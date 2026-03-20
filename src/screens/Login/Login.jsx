@@ -16,7 +16,7 @@ const Login = ({ onNavigate }) => {
         isOpen={isModalOpen} 
         onClose={() => {
           setIsModalOpen(false);
-          onNavigate('landing'); // Optionally back to home on modal close
+          onNavigate('studentDashboard'); // Redirect to dashboard
         }} 
         title="Login Successful" 
         message="Welcome back to InternLink! Redirecting you to your dashboard mock shortly." 
