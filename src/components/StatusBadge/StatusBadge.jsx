@@ -1,17 +1,21 @@
 import React from 'react';
-import '../../assets/css/students/StatusBadge.css';
 
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {
-    if (!status) return 'status-default';
-    const s = status.toLowerCase();
-    if (s === 'approved' || s === 'active' || s === 'completed') return 'status-success';
-    if (s === 'pending' || s === 'in progress') return 'status-warning';
-    if (s === 'rejected' || s === 'inactive') return 'status-danger';
-    return 'status-default';
+    if (!status) return 'default';
+    const lowerStatus = status.toLowerCase();
+    if (['placed', 'approved', 'active', 'success', 'accepted', 'completed'].includes(lowerStatus)) return 'success';
+    if (['unplaced', 'pending', 'warning', 'ongoing', 'in progress'].includes(lowerStatus)) return 'warning';
+    if (['flagged', 'rejected', 'danger', 'failed', 'inactive'].includes(lowerStatus)) return 'danger';
+    if (['info', 'graded'].includes(lowerStatus)) return 'info';
+    return 'default';
   };
 
-  return <span className={`status-badge ${getStatusClass(status)}`}>{status}</span>;
+  return (
+    <span className={`dashboard-badge ${getStatusClass(status)}`}>
+      {status}
+    </span>
+  );
 };
 
 export default StatusBadge;

@@ -1,13 +1,12 @@
 /* src/pages/supervisor/DashboardPage/DashboardPage.css */
 
-.welcome-card {
+.welcome-card.card-supervisor {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
   color: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2rem;
-  color: #ffffff;
 }
 
 .welcome-label {

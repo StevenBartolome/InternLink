@@ -1,4 +1,4 @@
-.progress-container {
+.internship-progress-page {
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
@@ -27,12 +27,13 @@
 
 .progress-card {
   background-color: var(--bg-primary);
-  padding: 24px;
+  padding: 32px;
   border-radius: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--glass-border);
   display: flex;
   flex-direction: column;
+  min-height: 220px;
 }
 
 .active-company-card {
@@ -44,8 +45,8 @@
 
 .active-company-card h2 {
   color: white;
-  font-size: 22px;
-  margin-bottom: 16px;
+  font-size: 26px;
+  margin-bottom: 20px;
   position: relative;
   z-index: 2;
 }
@@ -54,11 +55,11 @@
   align-self: flex-start;
   background-color: rgba(255, 255, 255, 0.2);
   color: white;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border-radius: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   backdrop-filter: blur(4px);
 }
 
@@ -87,7 +88,7 @@
 }
 
 .hours-stats h3 {
-  font-size: 28px;
+  font-size: 36px;
   color: var(--text-main);
 }
 
