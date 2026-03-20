@@ -6,7 +6,8 @@ import Register from './screens/Register/Register';
 import StudentDashboard from './screens/StudentDashboard/StudentDashboard';
 
 function App() {
-  const [view, setView] = useState('studentDashboard');
+  const [view, setView] = useState('landing');
+
 
   return (
     <div className="App">

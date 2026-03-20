@@ -11,7 +11,10 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
   return (
     <div className="sidebar">
       <div className="sidebar-logo">
-        <div className="logo-icon">🔗</div>
+        <div className="logo-icon">
+          <i className="fa-solid fa-graduation-cap"></i>
+        </div>
+
         <span className="logo-text">InternLink</span>
       </div>
       
