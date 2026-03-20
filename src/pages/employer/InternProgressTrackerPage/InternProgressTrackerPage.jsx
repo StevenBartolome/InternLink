@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Calendar, Clock, CheckCircle2, Circle } from 'lucide-react';
 import { activeInterns } from '../../../data/employerMockData';
 import ProgressBar from '../../../components/ProgressBar/ProgressBar';
-import './InternProgressTrackerPage.css';
+import '../../../assets/css/employer/InternProgressTrackerPage.css';
 
 const InternProgressTrackerPage = () => {
   const [expandedInternId, setExpandedInternId] = useState(null);

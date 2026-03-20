@@ -4,7 +4,7 @@ import { Briefcase, Users, CheckSquare, Clock, Plus, ArrowRight } from 'lucide-r
 import { internshipListings, applicants, activeInterns } from '../../../data/employerMockData';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
 import ProgressBar from '../../../components/ProgressBar/ProgressBar';
-import './DashboardPage.css';
+import '../../../assets/css/employer/DashboardPage.css';
 
 const DashboardPage = () => {
   const navigate = useNavigate();

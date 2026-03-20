@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { applicationRecords, progressState, studentProfile } from '../data/mockData';
 import { FileText, CheckCircle2, Clock, Briefcase, ArrowRight, Star } from 'lucide-react';
-import './DashboardPage.css';
+import '../assets/css/students/DashboardPage.css';
 
 export default function DashboardPage() {
   const navigate = useNavigate();

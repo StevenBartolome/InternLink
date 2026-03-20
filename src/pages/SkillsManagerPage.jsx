@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentProfile } from '../data/mockData';
 import { Plus, X, Award, PlusCircle, Trash2, ArrowLeft, CheckCircle } from 'lucide-react';
-import './SkillsManagerPage.css';
+import '../assets/css/students/SkillsManagerPage.css';
 
 export default function SkillsManagerPage() {
   const navigate = useNavigate();

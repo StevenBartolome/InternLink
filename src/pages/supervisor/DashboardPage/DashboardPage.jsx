@@ -5,7 +5,7 @@ import { Users, CalendarClock, Briefcase, FileSignature, ArrowRight } from 'luci
 import { supervisorData, internsData, statsSummary } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
 import ProgressBar from '../../../components/supervisor/ProgressBar';
-import './DashboardPage.css';
+import '../../../assets/css/supervisor/DashboardPage.css';
 
 const DashboardPage = () => {
   const navigate = useNavigate();

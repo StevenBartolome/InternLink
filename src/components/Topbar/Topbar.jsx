@@ -4,7 +4,7 @@ import { Bell, LogOut, GraduationCap, Briefcase, User } from 'lucide-react';
 import { userNotifications, studentProfile } from '../../data/mockData';
 import { notifications as employerNotifications, companyProfile } from '../../data/employerMockData';
 import Modal from '../Modal/Modal';
-import './Topbar.css';
+import '../../assets/css/students/Topbar.css';
 
 const Topbar = () => {
   const location = useLocation();

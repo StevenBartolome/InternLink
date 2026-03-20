@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, X, Save } from 'lucide-react';
-import './PostInternshipPage.css';
+import '../../../assets/css/employer/PostInternshipPage.css';
 
 const PostInternshipPage = () => {
   const location = useLocation();

@@ -1,7 +1,7 @@
 import React from 'react';
 import { gradesEvaluations } from '../data/mockData';
 import { Award, FileText, Star, MessageSquare } from 'lucide-react';
-import './GradesEvaluationsPage.css';
+import '../assets/css/students/GradesEvaluationsPage.css';
 
 export default function GradesEvaluationsPage() {
   const { overallGrade, coordinatorRemarks, evaluations } = gradesEvaluations;

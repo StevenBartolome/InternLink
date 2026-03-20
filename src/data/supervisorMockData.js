@@ -14,7 +14,7 @@ export const internsData = [
   {
     id: 1,
     name: "Maria Santos",
-    school: "University of Santo Tomas (UST)",
+    school: "National University Baliwag",
     course: "BS Information Technology",
     photo: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     contact: "+63 912 345 6789",
@@ -38,7 +38,7 @@ export const internsData = [
   {
     id: 2,
     name: "Juan Miguel",
-    school: "FEU Institute of Technology",
+    school: "National University Baliwag",
     course: "BS Computer Science",
     photo: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     contact: "+63 922 888 7777",
@@ -59,7 +59,7 @@ export const internsData = [
   {
     id: 3,
     name: "Ana Lopez",
-    school: "Mapúa University",
+    school: "National University Baliwag",
     course: "BS Business Administration",
     photo: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
     contact: "+63 916 555 4321",

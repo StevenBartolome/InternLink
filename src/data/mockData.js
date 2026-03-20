@@ -2,11 +2,11 @@
 
 export const studentProfile = {
   id: "STUD-2023-0042",
-  name: "Juan Gabriel dela Cruz",
+  name: "Gabriela Dela Cruz",
   course: "BS Information Technology Major in Web and Mobile Application",
   yearLevel: "4th Year",
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan&backgroundColor=b6e3f4",
-  email: "juan.delacruz@student.edu.ph",
+  email: "gabriela.delacruz@student.edu.ph",
   contact: "+63 912 345 6789",
   address: "123 Mabini St., Quezon City, Metro Manila",
   skills: ["React.js", "Node.js", "JavaScript", "HTML/CSS", "UI Setup", "Git"],

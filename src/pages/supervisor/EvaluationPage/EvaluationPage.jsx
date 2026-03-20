@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Star, FileSignature, CheckCircle2 } from 'lucide-react';
 import { internsData } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
-import './EvaluationPage.css';
+import '../../../assets/css/supervisor/EvaluationPage.css';
 
 const EvaluationPage = () => {
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);

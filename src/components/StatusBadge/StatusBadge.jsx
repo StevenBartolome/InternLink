@@ -1,5 +1,5 @@
 import React from 'react';
-import './StatusBadge.css';
+import '../../assets/css/students/StatusBadge.css';
 
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {

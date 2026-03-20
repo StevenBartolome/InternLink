@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Briefcase, Save } from 'lucide-react';
 import { companyProfile } from '../../../data/employerMockData';
-import './CompanyProfilePage.css';
+import '../../../assets/css/employer/CompanyProfilePage.css';
 
 const CompanyProfilePage = () => {
   const [profile, setProfile] = useState(companyProfile);

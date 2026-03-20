@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentProfile } from '../data/mockData';
 import { Mail, Phone, MapPin, Award, CheckCircle, Edit2, Plus, FileText, Download, Eye, Upload } from 'lucide-react';
-import './ProfilePage.css';
+import '../assets/css/students/ProfilePage.css';
 
 export default function ProfilePage() {
   const navigate = useNavigate();

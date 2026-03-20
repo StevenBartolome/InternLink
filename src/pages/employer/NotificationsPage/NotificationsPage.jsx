@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Bell, Check, UserPlus, Award, AlertCircle } from 'lucide-react';
 import { notifications as initialNotifications } from '../../../data/employerMockData';
-import './NotificationsPage.css';
+import '../../../assets/css/employer/NotificationsPage.css';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState(initialNotifications);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { progressState } from '../data/mockData';
 import { Calendar, User, Clock, CheckCircle2, Circle, HelpCircle } from 'lucide-react';
-import './InternshipProgressPage.css';
+import '../assets/css/students/InternshipProgressPage.css';
 
 export default function InternshipProgressPage() {
   const [tasks, setTasks] = useState([...progressState.tasks]);

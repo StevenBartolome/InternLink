@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Plus, Trash2, CheckCircle2, Search, Filter } from 'lucide-react';
 import { internsData } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
-import './TaskManagementPage.css';
+import '../../../assets/css/supervisor/TaskManagementPage.css';
 
 const TaskManagementPage = () => {
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);

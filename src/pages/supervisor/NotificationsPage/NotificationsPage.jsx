@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Bell, CheckCircle2, AlertCircle, LogIn, FileText, Users, Check } from 'lucide-react';
 import { notificationsData } from '../../../data/supervisorMockData';
-import './NotificationsPage.css';
+import '../../../assets/css/supervisor/NotificationsPage.css';
 
 const NotificationsPage = () => {
   const [activeTab, setActiveTab] = useState('All');

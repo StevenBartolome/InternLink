@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { internshipListings } from '../data/mockData';
 import { Search, MapPin, Clock, Briefcase, Filter } from 'lucide-react';
-import './InternshipBrowsePage.css';
+import '../assets/css/students/InternshipBrowsePage.css';
 
 export default function InternshipBrowsePage() {
   const navigate = useNavigate();

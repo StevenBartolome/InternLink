@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, LogOut } from 'lucide-react';
 import { supervisorData } from '../../data/supervisorMockData';
 import Modal from '../Modal/Modal';
-import './Topbar.css';
+import '../../assets/css/supervisor/Topbar.css';
 
 const Topbar = ({ toggleSidebar, title }) => {
   const navigate = useNavigate();

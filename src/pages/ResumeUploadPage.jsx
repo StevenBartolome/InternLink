@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { studentProfile } from '../data/mockData';
 import { UploadCloud, FileText, Trash2, Link, Plus, Globe, ArrowLeft, CheckCircle } from 'lucide-react';
-import './ResumeUploadPage.css';
+import '../assets/css/students/ResumeUploadPage.css';
 
 export default function ResumeUploadPage() {
   const navigate = useNavigate();

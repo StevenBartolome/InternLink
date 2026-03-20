@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Clock, Calendar, Check, AlertCircle } from 'lucide-react';
 import { internsData } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
-import './AttendanceLogPage.css';
+import '../../../assets/css/supervisor/AttendanceLogPage.css';
 
 const AttendanceLogPage = () => {
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);

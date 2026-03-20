@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Users, UserPlus, Mail, Building, ShieldCheck, Plus, X } from 'lucide-react';
 import { supervisors as initialSupervisors } from '../../../data/employerMockData';
-import './ManageSupervisorsPage.css';
+import '../../../assets/css/employer/ManageSupervisorsPage.css';
 
 const ManageSupervisorsPage = () => {
   const [supervisorsList, setSupervisorsList] = useState(initialSupervisors);

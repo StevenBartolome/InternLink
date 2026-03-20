@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { studentProfile, internshipListings } from '../data/mockData';
 import { ArrowLeft, CheckCircle2, FileText, Upload } from 'lucide-react';
-import './ApplicationFormPage.css';
+import '../assets/css/students/ApplicationFormPage.css';
 
 export default function ApplicationFormPage() {
   const { id } = useParams();

@@ -2,7 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import Topbar from '../Topbar/Topbar';
-import './MainLayout.css';
+import '../../assets/css/students/MainLayout.css';
 
 const MainLayout = () => {
   return (

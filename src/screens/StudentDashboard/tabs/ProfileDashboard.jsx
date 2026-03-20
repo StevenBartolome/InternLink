@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { studentProfile } from '../../../data/mockData';
+import { User } from 'lucide-react';
 
 const ProfileDashboard = () => {
   const [skills, setSkills] = useState(['React', 'JavaScript', 'Node.js', 'Figma', 'Python']);
@@ -22,7 +24,9 @@ const ProfileDashboard = () => {
         {/* Left Column - Info & Resume */}
         <div className="profile-left">
           <div className="profile-card basic-info">
-            <div className="avatar-large">JD</div>
+            <div className="avatar-large-wrapper">
+              <img src={studentProfile.avatar} alt="Student Profile" className="avatar-large-img" />
+            </div>
             <h2>Juan Dela Cruz</h2>
             <p className="subtitle">BS Computer Science Student</p>
             <p className="bio">Passionate software engineer building modern web applications. Looking for summer internship opportunities.</p>
@@ -106,19 +110,24 @@ const ProfileDashboard = () => {
           text-align: center;
         }
 
-        .avatar-large {
+        .avatar-large-wrapper {
           width: 80px;
           height: 80px;
           border-radius: 50%;
-          background: var(--gradient-primary);
+          border: 4px solid var(--bg-primary);
+          background-color: var(--bg-secondary);
+          margin-bottom: 1rem;
+          box-shadow: var(--shadow-md);
+          overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 2rem;
-          font-weight: 700;
-          color: white;
-          margin-bottom: 1rem;
-          box-shadow: var(--shadow-md);
+        }
+
+        .avatar-large-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
         .basic-info h2 {

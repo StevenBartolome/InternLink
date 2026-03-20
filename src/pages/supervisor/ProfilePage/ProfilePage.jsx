@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { User, Mail, Building, Phone, Calendar, Save, CheckCircle2 } from 'lucide-react';
 import { supervisorData } from '../../../data/supervisorMockData';
-import './ProfilePage.css';
+import '../../../assets/css/supervisor/ProfilePage.css';
 
 const ProfilePage = () => {
   const [formData, setFormData] = useState({

@@ -9,7 +9,7 @@ import ProfileDashboard from './tabs/ProfileDashboard';
 const StudentDashboard = ({ onNavigate }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [user] = useState({
-    name: 'Juan Dela Cruz',
+    name: 'Gabriela Dela Cruz',
     role: 'Student',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Juan'
   });

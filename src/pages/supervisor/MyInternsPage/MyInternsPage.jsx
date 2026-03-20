@@ -5,7 +5,7 @@ import { Mail, Phone, BookOpen, GraduationCap } from 'lucide-react';
 import { internsData } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
 import ProgressBar from '../../../components/supervisor/ProgressBar';
-import './MyInternsPage.css';
+import '../../../assets/css/supervisor/MyInternsPage.css';
 
 const MyInternsPage = () => {
   const navigate = useNavigate();

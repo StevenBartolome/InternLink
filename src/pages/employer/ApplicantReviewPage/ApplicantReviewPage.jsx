@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { X, Mail, BookOpen, Award, FileText } from 'lucide-react';
 import { internshipListings, applicants } from '../../../data/employerMockData';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import './ApplicantReviewPage.css';
+import '../../../assets/css/employer/ApplicantReviewPage.css';
 
 const ApplicantReviewPage = () => {
   const location = useLocation();

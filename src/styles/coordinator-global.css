@@ -1,0 +1,96 @@
+/* coordinator-global.css */
+body.coordinator-theme {
+  --primary: #1E40AF;        /* Blue 800 */
+  --primary-light: #EFF6FF;  /* Blue 50 */
+  --primary-dark: #1D4ED8;   /* Blue 700 */
+  --bg: #ffffff;
+  --surface: #f9fafb;
+  --border: #e5e7eb;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --success: #16a34a;
+  --info: #0284c7;
+  
+  --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --transition: all 0.3s ease;
+
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Common utility classes */
+.coordinator-card {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.coordinator-table-container {
+  overflow-x: auto;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.coordinator-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.coordinator-table th {
+  padding: 1rem;
+  background: var(--surface);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.coordinator-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.coordinator-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.coordinator-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  border: none;
+  font-size: 0.875rem;
+}
+
+.coordinator-btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.coordinator-btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.coordinator-btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.coordinator-btn-secondary:hover {
+  background: var(--border);
+}

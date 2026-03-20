@@ -1,0 +1,31 @@
+.coordinator-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.coordinator-main-wrapper {
+  flex: 1;
+  margin-left: 250px; /* Width of sidebar */
+  display: flex;
+  flex-direction: column;
+  transition: margin-left 0.3s ease;
+}
+
+.coordinator-main-content {
+  margin-top: 64px; /* Height of topbar */
+  padding: 2rem;
+  flex: 1;
+  background-color: var(--surface);
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .coordinator-main-wrapper {
+    margin-left: 0;
+  }
+  
+  .coordinator-main-content {
+    padding: 1rem;
+  }
+}

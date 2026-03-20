@@ -4,7 +4,7 @@ import { useLocation, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import '../../styles/supervisor/global.css'; // Import global styles for supervisor
-import './SupervisorLayout.css';
+import '../../assets/css/supervisor/SupervisorLayout.css';
 
 const SupervisorLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);

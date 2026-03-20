@@ -41,6 +41,20 @@ import EvaluationPage from './pages/supervisor/EvaluationPage/EvaluationPage';
 import SupervisorNotificationsPage from './pages/supervisor/NotificationsPage/NotificationsPage';
 import SupervisorProfilePage from './pages/supervisor/ProfilePage/ProfilePage';
 
+// Import Coordinator Pages
+import CoordinatorLayout from './components/coordinator/CoordinatorLayout';
+import CoordinatorDashboardPage from './pages/coordinator/DashboardPage/DashboardPage';
+import StudentDirectoryPage from './pages/coordinator/StudentDirectoryPage/StudentDirectoryPage';
+import ApplicationTrackingPage from './pages/coordinator/ApplicationTrackingPage/ApplicationTrackingPage';
+import InternshipApprovalPage from './pages/coordinator/InternshipApprovalPage/InternshipApprovalPage';
+import ProgressMonitoringPage from './pages/coordinator/ProgressMonitoringPage/ProgressMonitoringPage';
+import GradeManagementPage from './pages/coordinator/GradeManagementPage/GradeManagementPage';
+import AutomatedMatchingPage from './pages/coordinator/AutomatedMatchingPage/AutomatedMatchingPage';
+import StudentEvaluationPage from './pages/coordinator/StudentEvaluationPage/StudentEvaluationPage';
+import ReportsDashboardPage from './pages/coordinator/ReportsDashboardPage/ReportsDashboardPage';
+import CoordinatorNotificationsPage from './pages/coordinator/NotificationsPage/NotificationsPage';
+import CoordinatorProfilePage from './pages/coordinator/ProfilePage/ProfilePage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -88,6 +102,21 @@ function App() {
           <Route path="/supervisor/evaluation" element={<EvaluationPage />} />
           <Route path="/supervisor/notifications" element={<SupervisorNotificationsPage />} />
           <Route path="/supervisor/profile" element={<SupervisorProfilePage />} />
+        </Route>
+
+        {/* Coordinator Routes */}
+        <Route element={<CoordinatorLayout />}>
+          <Route path="/coordinator/dashboard" element={<CoordinatorDashboardPage />} />
+          <Route path="/coordinator/students" element={<StudentDirectoryPage />} />
+          <Route path="/coordinator/applications" element={<ApplicationTrackingPage />} />
+          <Route path="/coordinator/approvals" element={<InternshipApprovalPage />} />
+          <Route path="/coordinator/progress" element={<ProgressMonitoringPage />} />
+          <Route path="/coordinator/grades" element={<GradeManagementPage />} />
+          <Route path="/coordinator/matching" element={<AutomatedMatchingPage />} />
+          <Route path="/coordinator/evaluation" element={<StudentEvaluationPage />} />
+          <Route path="/coordinator/reports" element={<ReportsDashboardPage />} />
+          <Route path="/coordinator/notifications" element={<CoordinatorNotificationsPage />} />
+          <Route path="/coordinator/profile" element={<CoordinatorProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

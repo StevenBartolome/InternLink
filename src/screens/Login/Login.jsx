@@ -25,8 +25,12 @@ const Login = () => {
       setError('');
       setRedirectPath('/supervisor/dashboard');
       setIsModalOpen(true);
+    } else if (email === 'coordinator@gmail.com' && password === '123') {
+      setError('');
+      setRedirectPath('/coordinator/dashboard');
+      setIsModalOpen(true);
     } else {
-      setError('Invalid email or password. Use student@gmail.com, employer@gmail.com, or supervisor@gmail.com (pw: 123)');
+      setError('Invalid email or password. Use student, employer, supervisor, or coordinator @gmail.com (pw: 123)');
     }
 
   };
@@ -121,8 +125,8 @@ const Login = () => {
           <div className="info-banner">
             <i className="fa-solid fa-circle-info"></i>
             <div>
-              <h4>Student, Employer & Supervisor Login</h4>
-              <p>The system automatically detects your account type and redirects you to the appropriate dashboard.</p>
+              <h4>Unified Role Login</h4>
+              <p>The system automatically detects your student, employer, supervisor, or coordinator account tip and redirects you to the appropriate dashboard.</p>
             </div>
           </div>
         </div>

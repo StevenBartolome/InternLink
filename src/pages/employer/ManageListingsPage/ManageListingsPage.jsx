@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Power, RefreshCw } from 'lucide-react';
 import { internshipListings } from '../../../data/employerMockData';
 import StatusBadge from '../../../components/StatusBadge/StatusBadge';
-import './ManageListingsPage.css';
+import '../../../assets/css/employer/ManageListingsPage.css';
 
 const ManageListingsPage = () => {
   const navigate = useNavigate();

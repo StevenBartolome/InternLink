@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { applicants } from '../../../data/employerMockData';
-import './ApplicationApprovalPage.css';
+import '../../../assets/css/employer/ApplicationApprovalPage.css';
 
 const ApplicationApprovalPage = () => {
   const [pendingApps, setPendingApps] = useState(

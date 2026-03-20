@@ -1,6 +1,6 @@
 // src/components/supervisor/StatusBadge.jsx
 import React from 'react';
-import './StatusBadge.css';
+import '../../assets/css/supervisor/StatusBadge.css';
 
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {

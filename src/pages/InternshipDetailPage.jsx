@@ -2,7 +2,7 @@ import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { internshipListings } from '../data/mockData';
 import { MapPin, Clock, Briefcase, Calendar, ArrowLeft, Building2 } from 'lucide-react';
-import './InternshipDetailPage.css';
+import '../assets/css/students/InternshipDetailPage.css';
 
 export default function InternshipDetailPage() {
   const { id } = useParams();

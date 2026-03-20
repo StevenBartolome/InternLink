@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { UserPlus, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { activeInterns, supervisors } from '../../../data/employerMockData';
-import './AssignSupervisorPage.css';
+import '../../../assets/css/employer/AssignSupervisorPage.css';
 
 const AssignSupervisorPage = () => {
   const [selectedInternId, setSelectedInternId] = useState(activeInterns[0]?.id || '');

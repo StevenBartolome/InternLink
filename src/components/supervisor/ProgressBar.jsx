@@ -1,6 +1,6 @@
 // src/components/supervisor/ProgressBar.jsx
 import React from 'react';
-import './ProgressBar.css';
+import '../../assets/css/supervisor/ProgressBar.css';
 
 const ProgressBar = ({ rendered, required }) => {
   const percentage = Math.min(Math.round((rendered / required) * 100), 100);

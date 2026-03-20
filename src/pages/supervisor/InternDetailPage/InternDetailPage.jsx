@@ -8,7 +8,7 @@ import {
 import { internsData } from '../../../data/supervisorMockData';
 import StatusBadge from '../../../components/supervisor/StatusBadge';
 import ProgressBar from '../../../components/supervisor/ProgressBar';
-import './InternDetailPage.css';
+import '../../../assets/css/supervisor/InternDetailPage.css';
 
 const InternDetailPage = () => {
   const { id } = useParams();

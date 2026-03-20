@@ -11,7 +11,7 @@ import {
   LogOut, 
   GraduationCap 
 } from 'lucide-react';
-import './Sidebar.css';
+import '../../assets/css/supervisor/Sidebar.css';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();

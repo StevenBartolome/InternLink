@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { applicationRecords } from '../data/mockData';
 import { ChevronDown, ChevronUp, Clock, CheckCircle2, XCircle, Search } from 'lucide-react';
-import './MyApplicationsPage.css';
+import '../assets/css/students/MyApplicationsPage.css';
 
 export default function MyApplicationsPage() {
   const [expandedId, setExpandedId] = useState(null);

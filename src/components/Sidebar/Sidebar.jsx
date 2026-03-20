@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { studentProfile } from '../../data/mockData';
 import { companyProfile } from '../../data/employerMockData';
-import './Sidebar.css';
+import '../../assets/css/students/Sidebar.css';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);

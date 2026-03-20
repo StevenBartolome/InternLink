@@ -1,5 +1,5 @@
 import React from 'react';
-import './SystemFlow.css';
+import '../../assets/css/students/SystemFlow.css';
 
 const SystemFlow = () => {
   const steps = [
