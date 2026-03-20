@@ -5,8 +5,8 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
     { id: 'overview', label: 'Dashboard', icon: '📊' },
     { id: 'internships', label: 'Browse Internships', icon: '🔍' },
     { id: 'applications', label: 'My Applications', icon: '📝' },
-    { id: 'profile', label: 'Profile', icon: '👤' },
   ];
+
 
   return (
     <div className="sidebar">
@@ -28,12 +28,7 @@ const Sidebar = ({ activeTab, setActiveTab, onLogout }) => {
         ))}
       </nav>
 
-      <div className="sidebar-footer">
-        <button className="nav-item logout" onClick={onLogout}>
-          <span className="nav-icon">🚪</span>
-          <span className="nav-label">Logout</span>
-        </button>
-      </div>
+
 
       <style jsx="true">{`
         .sidebar {

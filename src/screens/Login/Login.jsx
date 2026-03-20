@@ -4,11 +4,22 @@ import Modal from '../../components/Modal/Modal';
 
 const Login = ({ onNavigate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setIsModalOpen(true);
+    if (email === 'student@gmail.com' && password === '123') {
+      setError('');
+      setIsModalOpen(true);
+    } else {
+      setError('Invalid email or password. Use student@gmail.com / 123');
+    }
   };
+
+
+
 
   return (
     <div className="auth-split">
@@ -58,10 +69,13 @@ const Login = ({ onNavigate }) => {
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form-high">
+            {error && <p className="error-msg" style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: '1rem', background: '#fef2f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fca5a5' }}>{error}</p>}
+
             <div className="form-group-high">
               <label htmlFor="email">Email or Username</label>
               <div className="input-with-icon">
-                <input type="email" id="email" placeholder="name@example.com or username" required />
+                <input type="email" id="email" placeholder="name@example.com or username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+
                 <i className="fa-regular fa-envelope"></i>
               </div>
             </div>
@@ -69,7 +83,8 @@ const Login = ({ onNavigate }) => {
             <div className="form-group-high">
               <label htmlFor="password">Password</label>
               <div className="input-with-icon">
-                <input type="password" id="password" placeholder="••••••••••••" required />
+                <input type="password" id="password" placeholder="••••••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
+
                 <i className="fa-regular fa-eye-slash"></i>
               </div>
             </div>

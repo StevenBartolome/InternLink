@@ -39,14 +39,18 @@ const StudentDashboard = ({ onNavigate }) => {
             <p>Here is what is happening with your internship search today.</p>
           </div>
           <div className="header-right">
-            <div className="user-profile">
+            <div className="user-profile" onClick={() => setActiveTab('profile')} title="Go to Profile">
               <img src={user.avatar} alt="Profile" className="avatar" />
               <div className="user-info">
                 <span className="user-name">{user.name}</span>
                 <span className="user-role">{user.role}</span>
               </div>
             </div>
+            <button className="logout-icon-btn" onClick={() => onNavigate('landing')} title="Logout">
+              🚪
+            </button>
           </div>
+
         </header>
         <main className="dashboard-content">
           {renderTabContent()}
