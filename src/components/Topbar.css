@@ -1,0 +1,146 @@
+.topbar {
+  height: 64px;
+  background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%);
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+@media (max-width: 1024px) {
+  .topbar {
+    padding-left: 64px;
+  }
+}
+
+.topbar-left h2 {
+  font-size: 18px;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-brand-mini {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  color: var(--text-main);
+  font-size: 15px;
+}
+
+.hat-icon {
+  color: var(--primary);
+}
+
+.notification-bell {
+  position: relative;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-bell:hover {
+  background-color: var(--bg-secondary);
+}
+
+.bell-icon {
+  color: var(--text-muted);
+}
+
+.notification-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background-color: #DC2626; /* Red 600 */
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 2px solid var(--bg-primary);
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--glass-border);
+}
+
+.topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.topbar-profile:hover {
+  background-color: var(--bg-secondary);
+}
+
+.topbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--secondary);
+}
+
+.topbar-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.topbar-logout-btn {
+  background: transparent;
+  border: none;
+  color: #DC2626; /* Red 600 directly */
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.topbar-logout-btn:hover {
+  background-color: #FEF2F2; /* Red 50 */
+}
+
+@media (max-width: 640px) {
+  .topbar-user-info {
+    display: none;
+  }
+}

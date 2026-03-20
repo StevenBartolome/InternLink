@@ -66,3 +66,38 @@
 .btn-modal-close:hover {
   background: #1E3A8A;
 }
+
+/* Confirmation Actions */
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-modal-cancel, .btn-modal-confirm {
+  flex: 1;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-modal-cancel {
+  background-color: #F1F5F9;
+  color: #475569;
+}
+
+.btn-modal-cancel:hover {
+  background-color: #E2E8F0;
+}
+
+.btn-modal-confirm {
+  background-color: #DC2626; /* Red 600 for destructive actions like Logout */
+  color: white;
+}
+
+.btn-modal-confirm:hover {
+  background-color: #B91C1C;
+}

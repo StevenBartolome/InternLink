@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import '../Login/Login.css'; // Reusing shared styles
 import Modal from '../../components/Modal/Modal';
-const Register = ({ onNavigate }) => {
+
+const Register = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [role, setRole] = useState('student');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,7 +23,7 @@ const Register = ({ onNavigate }) => {
         isOpen={isModalOpen} 
         onClose={() => {
           setIsModalOpen(false);
-          onNavigate('login'); // Switch to login screen on close
+          navigate('/login'); // Switch to login screen on close
         }} 
         title="Registration Successful" 
         message="Your account has been created! You can now login using your credentials." 
@@ -50,7 +53,7 @@ const Register = ({ onNavigate }) => {
       {/* Right Form Side */}
       <div className="auth-form-side">
         <div className="back-bar">
-          <button className="btn-back-link" onClick={() => onNavigate('landing')}>
+          <button className="btn-back-link" onClick={() => navigate('/')}>
             <i className="fa-solid fa-arrow-left"></i> Back to Home
           </button>
         </div>
@@ -171,7 +174,7 @@ const Register = ({ onNavigate }) => {
           </form>
 
           <p className="auth-switch-footer">
-            Already have an account? <span onClick={() => onNavigate('login')}>Login here</span>
+            Already have an account? <span onClick={() => navigate('/login')}>Login here</span>
           </p>
         </div>
       </div>

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Login.css';
 import Modal from '../../components/Modal/Modal';
 
-const Login = ({ onNavigate }) => {
+const Login = () => {
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +29,7 @@ const Login = ({ onNavigate }) => {
         isOpen={isModalOpen} 
         onClose={() => {
           setIsModalOpen(false);
-          onNavigate('studentDashboard'); // Redirect to dashboard
+          navigate('/dashboard'); // Redirect to dashboard
         }} 
         title="Login Successful" 
         message="Welcome back to InternLink! Redirecting you to your dashboard mock shortly." 
@@ -57,7 +59,7 @@ const Login = ({ onNavigate }) => {
       {/* Right Form Side */}
       <div className="auth-form-side">
         <div className="back-bar">
-          <button className="btn-back-link" onClick={() => onNavigate('landing')}>
+          <button className="btn-back-link" onClick={() => navigate('/')}>
             <i className="fa-solid fa-arrow-left"></i> Back to Home
           </button>
         </div>
@@ -102,7 +104,7 @@ const Login = ({ onNavigate }) => {
           </form>
 
           <p className="auth-switch-footer">
-            Don't have an account? <span onClick={() => onNavigate('register')}>Register here</span>
+            Don't have an account? <span onClick={() => navigate('/register')}>Register here</span>
           </p>
 
           <div className="info-banner">

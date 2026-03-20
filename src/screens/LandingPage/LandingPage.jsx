@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar/Navbar';
 import Hero from '../../components/Hero/Hero';
 import Features from '../../components/Features/Features';
@@ -6,10 +7,12 @@ import Stats from '../../components/Stats/Stats';
 import Footer from '../../components/Footer/Footer';
 import './LandingPage.css';
 
-const LandingPage = ({ onNavigate }) => {
+const LandingPage = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="landing-page">
-      <Navbar onLogin={() => onNavigate('login')} onRegister={() => onNavigate('register')} />
+      <Navbar onLogin={() => navigate('/login')} onRegister={() => navigate('/register')} />
       <Hero />
       <Features />
       <Stats />
