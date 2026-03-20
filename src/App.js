@@ -1,25 +1,20 @@
-import logo from './logo.svg';
+import React, { useState } from 'react';
 import './App.css';
+import LandingPage from './screens/LandingPage/LandingPage';
+import Login from './screens/Login/Login';
+import Register from './screens/Register/Register';
 
 function App() {
+  const [view, setView] = useState('landing');
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      {view === 'landing' && <LandingPage onNavigate={setView} />}
+      {view === 'login' && <Login onNavigate={setView} />}
+      {view === 'register' && <Register onNavigate={setView} />}
     </div>
   );
 }
 
 export default App;
+
