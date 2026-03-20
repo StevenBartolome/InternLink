@@ -1,0 +1,251 @@
+/* src/pages/supervisor/EvaluationPage/EvaluationPage.css */
+
+.evaluation-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Sidebar Intern List */
+.eval-intern-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.eval-intern-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.eval-intern-item:hover {
+  background-color: var(--surface);
+}
+
+.eval-intern-item.active {
+  background-color: var(--primary-light);
+  border: 1px solid #bae6fd;
+}
+
+.eval-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.eval-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.eval-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+/* Form Card */
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.form-header-title {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.header-icon {
+  color: var(--primary);
+  margin-top: 0.25rem;
+}
+
+.form-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.form-header p {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.read-only-badge {
+  background-color: #f3f4f6;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.criteria-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.criteria-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.criteria-info {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.criteria-label {
+  color: var(--text-primary);
+}
+
+.criteria-value {
+  color: var(--primary);
+}
+
+.score-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 5px;
+  background: #e5e7eb;
+  outline: none;
+}
+
+.score-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.score-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.overall-summary {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.overall-score-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.overall-label {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.overall-val {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.stars-row {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.remarks-group textarea {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  resize: vertical;
+}
+
+.submit-eval-btn {
+  width: 100%;
+  background-color: var(--primary);
+  color: #ffffff;
+  padding: 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+}
+
+.submit-eval-btn:hover {
+  background-color: var(--primary-dark);
+}
+
+/* Success Card */
+.success-card {
+  text-align: center;
+  padding: 3rem;
+}
+
+.success-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.success-icon {
+  color: var(--success);
+}
+
+.success-content h2 {
+  color: var(--text-primary);
+}
+
+.success-content p {
+  color: var(--text-secondary);
+}
+
+.summary-box {
+  background-color: var(--primary-light);
+  padding: 0.75rem 1.5rem;
+  border-radius: 9999px;
+  color: var(--primary-dark);
+}
+
+.reset-view-btn {
+  background: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .evaluation-layout {
+    grid-template-columns: 1fr;
+  }
+}

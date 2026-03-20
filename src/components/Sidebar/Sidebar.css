@@ -70,6 +70,41 @@
   font-weight: 600;
 }
 
+/* Submenu Styles */
+.submenu-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.submenu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.submenu-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.submenu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  border-left: 1px solid var(--glass-border);
+  margin-left: 24px;
+  padding-left: 4px;
+}
+
+.sub-link {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
 /* Footer Removed Styles */
 
 /* Mobile responsive styles */
@@ -118,4 +153,23 @@
   .sidebar-backdrop {
     display: block;
   }
+}
+
+/* Company Logo in Sidebar */
+.company-logo-sidebar {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border);
+}
+
+.sidebar-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

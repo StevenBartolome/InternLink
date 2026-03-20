@@ -9,15 +9,26 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [redirectPath, setRedirectPath] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (email === 'student@gmail.com' && password === '123') {
       setError('');
+      setRedirectPath('/dashboard');
+      setIsModalOpen(true);
+    } else if (email === 'employer@gmail.com' && password === '123') {
+      setError('');
+      setRedirectPath('/employer/dashboard');
+      setIsModalOpen(true);
+    } else if (email === 'supervisor@gmail.com' && password === '123') {
+      setError('');
+      setRedirectPath('/supervisor/dashboard');
       setIsModalOpen(true);
     } else {
-      setError('Invalid email or password. Use student@gmail.com / 123');
+      setError('Invalid email or password. Use student@gmail.com, employer@gmail.com, or supervisor@gmail.com (pw: 123)');
     }
+
   };
 
 
@@ -29,7 +40,7 @@ const Login = () => {
         isOpen={isModalOpen} 
         onClose={() => {
           setIsModalOpen(false);
-          navigate('/dashboard'); // Redirect to dashboard
+          navigate(redirectPath); // Redirect to dashboard
         }} 
         title="Login Successful" 
         message="Welcome back to InternLink! Redirecting you to your dashboard mock shortly." 
@@ -110,7 +121,7 @@ const Login = () => {
           <div className="info-banner">
             <i className="fa-solid fa-circle-info"></i>
             <div>
-              <h4>Student & Employer Login</h4>
+              <h4>Student, Employer & Supervisor Login</h4>
               <p>The system automatically detects your account type and redirects you to the appropriate dashboard.</p>
             </div>
           </div>

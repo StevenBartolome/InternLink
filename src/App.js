@@ -4,9 +4,9 @@ import './App.css';
 import LandingPage from './screens/LandingPage/LandingPage';
 import Login from './screens/Login/Login';
 import Register from './screens/Register/Register';
-import MainLayout from './components/MainLayout';
+import MainLayout from './components/MainLayout/MainLayout';
 
-// Import Pages
+// Import Student Pages
 import ProfilePage from './pages/ProfilePage';
 import SkillsManagerPage from './pages/SkillsManagerPage';
 import ResumeUploadPage from './pages/ResumeUploadPage';
@@ -19,6 +19,28 @@ import GradesEvaluationsPage from './pages/GradesEvaluationsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import DashboardPage from './pages/DashboardPage';
 
+// Import Employer Pages
+import EmployerDashboardPage from './pages/employer/DashboardPage/DashboardPage';
+import CompanyProfilePage from './pages/employer/CompanyProfilePage/CompanyProfilePage';
+import PostInternshipPage from './pages/employer/PostInternshipPage/PostInternshipPage';
+import ManageListingsPage from './pages/employer/ManageListingsPage/ManageListingsPage';
+import ApplicantReviewPage from './pages/employer/ApplicantReviewPage/ApplicantReviewPage';
+import ApplicationApprovalPage from './pages/employer/ApplicationApprovalPage/ApplicationApprovalPage';
+import InternProgressTrackerPage from './pages/employer/InternProgressTrackerPage/InternProgressTrackerPage';
+import AssignSupervisorPage from './pages/employer/AssignSupervisorPage/AssignSupervisorPage';
+import EmployerNotificationsPage from './pages/employer/NotificationsPage/NotificationsPage';
+import ManageSupervisorsPage from './pages/employer/ManageSupervisorsPage/ManageSupervisorsPage';
+// Import Supervisor Pages
+import SupervisorLayout from './components/supervisor/SupervisorLayout';
+import SupervisorDashboardPage from './pages/supervisor/DashboardPage/DashboardPage';
+import MyInternsPage from './pages/supervisor/MyInternsPage/MyInternsPage';
+import InternDetailPage from './pages/supervisor/InternDetailPage/InternDetailPage';
+import AttendanceLogPage from './pages/supervisor/AttendanceLogPage/AttendanceLogPage';
+import TaskManagementPage from './pages/supervisor/TaskManagementPage/TaskManagementPage';
+import EvaluationPage from './pages/supervisor/EvaluationPage/EvaluationPage';
+import SupervisorNotificationsPage from './pages/supervisor/NotificationsPage/NotificationsPage';
+import SupervisorProfilePage from './pages/supervisor/ProfilePage/ProfilePage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -30,6 +52,7 @@ function App() {
 
         {/* Protected/Authenticated Dashboard Layout */}
         <Route element={<MainLayout />}>
+          {/* Student Routes */}
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/skills" element={<SkillsManagerPage />} />
@@ -41,6 +64,30 @@ function App() {
           <Route path="/progress" element={<InternshipProgressPage />} />
           <Route path="/grades" element={<GradesEvaluationsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
+
+          {/* Employer Routes */}
+          <Route path="/employer/dashboard" element={<EmployerDashboardPage />} />
+          <Route path="/employer/profile" element={<CompanyProfilePage />} />
+          <Route path="/employer/post" element={<PostInternshipPage />} />
+          <Route path="/employer/listings" element={<ManageListingsPage />} />
+          <Route path="/employer/applicants" element={<ApplicantReviewPage />} />
+          <Route path="/employer/approvals" element={<ApplicationApprovalPage />} />
+          <Route path="/employer/progress" element={<InternProgressTrackerPage />} />
+          <Route path="/employer/assign-supervisor" element={<AssignSupervisorPage />} />
+          <Route path="/employer/supervisors" element={<ManageSupervisorsPage />} />
+          <Route path="/employer/notifications" element={<EmployerNotificationsPage />} />
+        </Route>
+
+        {/* Supervisor Routes */}
+        <Route element={<SupervisorLayout />}>
+          <Route path="/supervisor/dashboard" element={<SupervisorDashboardPage />} />
+          <Route path="/supervisor/interns" element={<MyInternsPage />} />
+          <Route path="/supervisor/interns/:id" element={<InternDetailPage />} />
+          <Route path="/supervisor/attendance" element={<AttendanceLogPage />} />
+          <Route path="/supervisor/tasks" element={<TaskManagementPage />} />
+          <Route path="/supervisor/evaluation" element={<EvaluationPage />} />
+          <Route path="/supervisor/notifications" element={<SupervisorNotificationsPage />} />
+          <Route path="/supervisor/profile" element={<SupervisorProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
@@ -48,4 +95,3 @@ function App() {
 }
 
 export default App;
-
