@@ -22,7 +22,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: '/supervisor/attendance', icon: CalendarCheck, label: 'Attendance' },
     { path: '/supervisor/tasks', icon: CheckSquare, label: 'Tasks' },
     { path: '/supervisor/evaluation', icon: FileEdit, label: 'Evaluation' },
-    { path: '/supervisor/notifications', icon: Bell, label: 'Notifications' },
   ];
 
   const handleLogout = () => {

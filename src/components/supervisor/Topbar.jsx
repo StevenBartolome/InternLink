@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Bell, LogOut } from 'lucide-react';
-import { supervisorData } from '../../data/supervisorMockData';
+import { supervisorData, notificationsData } from '../../data/supervisorMockData';
 import Modal from '../Modal/Modal';
 import '../../assets/css/supervisor/Topbar.css';
 
@@ -14,6 +14,8 @@ const Topbar = ({ toggleSidebar, title }) => {
     setIsModalOpen(false);
     navigate('/login');
   };
+
+  const unreadCount = notificationsData.filter(n => !n.read).length;
   return (
     <header className="supervisor-topbar">
       <div className="topbar-left">
@@ -26,7 +28,7 @@ const Topbar = ({ toggleSidebar, title }) => {
       <div className="topbar-right">
         <button className="icon-btn" onClick={() => navigate('/supervisor/notifications')}>
           <Bell size={20} />
-          <span className="badge-dot"></span>
+          {unreadCount > 0 && <span className="badge-dot"></span>}
         </button>
         
         <div className="topbar-divider"></div>
