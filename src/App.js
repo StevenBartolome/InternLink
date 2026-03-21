@@ -56,6 +56,21 @@ import ReportsDashboardPage from './pages/coordinator/ReportsDashboardPage';
 import CoordinatorNotificationsPage from './pages/coordinator/NotificationsPage';
 import CoordinatorProfilePage from './pages/coordinator/ProfilePage';
 
+// Import Admin Pages
+import AdminLayout from './components/admin/AdminLayout';
+import AdminDashboardPage from './pages/admin/DashboardPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
+import AccountVerificationPage from './pages/admin/AccountVerificationPage';
+import InternshipOversightPage from './pages/admin/InternshipOversightPage';
+import MatchingEngineSettingsPage from './pages/admin/MatchingEngineSettingsPage';
+import SystemReportsPage from './pages/admin/SystemReportsPage';
+import AuditLogsPage from './pages/admin/AuditLogsPage';
+import SystemSettingsPage from './pages/admin/SystemSettingsPage';
+import NotificationsCenterPage from './pages/admin/NotificationsCenterPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminProfilePage from './pages/admin/ProfilePage';
+
+
 function App() {
   return (
     <BrowserRouter>
@@ -119,6 +134,23 @@ function App() {
           <Route path="/coordinator/notifications" element={<CoordinatorNotificationsPage />} />
           <Route path="/coordinator/profile" element={<CoordinatorProfilePage />} />
         </Route>
+
+        {/* Admin Routes */}
+        <Route path="/admin/login" element={<AdminLoginPage />} />
+        <Route element={<AdminLayout />}>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+          <Route path="/admin/users" element={<UserManagementPage />} />
+          <Route path="/admin/verification" element={<AccountVerificationPage />} />
+          <Route path="/admin/oversight" element={<InternshipOversightPage />} />
+          <Route path="/admin/matching" element={<MatchingEngineSettingsPage />} />
+          <Route path="/admin/reports" element={<SystemReportsPage />} />
+          <Route path="/admin/audit" element={<AuditLogsPage />} />
+          <Route path="/admin/settings" element={<SystemSettingsPage />} />
+          <Route path="/admin/notifications" element={<NotificationsCenterPage />} />
+          <Route path="/admin/profile" element={<AdminProfilePage />} />
+        </Route>
+
       </Routes>
     </BrowserRouter>
   );

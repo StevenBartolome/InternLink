@@ -53,7 +53,7 @@
   background: white;
   padding: 20px;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -68,15 +68,37 @@
   justify-content: center;
 }
 
-.bg-green { background-color: #dcfce7; }
-.bg-blue { background-color: #dbeafe; }
-.bg-purple { background-color: #fae8ff; }
-.bg-orange { background-color: #ffedd5; }
+.bg-green {
+  background-color: #dcfce7;
+}
 
-.text-green { color: #16a34a; }
-.text-blue { color: #2563eb; }
-.text-purple { color: #a855f7; }
-.text-orange { color: #ea580c; }
+.bg-blue {
+  background-color: #dbeafe;
+}
+
+.bg-purple {
+  background-color: #fae8ff;
+}
+
+.bg-orange {
+  background-color: #ffedd5;
+}
+
+.text-green {
+  color: #16a34a;
+}
+
+.text-blue {
+  color: #2563eb;
+}
+
+.text-purple {
+  color: #a855f7;
+}
+
+.text-orange {
+  color: #ea580c;
+}
 
 .stat-content {
   display: flex;
@@ -97,9 +119,14 @@
 /* Dashboard Grid */
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 8fr 1fr;
+  /* Maximize Recent Applications size ratio */
   gap: 24px;
+  align-items: start;
+  /* Prevent items stretching unevenly */
 }
+
+
 
 @media (max-width: 1024px) {
   .dashboard-grid {
@@ -110,7 +137,7 @@
 .grid-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
   padding: 20px;
 }
 
@@ -142,11 +169,44 @@
 }
 
 /* Table */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  /* Handle overflow on tight views */
+}
+
 .dashboard-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  table-layout: auto;
+  /* allow auto-fit contents */
 }
+
+.dashboard-table th:nth-child(1),
+.dashboard-table td:nth-child(1) {
+  width: 35%;
+}
+
+.dashboard-table th:nth-child(2),
+.dashboard-table td:nth-child(2) {
+  width: 30%;
+}
+
+.dashboard-table th:nth-child(3),
+.dashboard-table td:nth-child(3) {
+  width: 15%;
+  white-space: nowrap;
+  /* Prevent date wrapping */
+}
+
+.dashboard-table th:nth-child(4),
+.dashboard-table td:nth-child(4) {
+  width: 20%;
+  white-space: nowrap;
+  /* Prevent Status wrapping or clamping */
+}
+
 
 .dashboard-table th {
   padding: 12px;
@@ -162,8 +222,14 @@
   font-size: 14px;
 }
 
-.font-semibold { font-weight: 600; }
-.sub-text { font-size: 12px; color: var(--text-secondary); }
+.font-semibold {
+  font-weight: 600;
+}
+
+.sub-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
 
 /* Intern List */
 .intern-list {

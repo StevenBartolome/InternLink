@@ -14,9 +14,9 @@ const DashboardPage = () => {
   ];
 
   return (
-    <div className="dashboard-page">
+    <div className="dashboard-container">
       {/* Welcome Card */}
-      <div className="welcome-card dashboard-card">
+      <div className="welcome-banner">
         <div className="welcome-text">
           <h2>Welcome back, {coordinatorProfile.name}!</h2>
           <p>{coordinatorProfile.school} • {coordinatorProfile.department}</p>

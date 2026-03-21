@@ -28,7 +28,6 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     { path: '/coordinator/matching', icon: Cpu, label: 'Automated Matching' },
     { path: '/coordinator/evaluation', icon: FileSpreadsheet, label: 'Student Evaluation' },
     { path: '/coordinator/reports', icon: BarChart2, label: 'Reports' },
-    { path: '/coordinator/notifications', icon: Bell, label: 'Notifications' },
   ];
 
   return (

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, GraduationCap, Briefcase, User } from 'lucide-react';
 import { userNotifications, studentProfile } from '../../data/mockData';
 import { notifications as employerNotifications, companyProfile } from '../../data/employerMockData';
+import { adminProfile } from '../../data/adminMockData';
 import Modal from '../Modal/Modal';
 import '../../assets/css/students/Topbar.css';
 
@@ -12,8 +13,21 @@ const Topbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const isEmployer = location.pathname.startsWith('/employer');
+  const isAdmin = location.pathname.startsWith('/admin');
 
   const getTitle = (path) => {
+    if (isAdmin) {
+      if (path.startsWith('/admin/users')) return 'User Management';
+      if (path.startsWith('/admin/verification')) return 'Account Verification';
+      if (path.startsWith('/admin/oversight')) return 'Internship Oversight';
+      if (path.startsWith('/admin/matching')) return 'Matching Engine';
+      if (path.startsWith('/admin/reports')) return 'System Reports';
+      if (path.startsWith('/admin/audit')) return 'Audit Logs';
+      if (path.startsWith('/admin/settings')) return 'System Settings';
+      if (path.startsWith('/admin/profile')) return 'Admin Profile';
+      return 'Admin Dashboard';
+    }
+
     if (isEmployer) {
       if (path.startsWith('/employer/listings')) return 'Manage Listings';
       if (path.startsWith('/employer/post')) return 'Post Internship';
@@ -39,7 +53,7 @@ const Topbar = () => {
     }
   };
 
-  const notifications = isEmployer ? employerNotifications : userNotifications;
+  const notifications = isAdmin ? [] : isEmployer ? employerNotifications : userNotifications;
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   const handleLogout = () => {
@@ -47,7 +61,11 @@ const Topbar = () => {
     navigate('/login');
   };
 
-  const profileData = isEmployer ? {
+  const profileData = isAdmin ? {
+    name: adminProfile.name,
+    avatar: adminProfile.avatar,
+    role: "Admin"
+  } : isEmployer ? {
     name: companyProfile.name,
     avatar: companyProfile.logo,
     role: "Employer"
@@ -67,7 +85,7 @@ const Topbar = () => {
         <div className="topbar-right">
           {/* Topbar Brand link with Hat */}
           <div className="topbar-brand-mini">
-            {isEmployer ? <Briefcase size={20} className="hat-icon" /> : <GraduationCap size={20} className="hat-icon" />}
+            {isAdmin ? <Briefcase size={20} className="hat-icon text-red-500" /> : isEmployer ? <Briefcase size={20} className="hat-icon" /> : <GraduationCap size={20} className="hat-icon" />}
             <span>InternLink</span>
           </div>
 
@@ -80,7 +98,7 @@ const Topbar = () => {
 
           <div className="topbar-divider"></div>
 
-          <div className="topbar-profile" onClick={() => navigate(isEmployer ? '/employer/profile' : '/profile')}>
+          <div className="topbar-profile" onClick={() => navigate(isAdmin ? '/admin/profile' : isEmployer ? '/employer/profile' : '/profile')}>
             {profileData.avatar ? (
               <img src={profileData.avatar} alt="Avatar" className="topbar-avatar" />
             ) : (

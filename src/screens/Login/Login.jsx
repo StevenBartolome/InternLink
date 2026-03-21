@@ -29,8 +29,12 @@ const Login = () => {
       setError('');
       setRedirectPath('/coordinator/dashboard');
       setIsModalOpen(true);
+    } else if (email === 'admin@gmail.com' && password === '123') {
+      setError('');
+      setRedirectPath('/admin/dashboard');
+      setIsModalOpen(true);
     } else {
-      setError('Invalid email or password. Use student, employer, supervisor, or coordinator @gmail.com (pw: 123)');
+      setError('Invalid email or password. Use student, employer, supervisor, coordinator, or admin @gmail.com (pw: 123)');
     }
 
   };

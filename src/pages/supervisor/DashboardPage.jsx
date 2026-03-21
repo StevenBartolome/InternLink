@@ -83,30 +83,22 @@ const DashboardPage = () => {
           <div className="section-header">
             <h3>Quick Actions</h3>
           </div>
-          <div className="quick-actions-list">
-            <button className="action-btn primary" onClick={() => navigate('/supervisor/attendance')}>
-              <CalendarClock size={20} />
-              <div className="action-text">
-                <span>Log Attendance</span>
-                <p>Time In/Out or manual correction</p>
-              </div>
+          <div className="shortcuts-grid-supervisor">
+            <button className="shortcut-item" onClick={() => navigate('/supervisor/attendance')}>
+              <CalendarClock size={24} />
+              <span>Log Attendance</span>
             </button>
-            <button className="action-btn secondary" onClick={() => navigate('/supervisor/tasks')}>
-              <Briefcase size={20} />
-              <div className="action-text">
-                <span>Manage Tasks</span>
-                <p>Assign and update intern tasks</p>
-              </div>
+            <button className="shortcut-item" onClick={() => navigate('/supervisor/tasks')}>
+              <Briefcase size={24} />
+              <span>Manage Tasks</span>
             </button>
-            <button className="action-btn secondary" onClick={() => navigate('/supervisor/evaluation')}>
-              <FileSignature size={20} />
-              <div className="action-text">
-                <span>Evaluate Intern</span>
-                <p>Submit performance review</p>
-              </div>
+            <button className="shortcut-item" onClick={() => navigate('/supervisor/evaluation')}>
+              <FileSignature size={24} />
+              <span>Evaluate Intern</span>
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );

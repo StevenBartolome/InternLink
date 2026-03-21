@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   Menu, X, LayoutDashboard, User, Briefcase, FileCheck, 
-  CheckSquare, Award, Bell, LogOut, GraduationCap, PlusSquare, Users, UserPlus, ChevronDown, ChevronUp
+  CheckSquare, Award, Bell, LogOut, GraduationCap, PlusSquare, Users, UserPlus, ChevronDown, ChevronUp,
+  BarChart2
 } from 'lucide-react';
 import { studentProfile } from '../../data/mockData';
 import { companyProfile } from '../../data/employerMockData';
+import { adminProfile } from '../../data/adminMockData';
 import '../../assets/css/students/Sidebar.css';
 
 const Sidebar = () => {
@@ -19,9 +21,18 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  const isEmployer = location.pathname.startsWith('/employer');
+  const isAdmin = location.pathname.startsWith('/admin');
+  const isEmployer = !isAdmin && location.pathname.startsWith('/employer');
 
-  const navItems = isEmployer ? [
+  const navItems = isAdmin ? [
+    { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
+    { name: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
+    { name: 'Account Verification', path: '/admin/verification', icon: <FileCheck size={20} /> },
+    { name: 'Internship Oversight', path: '/admin/oversight', icon: <Briefcase size={20} /> },
+    // Matching is Settings2?
+    { name: 'System Reports', path: '/admin/reports', icon: <BarChart2 size={18} /> }, // Wait, layout icon setup
+    { name: 'Audit Logs', path: '/admin/audit', icon: <FileCheck size={20} /> }
+  ] : isEmployer ? [
     { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Manage Listings', path: '/employer/listings', icon: <Briefcase size={20} /> },
     { name: 'Post Internship', path: '/employer/post', icon: <PlusSquare size={20} /> },
@@ -45,7 +56,7 @@ const Sidebar = () => {
     { name: 'Grades & Evaluations', path: '/grades', icon: <Award size={20} /> },
   ];
 
-  const brandName = isEmployer ? companyProfile.name : 'InternLink';
+  const brandName = isAdmin ? 'InternLink Admin' : isEmployer ? companyProfile.name : 'InternLink';
 
   return (
     <>

@@ -104,7 +104,9 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 24px;
+  align-items: start; /* Prevent items stretching unevenly */
 }
+
 
 @media (max-width: 1024px) {
   .dashboard-layout {

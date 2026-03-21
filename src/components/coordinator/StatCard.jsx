@@ -5,7 +5,7 @@ const StatCard = ({ title, value, icon: Icon, trend, color = 'primary' }) => {
   return (
     <div className={`stat-card ${color}`}>
       <div className="stat-icon-wrapper">
-        {Icon && <Icon size={24} className="stat-icon" />}
+        {Icon && <Icon size={24} className="stat-card-icon" />}
       </div>
       <div className="stat-content">
         <span className="stat-title">{title}</span>

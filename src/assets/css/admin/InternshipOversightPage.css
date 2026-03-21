@@ -1,0 +1,244 @@
+/* src/assets/css/admin/InternshipOversightPage.css */
+
+.oversight-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: calc(100vh - 120px);
+}
+
+/* Summary Bar */
+.oversight-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  background-color: var(--bg-primary, #ffffff);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.summary-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted, #475569);
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main, #0F172A);
+}
+
+.summary-item.total .summary-value { color: var(--primary, #1E40AF); }
+.summary-item.active .summary-value { color: var(--success, #16a34a); }
+.summary-item.pending .summary-value { color: var(--warning, #d97706); }
+.summary-item.flagged .summary-value { color: var(--danger, #dc2626); }
+
+/* Filter Bar */
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.select-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.select-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: var(--text-muted, #475569);
+  pointer-events: none;
+}
+
+.select-wrapper select {
+  padding: 0.6rem 0.75rem 0.6rem 2.25rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background-color: var(--bg-primary, #ffffff);
+  font-size: 0.875rem;
+  color: var(--text-main, #0F172A);
+  outline: none;
+  cursor: pointer;
+}
+
+/* Content Wrapper */
+.oversight-content-wrapper {
+  display: flex;
+  gap: 1.5rem;
+  flex: 1;
+  overflow: hidden;
+}
+
+.listings-container {
+  flex: 2;
+  overflow-y: auto;
+}
+
+/* Table Responsive override */
+.listings-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+  background-color: var(--bg-primary, #ffffff);
+}
+
+.listings-table th {
+  padding: 1rem;
+  background-color: var(--bg-secondary, #F8FAFC);
+  color: var(--text-muted, #475569);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.listings-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.listings-table tr:hover {
+  background-color: var(--bg-secondary, #F8FAFC);
+}
+
+.company-name {
+  font-weight: 600;
+}
+
+.view-details-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.75rem;
+  background-color: var(--bg-secondary, #F8FAFC);
+  color: var(--text-main, #0F172A);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-details-btn:hover {
+  background-color: var(--primary-light, #EFF6FF);
+  color: var(--primary, #1E40AF);
+  border-color: var(--primary, #1E40AF);
+}
+
+/* Details Panel */
+.details-panel {
+  flex: 1;
+  background-color: var(--bg-primary, #ffffff);
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.panel-header {
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  padding-bottom: 1rem;
+}
+
+.panel-header h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0.5rem 0 0.15rem 0;
+}
+
+.company-sub {
+  font-size: 0.875rem;
+  color: var(--text-muted, #475569);
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.panel-section label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #475569);
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.panel-section p {
+  font-size: 0.95rem;
+  color: var(--text-main, #0F172A);
+  font-weight: 500;
+}
+
+.remarks-box {
+  background-color: #FDE8E8;
+  padding: 0.75rem;
+  border-radius: 8px;
+}
+
+.panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.panel-btn {
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.panel-btn.approve { background-color: #DEF7EC; color: #03543F; }
+.panel-btn.approve:hover { background-color: #31C48D; color: white; }
+
+.panel-btn.flag { background-color: #FEF3C7; color: #92400E; }
+.panel-btn.flag:hover { background-color: #F59E0B; color: white; }
+
+.panel-btn.close-listing { background-color: #FDE8E8; color: #9B1C1C; }
+.panel-btn.close-listing:hover { background-color: #E02424; color: white; }
+
+.panel-btn.restore { background-color: var(--primary-light, #EFF6FF); color: var(--primary, #1E40AF); }
+.panel-btn.restore:hover { background-color: var(--primary, #1E40AF); color: white; }
+
+@media (max-width: 1024px) {
+  .oversight-content-wrapper {
+    flex-direction: column;
+  }
+}

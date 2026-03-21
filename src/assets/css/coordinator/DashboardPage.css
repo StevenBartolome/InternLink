@@ -1,32 +1,73 @@
-.dashboard-page {
+.dashboard-container {
   display: flex;
   flex-direction: column;
   gap: 2rem;
 }
 
-.welcome-card {
+.welcome-banner {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--bg);
-  padding: 2rem;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: white;
+  padding: 2.25rem 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .welcome-text h2 {
-  font-size: 1.5rem;
-  color: var(--text-primary);
+  font-size: 1.625rem;
+  font-weight: 700;
+  color: white;
   margin-bottom: 0.5rem;
 }
 
 .welcome-text p {
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.9);
   font-size: 0.875rem;
 }
 
-.quick-actions {
+.welcome-banner .quick-actions {
   display: flex;
   gap: 1rem;
+  background-color: transparent;
+  padding: 0;
+  border: none;
+  box-shadow: none;
 }
+
+.dashboard-btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 30px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-btn-primary {
+  background-color: #ffffff;
+  color: #1e40af;
+  border: none;
+}
+
+.dashboard-btn-primary:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.dashboard-btn-secondary {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.dashboard-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
 
 .stats-grid {
   display: grid;
@@ -38,7 +79,9 @@
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 1.5rem;
+  align-items: start; /* Prevent items stretching unevenly */
 }
+
 
 .activity-feed, .shortcuts-card {
   display: flex;

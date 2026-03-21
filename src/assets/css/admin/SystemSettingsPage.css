@@ -1,0 +1,244 @@
+/* src/assets/css/admin/SystemSettingsPage.css */
+
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.settings-block {
+  background-color: var(--bg-primary, #ffffff);
+  border-radius: 12px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.block-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.block-icon {
+  color: var(--primary, #1E40AF);
+}
+
+.block-icon.danger-icon {
+  color: var(--danger, #dc2626);
+}
+
+.block-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-main, #0F172A);
+}
+
+.block-content {
+  padding: 1.5rem;
+}
+
+/* Academic Cycle */
+.form-group-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted, #475569);
+}
+
+.form-group input, .form-group select {
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background-color: var(--bg-secondary, #F8FAFC);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+/* Hours Requirements Grid */
+.hours-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.hour-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hour-item label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main, #0F172A);
+}
+
+.hour-input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.hour-input-wrapper input {
+  width: 100%;
+  padding: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  background-color: var(--bg-secondary, #F8FAFC);
+}
+
+.hour-input-wrapper .unit {
+  position: absolute;
+  right: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-muted, #475569);
+  pointer-events: none;
+}
+
+/* Permissions Table */
+.permissions-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.permissions-table th {
+  padding: 0.75rem;
+  background-color: var(--bg-secondary, #F8FAFC);
+  color: var(--text-muted, #475569);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.permissions-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  vertical-align: middle;
+}
+
+.role-name-cell {
+  background-color: var(--bg-secondary, #F8FAFC);
+  font-weight: 600;
+  text-align: left;
+}
+
+/* Maintenance Toggle */
+.maintenance-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #FDE8E8;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #F8B4B4;
+}
+
+.toggle-title {
+  font-weight: 700;
+  color: #9B1C1C;
+  font-size: 0.9rem;
+}
+
+.toggle-sub {
+  font-size: 0.75rem;
+  color: #c81e1e;
+}
+
+/* Switch Slider */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--danger, #dc2626);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Footer Group */
+.settings-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.save-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background-color: var(--primary, #1E40AF);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.save-all-btn:hover {
+  background-color: var(--primary-hover, #1D4ED8);
+}
+
+.save-all-btn.success {
+  background-color: var(--success, #16a34a);
+}
