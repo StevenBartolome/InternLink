@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { progressState as initialProgressState } from '../../data/mockData';
+import { progressState as initialProgressState } from '../../services/mocks/mockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipProgressPage = () => {

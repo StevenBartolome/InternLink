@@ -1,7 +1,7 @@
 // src/pages/employer/AssignSupervisorPage.jsx
 import React, { useState, useEffect } from 'react';
 import { UserPlus, ShieldAlert, CheckCircle2, User, ChevronRight } from 'lucide-react';
-import { activeInterns, supervisors } from '../../data/employerMockData';
+import { activeInterns, supervisors } from '../../services/mocks/employerMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

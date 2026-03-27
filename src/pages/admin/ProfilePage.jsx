@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { adminProfile } from '../../data/adminMockData';
+import { adminProfile } from '../../services/mocks/adminMockData';
 import { Shield, Edit2, ShieldCheck, Save, X } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import Toast from '../../components/coordinator/Toast';
+import Toast from '../../components/common/Toast';
 
 const AdminProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { mockStudents } from '../../data/coordinatorMockData';
+import { mockStudents } from '../../services/mocks/coordinatorMockData';
 
 const StudentEvaluationPage = () => {
   const { showToast } = useOutletContext() || {};

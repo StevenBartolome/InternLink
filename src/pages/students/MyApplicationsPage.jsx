@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { applicationRecords } from '../../data/mockData';
+import { applicationRecords } from '../../services/mocks/mockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const MyApplicationsPage = () => {

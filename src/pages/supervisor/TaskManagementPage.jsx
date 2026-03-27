@@ -1,8 +1,8 @@
 // src/pages/supervisor/TaskManagementPage.jsx
 import React, { useState } from 'react';
 import { Plus, Trash2, CheckCircle2, Search, Filter, Calendar, ClipboardList } from 'lucide-react';
-import { internsData } from '../../data/supervisorMockData';
-import StatusBadge from '../../components/supervisor/StatusBadge';
+import { internsData } from '../../services/mocks/supervisorMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

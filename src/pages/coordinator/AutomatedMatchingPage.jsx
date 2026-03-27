@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { mockStudents, mockEmployerListings } from '../../data/coordinatorMockData';
+import { mockStudents, mockEmployerListings } from '../../services/mocks/coordinatorMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const AutomatedMatchingPage = () => {

@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { auditLogs } from '../../data/adminMockData';
-import Toast from '../../components/coordinator/Toast';
+import { auditLogs } from '../../services/mocks/adminMockData';
+import Toast from '../../components/common/Toast';
 
 const AuditLogsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');

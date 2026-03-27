@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
-import LandingPage from './screens/LandingPage/LandingPage';
-import Login from './screens/Login/Login';
-import Register from './screens/Register/Register';
-import MainLayout from './components/MainLayout/MainLayout';
+import LandingPage from './pages/auth/LandingPage/LandingPage';
+import Login from './pages/auth/Login/Login';
+import Register from './pages/auth/Register/Register';
+import MainLayout from './components/layout/student/MainLayout/MainLayout';
 
 // Import Student Pages
 import ProfilePage from './pages/students/ProfilePage';
@@ -32,7 +32,7 @@ import EmployerNotificationsPage from './pages/employer/NotificationsPage';
 import ManageSupervisorsPage from './pages/employer/ManageSupervisorsPage';
 
 // Import Supervisor Pages
-import SupervisorLayout from './components/supervisor/SupervisorLayout';
+import SupervisorLayout from './components/layout/supervisor/SupervisorLayout';
 import SupervisorDashboardPage from './pages/supervisor/DashboardPage';
 import MyInternsPage from './pages/supervisor/MyInternsPage';
 import InternDetailPage from './pages/supervisor/InternDetailPage';
@@ -43,7 +43,7 @@ import SupervisorNotificationsPage from './pages/supervisor/NotificationsPage';
 import SupervisorProfilePage from './pages/supervisor/ProfilePage';
 
 // Import Coordinator Pages
-import CoordinatorLayout from './components/coordinator/CoordinatorLayout';
+import CoordinatorLayout from './components/layout/coordinator/CoordinatorLayout';
 import CoordinatorDashboardPage from './pages/coordinator/DashboardPage';
 import StudentDirectoryPage from './pages/coordinator/StudentDirectoryPage';
 import ApplicationTrackingPage from './pages/coordinator/ApplicationTrackingPage';
@@ -57,7 +57,7 @@ import CoordinatorNotificationsPage from './pages/coordinator/NotificationsPage'
 import CoordinatorProfilePage from './pages/coordinator/ProfilePage';
 
 // Import Admin Pages
-import AdminLayout from './components/admin/AdminLayout';
+import AdminLayout from './components/layout/admin/AdminLayout';
 import AdminDashboardPage from './pages/admin/DashboardPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
 import AccountVerificationPage from './pages/admin/AccountVerificationPage';

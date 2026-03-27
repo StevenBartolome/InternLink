@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentProfile as initialProfile } from '../../data/mockData';
+import { studentProfile as initialProfile } from '../../services/mocks/mockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ProfilePage = () => {

@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { reportsData } from '../../data/adminMockData';
-import Toast from '../../components/coordinator/Toast';
+import { reportsData } from '../../services/mocks/adminMockData';
+import Toast from '../../components/common/Toast';
 import { useState } from 'react';
 
 const SystemReportsPage = () => {

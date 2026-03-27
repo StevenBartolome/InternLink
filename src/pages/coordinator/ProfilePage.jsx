@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { coordinatorProfile } from '../../data/coordinatorMockData';
+import { coordinatorProfile } from '../../services/mocks/coordinatorMockData';
 
 const ProfilePage = () => {
   const { showToast } = useOutletContext() || {};

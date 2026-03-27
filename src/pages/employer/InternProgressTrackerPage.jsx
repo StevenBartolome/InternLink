@@ -1,8 +1,8 @@
 // src/pages/employer/InternProgressTrackerPage.jsx
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Calendar, Clock, CheckCircle2, Circle, User, ListTodo, History } from 'lucide-react';
-import { activeInterns } from '../../data/employerMockData';
-import ProgressBar from '../../components/ProgressBar/ProgressBar';
+import { activeInterns } from '../../services/mocks/employerMockData';
+import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

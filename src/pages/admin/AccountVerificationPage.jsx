@@ -5,9 +5,9 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { verificationsList } from '../../data/adminMockData';
+import { verificationsList } from '../../services/mocks/adminMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import Toast from '../../components/coordinator/Toast';
+import Toast from '../../components/common/Toast';
 
 const AccountVerificationPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');

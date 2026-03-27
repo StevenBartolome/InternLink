@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentProfile } from '../../data/mockData';
+import { studentProfile } from '../../services/mocks/mockData';
 
 const ResumeUploadPage = () => {
   const [files, setFiles] = useState(studentProfile.resumeFiles);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Settings, Play, Check, AlertCircle, RefreshCw, Sliders } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { matchingSettings, matchResults } from '../../data/adminMockData';
+import { matchingSettings, matchResults } from '../../services/mocks/adminMockData';
 
 const MatchingEngineSettingsPage = () => {
   const [weights, setWeights] = useState(matchingSettings.weights);

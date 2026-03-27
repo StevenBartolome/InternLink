@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { userNotifications } from '../../data/mockData';
+import { userNotifications } from '../../services/mocks/mockData';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState(userNotifications);

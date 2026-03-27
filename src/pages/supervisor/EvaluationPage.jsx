@@ -1,8 +1,8 @@
 // src/pages/supervisor/EvaluationPage.jsx
 import React, { useState, useEffect } from 'react';
 import { Star, FileSignature, CheckCircle2, User, ChevronRight } from 'lucide-react';
-import { internsData } from '../../data/supervisorMockData';
-import StatusBadge from '../../components/supervisor/StatusBadge';
+import { internsData } from '../../services/mocks/supervisorMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

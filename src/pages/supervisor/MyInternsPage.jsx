@@ -2,9 +2,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, GraduationCap, ArrowRight } from 'lucide-react';
-import { internsData } from '../../data/supervisorMockData';
-import StatusBadge from '../../components/supervisor/StatusBadge';
-import ProgressBar from '../../components/supervisor/ProgressBar';
+import { internsData } from '../../services/mocks/supervisorMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
+import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

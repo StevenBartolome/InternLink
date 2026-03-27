@@ -1,7 +1,7 @@
 // src/pages/supervisor/ProfilePage.jsx
 import React, { useState } from 'react';
 import { User, Mail, Building, Phone, Calendar, Save, CheckCircle2 } from 'lucide-react';
-import { supervisorData } from '../../data/supervisorMockData';
+import { supervisorData } from '../../services/mocks/supervisorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

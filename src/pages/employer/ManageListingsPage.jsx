@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Power, RefreshCw } from 'lucide-react';
-import { internshipListings } from '../../data/employerMockData';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
+import { internshipListings } from '../../services/mocks/employerMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

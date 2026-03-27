@@ -1,7 +1,7 @@
 // src/pages/employer/ManageSupervisorsPage.jsx
 import React, { useState } from 'react';
 import { Users, UserPlus, Mail, Building, ShieldCheck, Plus, X, User } from 'lucide-react';
-import { supervisors as initialSupervisors } from '../../data/employerMockData';
+import { supervisors as initialSupervisors } from '../../services/mocks/employerMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

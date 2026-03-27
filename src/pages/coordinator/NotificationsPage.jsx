@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { mockNotifications } from '../../data/coordinatorMockData';
+import { mockNotifications } from '../../services/mocks/coordinatorMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const NotificationsPage = () => {

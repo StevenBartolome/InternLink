@@ -6,8 +6,8 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { internshipListings } from '../../data/adminMockData';
-import Toast from '../../components/coordinator/Toast';
+import { internshipListings } from '../../services/mocks/adminMockData';
+import Toast from '../../components/common/Toast';
 
 const InternshipOversightPage = () => {
   const [filterStatus, setFilterStatus] = useState('All');

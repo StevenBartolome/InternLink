@@ -1,12 +1,12 @@
 // src/pages/admin/DashboardPage.jsx
 import React, { useState } from 'react';
 import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText, Bell } from 'lucide-react';
-import { adminProfile, dashboardStats, auditLogs } from '../../data/adminMockData';
-import StatCard from '../../components/StatCard';
+import { adminProfile, dashboardStats, auditLogs } from '../../services/mocks/adminMockData';
+import StatCard from '../../components/common/StatCard';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import Toast from '../../components/coordinator/Toast';
+import Toast from '../../components/common/Toast';
 import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {

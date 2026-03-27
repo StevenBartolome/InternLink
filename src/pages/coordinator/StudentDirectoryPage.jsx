@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Search, Filter, X } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import ProgressBar from '../../components/ProgressBar/ProgressBar';
-import { mockStudents } from '../../data/coordinatorMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
+import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
+import { mockStudents } from '../../services/mocks/coordinatorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

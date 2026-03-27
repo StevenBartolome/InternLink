@@ -1,7 +1,7 @@
 // src/pages/employer/NotificationsPage.jsx
 import React, { useState } from 'react';
 import { Bell, Check, UserPlus, Award, AlertCircle, Circle } from 'lucide-react';
-import { notifications as initialNotifications } from '../../data/employerMockData';
+import { notifications as initialNotifications } from '../../services/mocks/employerMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

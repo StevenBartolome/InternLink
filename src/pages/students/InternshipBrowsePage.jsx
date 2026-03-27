@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { internshipListings } from '../../data/mockData';
+import { internshipListings } from '../../services/mocks/mockData';
 import { Search, MapPin, Clock, Briefcase, Filter } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';

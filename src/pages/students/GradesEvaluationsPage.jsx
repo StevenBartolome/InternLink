@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { gradesEvaluations, progressState } from '../../data/mockData';
+import { gradesEvaluations, progressState } from '../../services/mocks/mockData';
 
 const GradesEvaluationsPage = () => {
   const styles = {

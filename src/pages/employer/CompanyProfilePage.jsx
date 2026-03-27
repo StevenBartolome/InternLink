@@ -1,7 +1,7 @@
 // src/pages/employer/CompanyProfilePage.jsx
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Globe, Briefcase, Save, CheckCircle2 } from 'lucide-react';
-import { companyProfile } from '../../data/employerMockData';
+import { companyProfile } from '../../services/mocks/employerMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

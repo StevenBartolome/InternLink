@@ -5,8 +5,8 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { systemSettings } from '../../data/adminMockData';
-import Toast from '../../components/coordinator/Toast';
+import { systemSettings } from '../../services/mocks/adminMockData';
+import Toast from '../../components/common/Toast';
 
 const SystemSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');

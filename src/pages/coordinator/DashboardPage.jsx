@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Users, FileCheck, AlertCircle, FileText, ArrowRight, Activity, BarChart2 } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import StatCard from '../../components/coordinator/StatCard';
-import { coordinatorProfile, mockNotifications, mockStudents, mockEmployerListings } from '../../data/coordinatorMockData';
+import StatCard from '../../components/layout/coordinator/StatCard';
+import { coordinatorProfile, mockNotifications, mockStudents, mockEmployerListings } from '../../services/mocks/coordinatorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

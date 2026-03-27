@@ -1,9 +1,9 @@
 // src/pages/coordinator/ProgressMonitoringPage.jsx
 import React, { useState } from 'react';
 import { Search, Filter, Calendar, CheckSquare, Clock, X } from 'lucide-react';
-import ProgressBar from '../../components/ProgressBar/ProgressBar';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import { mockProgressData } from '../../data/coordinatorMockData';
+import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
+import { mockProgressData } from '../../services/mocks/coordinatorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

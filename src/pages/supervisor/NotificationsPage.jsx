@@ -1,7 +1,7 @@
 // src/pages/supervisor/NotificationsPage.jsx
 import React, { useState } from 'react';
 import { Bell, CheckCircle2, AlertCircle, LogIn, FileText, Users, Check } from 'lucide-react';
-import { notificationsData } from '../../data/supervisorMockData';
+import { notificationsData } from '../../services/mocks/supervisorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

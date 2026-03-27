@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Users, CheckSquare, Clock, Plus, ArrowRight } from 'lucide-react';
-import { internshipListings, applicants, activeInterns } from '../../data/employerMockData';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import ProgressBar from '../../components/ProgressBar/ProgressBar';
+import { internshipListings, applicants, activeInterns } from '../../services/mocks/employerMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
+import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

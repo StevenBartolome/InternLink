@@ -1,7 +1,7 @@
 // src/pages/employer/ApplicationApprovalPage.jsx
 import React, { useState } from 'react';
 import { Check, X, User, MessageSquare, AlertCircle } from 'lucide-react';
-import { applicants } from '../../data/employerMockData';
+import { applicants } from '../../services/mocks/employerMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';

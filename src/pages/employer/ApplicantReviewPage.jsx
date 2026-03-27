@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { X, Mail, BookOpen, Award, FileText, ChevronRight, User } from 'lucide-react';
-import { internshipListings, applicants } from '../../data/employerMockData';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
+import { internshipListings, applicants } from '../../services/mocks/employerMockData';
+import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
