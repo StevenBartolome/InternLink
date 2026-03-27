@@ -25,7 +25,7 @@ const DashboardPage = () => {
 
   const styles = {
     container: {
-      padding: '24px',
+      padding: '0 24px 24px 24px', // Removed top padding
       display: 'flex',
       flexDirection: 'column',
       gap: '24px',

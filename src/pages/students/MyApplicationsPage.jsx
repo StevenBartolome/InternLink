@@ -13,10 +13,22 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 const MyApplicationsPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [filter, setFilter] = useState('All');
+  const [selectedApp, setSelectedApp] = useState(null);
+  const [apps, setApps] = useState(applicationRecords);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredApps = filter === 'All' 
-    ? applicationRecords 
-    : applicationRecords.filter(app => app.status === filter);
+    ? apps 
+    : apps.filter(app => app.status === filter);
+
+  const handleCancelApplication = (id) => {
+    setIsDeleting(true);
+    setTimeout(() => {
+      setApps(prev => prev.filter(app => app.id !== id));
+      setSelectedApp(null);
+      setIsDeleting(false);
+    }, 1000);
+  };
 
   const styles = {
     container: {
@@ -76,6 +88,31 @@ const MyApplicationsPage = () => {
         ...commonStyles.dashboardBadge,
         ...(colors[status] || commonStyles.badgeInfo),
       };
+    },
+    modalOverlay: {
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      backdropFilter: 'blur(4px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '20px',
+    },
+    modalContent: {
+      backgroundColor: '#fff',
+      padding: '32px',
+      borderRadius: '24px',
+      width: '100%',
+      maxWidth: '600px',
+      position: 'relative',
+      boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+      maxHeight: '90vh',
+      overflowY: 'auto',
     }
   };
 
@@ -108,7 +145,7 @@ const MyApplicationsPage = () => {
         {filteredApps.map(app => (
           <div key={app.id} style={styles.appCard}>
             <div style={styles.companyInfo}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifySelf: 'center', color: theme.colors.primary, fontWeight: 800 }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.primary, fontWeight: 800 }}>
                 {app.company.charAt(0)}
               </div>
               <div>
@@ -125,13 +162,79 @@ const MyApplicationsPage = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '24px', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
               <span style={styles.statusBadge(app.status)}>{app.status}</span>
-              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '10px' }}>
-                <ExternalLink size={18} />
+              <button 
+                onClick={() => setSelectedApp(app)}
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '10px' }}
+              >
+                <ArrowRight size={18} />
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Details Modal */}
+      {selectedApp && (
+        <div style={styles.modalOverlay} onClick={() => !isDeleting && setSelectedApp(null)}>
+          <div style={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <button 
+              onClick={() => setSelectedApp(null)}
+              style={{ position: 'absolute', top: '24px', right: '24px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.textMuted }}
+            >
+              <XCircle size={24} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '14px', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.primary, fontWeight: 800, fontSize: '1.5rem' }}>
+                {selectedApp.company.charAt(0)}
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>{selectedApp.position}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.textMuted, marginTop: '4px' }}>
+                  <Building2 size={16} />
+                  <span style={{ fontWeight: 600 }}>{selectedApp.company}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '32px' }}>
+              <div style={{ padding: '16px', backgroundColor: theme.colors.bgSecondary, borderRadius: '16px' }}>
+                <div style={{ ...styles.label, marginBottom: '4px' }}>Current Status</div>
+                <span style={styles.statusBadge(selectedApp.status)}>{selectedApp.status}</span>
+              </div>
+              <div style={{ padding: '16px', backgroundColor: theme.colors.bgSecondary, borderRadius: '16px' }}>
+                <div style={{ ...styles.label, marginBottom: '4px' }}>Applied Date</div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{selectedApp.dateApplied}</div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '32px' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '1.1rem', fontWeight: 700 }}>Cover Letter Snippet</h4>
+              <p style={{ margin: 0, color: theme.colors.textMuted, lineHeight: 1.6, fontSize: '0.95rem', fontStyle: 'italic' }}>
+                "{selectedApp.coverLetter || 'I am very interested in this position and look forward to contributing to your team...'}"
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, padding: '14px' }}
+                onClick={() => setSelectedApp(null)}
+              >
+                Done
+              </button>
+              {selectedApp.status === 'Pending' && (
+                <button 
+                  disabled={isDeleting}
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, color: theme.colors.danger, flex: 1, padding: '14px' }}
+                  onClick={() => handleCancelApplication(selectedApp.id)}
+                >
+                  {isDeleting ? 'Cancelling...' : 'Withdraw Application'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

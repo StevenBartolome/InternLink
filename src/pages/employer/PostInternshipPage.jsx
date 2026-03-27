@@ -1,7 +1,7 @@
 // src/pages/employer/PostInternshipPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Plus, X, Save, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, X, Save, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
@@ -81,7 +81,7 @@ const PostInternshipPage = () => {
 
   const styles = {
     container: {
-      padding: isMobile ? '1.5rem' : '2rem',
+      padding: isMobile ? '0 1.5rem 1.5rem 1.5rem' : '0 2rem 2rem 2rem', // Removed top padding
       maxWidth: '1000px',
       margin: '0 auto',
       display: 'flex',

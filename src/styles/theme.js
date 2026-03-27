@@ -6,6 +6,7 @@ export const theme = {
     bgAccent: '#EFF6FF',
     primary: '#1E40AF',
     primaryHover: '#1D4ED8',
+    primaryDark: '#1E3A8A', // Added to fix hover turning white
     secondary: '#3B82F6',
     accent: '#60A5FA',
     textMain: '#0F172A',

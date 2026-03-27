@@ -35,7 +35,7 @@ const ManageListingsPage = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '24px',
-      padding: '1.5rem',
+      padding: '0 1.5rem 1.5rem 1.5rem', // Removed top padding
     },
     header: {
       display: 'flex',

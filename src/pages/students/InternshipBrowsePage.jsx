@@ -43,7 +43,7 @@ export default function InternshipBrowsePage() {
       display: 'flex',
       flexDirection: 'column',
       gap: '20px',
-      padding: '1rem',
+      padding: '0 1rem 1rem 1rem', // Removed top padding
     },
     pageHeader: {
       marginBottom: '1rem',

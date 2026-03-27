@@ -20,8 +20,7 @@ const MainLayout = () => {
     },
     content: {
       flex: 1,
-      padding: '24px',
-      marginTop: '70px', // Matches Topbar height
+      padding: '16px 24px', // Reduced top padding
     }
   };
 

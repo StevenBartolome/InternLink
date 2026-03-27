@@ -31,7 +31,7 @@ const CompanyProfilePage = () => {
 
   const styles = {
     container: {
-      padding: isMobile ? '1.5rem' : '2rem',
+      padding: isMobile ? '0 1.5rem 1.5rem 1.5rem' : '0 2rem 2rem 2rem', // Removed top padding
       maxWidth: '900px',
       margin: '0 auto',
       display: 'flex',

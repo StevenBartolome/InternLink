@@ -20,7 +20,7 @@ const AdminLayout = () => {
     },
     content: {
       flex: 1,
-      padding: '24px',
+      padding: '16px 24px', // Reduced top padding
       marginTop: '70px', // Matches Topbar height
     }
   };
