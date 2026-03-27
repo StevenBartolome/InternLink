@@ -1,67 +1,64 @@
-import React, { useState } from 'react';
-import { Bell, Menu, LogOut, GraduationCap } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Bell, Search, User, Grid } from 'lucide-react';
+import { theme } from '../../styles/theme';
 import { coordinatorProfile } from '../../data/coordinatorMockData';
-import Modal from '../Modal/Modal';
-import '../../assets/css/coordinator/Topbar.css';
 
-const Topbar = ({ title, toggleSidebar }) => {
-  const navigate = useNavigate();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleLogout = () => {
-    setIsModalOpen(false);
-    navigate('/login');
+const Topbar = () => {
+  const styles = {
+    header: {
+      height: '70px',
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+      backdropFilter: 'blur(10px)',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 32px',
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      left: '270px',
+      zIndex: 900,
+    },
+    userSection: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '20px',
+    },
+    profile: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      cursor: 'pointer',
+      padding: '6px 12px',
+      borderRadius: '20px',
+      backgroundColor: '#f1f5f9',
+      transition: 'all 0.2s ease',
+    },
+    avatar: {
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      objectFit: 'cover',
+      border: `2px solid #fff`,
+    }
   };
 
   return (
-    <header className="coordinator-topbar">
-      <div className="topbar-left">
-        <button className="mobile-menu-btn" onClick={toggleSidebar}>
-          <Menu size={24} />
-        </button>
-        <h1 className="topbar-title">{title}</h1>
+    <header style={styles.header}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
+        <Grid size={20} />
+        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{coordinatorProfile.school}</span>
       </div>
-
-      <div className="topbar-right">
-        <div className="topbar-brand-mini">
-          <GraduationCap size={20} className="hat-icon" />
-          <span>InternLink</span>
-        </div>
-
-        <button className="icon-btn">
+      <div style={styles.userSection}>
+        <div style={{ color: theme.colors.textMuted, cursor: 'pointer' }}>
           <Bell size={20} />
-          <span className="badge-dot"></span>
-        </button>
-
-        <div className="topbar-divider"></div>
-
-        <div className="user-profile" onClick={() => navigate('/coordinator/profile')}>
-          <img 
-            src={coordinatorProfile.avatar} 
-            alt={coordinatorProfile.name} 
-            className="user-avatar"
-          />
-          <div className="user-info">
-            <span className="user-name">{coordinatorProfile.name}</span>
-            <span className="user-role">{coordinatorProfile.role}</span>
-          </div>
         </div>
-
-        <button className="topbar-logout-btn" onClick={() => setIsModalOpen(true)} title="Logout">
-          <LogOut size={20} />
-        </button>
+        <div style={styles.profile}>
+          <img src={coordinatorProfile.avatar} alt="Coordinator" style={styles.avatar} />
+          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{coordinatorProfile.name}</span>
+        </div>
       </div>
-
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        isConfirm={true}
-        onConfirm={handleLogout}
-        title="Confirm Logout" 
-        message="Are you sure you want to sign out of InternLink?" 
-        type="warning" 
-      />
     </header>
   );
 };

@@ -1,25 +1,17 @@
-// src/pages/admin/MatchingEngineSettingsPage.jsx
 import React, { useState } from 'react';
-import { Settings, Play, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Settings, Play, Check, AlertCircle, RefreshCw, Sliders } from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { matchingSettings, matchResults } from '../../data/adminMockData';
-import '../../assets/css/admin/MatchingEngineSettingsPage.css';
 
 const MatchingEngineSettingsPage = () => {
   const [weights, setWeights] = useState(matchingSettings.weights);
   const [threshold, setThreshold] = useState(matchingSettings.threshold);
-  const [maxMatches, setMaxMatches] = useState(matchingSettings.maxMatches);
-  const [autoAccept, setAutoAccept] = useState(matchingSettings.autoAccept);
-  const [notifyCoordinator, setNotifyCoordinator] = useState(matchingSettings.notifyCoordinator);
-
   const [isMatching, setIsMatching] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
   const handleWeightChange = (key, value) => {
-    setWeights(prev => {
-      const newWeights = { ...prev, [key]: parseInt(value) };
-      // Normalizing logic optional for mock, but lets just update
-      return newWeights;
-    });
+    setWeights(prev => ({ ...prev, [key]: parseInt(value) }));
   };
 
   const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
@@ -30,178 +22,137 @@ const MatchingEngineSettingsPage = () => {
     setTimeout(() => {
       setIsMatching(false);
       setShowResults(true);
-    }, 2000); // Simulate 2 second delay
+    }, 2000);
+  };
+
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+      gap: '24px',
+    },
+    card: {
+      ...commonStyles.dashboardCard,
+    },
+    weightItem: {
+      marginBottom: '20px',
+    },
+    sliderLabel: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: '0.9rem',
+      fontWeight: 600,
+      marginBottom: '8px',
+    },
+    range: {
+      width: '100%',
+      accentColor: theme.colors.primary,
+    },
+    matchResult: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      padding: '12px 16px',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      backgroundColor: theme.colors.bgPrimary,
+    }
   };
 
   return (
-    <div className="matching-settings-page">
-      <div className="settings-grid">
-        {/* Configuration Form */}
-        <div className="settings-card config-form">
-          <div className="card-header">
-            <Settings size={20} className="header-icon" />
-            <h3>Algorithm Weight Configuration</h3>
+    <div style={styles.container}>
+      <header>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>AI Matching Engine Settings</h1>
+        <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>Configure the heuristic weights for the student-company placement algorithm.</p>
+      </header>
+
+      <div style={styles.grid}>
+        <div style={styles.card}>
+          <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sliders size={20} color={theme.colors.primary} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Weight Configuration</h3>
           </div>
-          <div className="card-content">
-            <div className="weight-sliders">
-              <div className="slider-item">
-                <div className="slider-label">
-                  <span>Skills Match %</span>
-                  <span className="weight-badge">{weights.skills}%</span>
+          <div style={{ padding: '24px' }}>
+            {Object.entries(weights).map(([key, val]) => (
+              <div key={key} style={styles.weightItem}>
+                <div style={styles.sliderLabel}>
+                  <span style={{ textTransform: 'capitalize' }}>{key} Importance</span>
+                  <span style={{ color: theme.colors.primary }}>{val}%</span>
                 </div>
                 <input 
-                  type="range" min="0" max="100" value={weights.skills} 
-                  onChange={e => handleWeightChange('skills', e.target.value)} 
+                  type="range" min="0" max="100" value={val} 
+                  style={styles.range}
+                  onChange={e => handleWeightChange(key, e.target.value)} 
                 />
               </div>
-
-              <div className="slider-item">
-                <div className="slider-label">
-                  <span>Location Preference %</span>
-                  <span className="weight-badge">{weights.location}%</span>
-                </div>
-                <input 
-                  type="range" min="0" max="100" value={weights.location} 
-                  onChange={e => handleWeightChange('location', e.target.value)} 
-                />
-              </div>
-
-              <div className="slider-item">
-                <div className="slider-label">
-                  <span>Course Relevance %</span>
-                  <span className="weight-badge">{weights.course}%</span>
-                </div>
-                <input 
-                  type="range" min="0" max="100" value={weights.course} 
-                  onChange={e => handleWeightChange('course', e.target.value)} 
-                />
-              </div>
-
-              <div className="slider-item">
-                <div className="slider-label">
-                  <span>Availability %</span>
-                  <span className="weight-badge">{weights.availability}%</span>
-                </div>
-                <input 
-                  type="range" min="0" max="100" value={weights.availability} 
-                  onChange={e => handleWeightChange('availability', e.target.value)} 
-                />
-              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', borderRadius: '8px', backgroundColor: totalWeight === 100 ? theme.colors.bgAccent : '#FEF2F2', color: totalWeight === 100 ? theme.colors.primary : theme.colors.danger, fontWeight: 700 }}>
+              <span>Total Distribution:</span>
+              <span>{totalWeight}%</span>
             </div>
-
-            <div className="total-weight-bar">
-              <span>Total Weight: <strong>{totalWeight}%</strong></span>
-              {totalWeight !== 100 && (
-                <span className="weight-warning">
-                  <AlertCircle size={16} /> Must total 100%
-                </span>
-              )}
-            </div>
-
-            <div className="divider"></div>
-
-            <div className="input-group">
-              <div className="input-item">
-                <label>Minimum Match Score Threshold</label>
-                <input type="number" value={threshold} onChange={e => setThreshold(e.target.value)} />
+            {totalWeight !== 100 && (
+              <div style={{ fontSize: '0.75rem', color: theme.colors.danger, marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertCircle size={14} /> Total weight must equal 100% to save.
               </div>
-              <div className="input-item">
-                <label>Max Matches Per Student</label>
-                <input type="number" value={maxMatches} onChange={e => setMaxMatches(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="toggle-group">
-              <label className="toggle-item">
-                <input type="checkbox" checked={autoAccept} onChange={e => setAutoAccept(e.target.checked)} />
-                <span className="toggle-label">Auto-accept matches above threshold</span>
-              </label>
-              <label className="toggle-item">
-                <input type="checkbox" checked={notifyCoordinator} onChange={e => setNotifyCoordinator(e.target.checked)} />
-                <span className="toggle-label">Notify coordinator on new matches</span>
-              </label>
-            </div>
-
-            <button className="submit-settings-btn" disabled={totalWeight !== 100}>
-              Save Settings
+            )}
+            <button 
+              style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '100%', marginTop: '24px' }}
+              disabled={totalWeight !== 100}
+            >
+              Save Configuration
             </button>
           </div>
         </div>
 
-        {/* Action Panel */}
-        <div className="settings-card action-panel">
-          <div className="card-header">
-            <Play size={20} className="header-icon" />
-            <h3>Trigger Matching</h3>
-          </div>
-          <div className="card-content centered">
-            <p className="action-description">
-              Run the algorithm now to generate new student-company pairings based on current configuration.
-            </p>
-            
+        <div style={{ ...styles.card, background: theme.gradients.primary, color: '#fff' }}>
+          <div style={{ padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+            <Play size={48} />
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Execute Placement Run</h3>
+            <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>Force the system to re-calculate matches for all pending students and available slots.</p>
             <button 
-              className={`trigger-match-btn ${isMatching ? 'loading' : ''}`} 
               onClick={handleTriggerMatching}
               disabled={isMatching || totalWeight !== 100}
+              style={{ ...commonStyles.dashboardBtn, backgroundColor: '#fff', color: theme.colors.primary, padding: '12px 32px', fontWeight: 800, fontSize: '1rem', width: '100%' }}
             >
-              {isMatching ? (
-                <>
-                  <RefreshCw size={20} className="spin-icon" /> Matching in progress...
-                </>
-              ) : (
-                <>
-                  <Play size={20} /> Start Matching Run
-                </>
-              )}
+              {isMatching ? <><RefreshCw size={20} className="spin" /> Processing...</> : 'Start Algorithm'}
             </button>
-
-            <div className="last-run-info">
-              <span>Last Run: <strong>{matchingSettings.lastRun}</strong></span>
-              <span>Matches Generated: <strong>{matchingSettings.lastRunMatches}</strong></span>
+            <div style={{ fontSize: '0.75rem', opacity: 0.7, marginTop: '12px' }}>
+              Last executed: {matchingSettings.lastRun}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Match Results Preview */}
       {showResults && (
-        <div className="results-card">
-          <div className="results-header">
-            <Check size={24} className="success-icon" />
-            <div>
-              <h4>Matching Complete!</h4>
-              <p>5 matches generated based on threshold {threshold}%.</p>
-            </div>
+        <div style={styles.card}>
+          <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.success }}>
+            <Check size={20} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Batch Results Preview</h3>
           </div>
-          
-          <div className="table-responsive">
-            <table className="matches-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Matched Company</th>
-                  <th>Position</th>
-                  <th>Match Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matchResults.map(res => (
-                  <tr key={res.id}>
-                    <td>{res.student}</td>
-                    <td>{res.company}</td>
-                    <td>{res.position}</td>
-                    <td>
-                      <span className={`score-badge ${res.score >= 80 ? 'high' : 'medium'}`}>
-                        {res.score}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ padding: '0 10px' }}>
+            {matchResults.map(res => (
+              <div key={res.id} style={styles.matchResult}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, color: theme.colors.primary }}>
+                  {res.student.charAt(0)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700 }}>{res.student}</div>
+                  <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>{res.position} at {res.company}</div>
+                </div>
+                <div style={{ fontWeight: 800, color: theme.colors.success }}>{res.score}% Match</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
+      <style>{`
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 };

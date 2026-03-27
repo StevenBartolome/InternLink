@@ -1,27 +1,52 @@
 // src/components/supervisor/ProgressBar.jsx
 import React from 'react';
-import '../../assets/css/supervisor/ProgressBar.css';
+import { theme } from '../../styles/theme';
 
 const ProgressBar = ({ rendered, required }) => {
   const percentage = Math.min(Math.round((rendered / required) * 100), 100);
   
   const getColor = (percent) => {
-    if (percent < 30) return 'progress-low';
-    if (percent < 70) return 'progress-medium';
-    return 'progress-high';
+    if (percent < 30) return theme.colors.danger;
+    if (percent < 70) return theme.colors.warning;
+    return theme.colors.success;
+  };
+
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      width: '100%',
+    },
+    info: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      fontSize: '0.75rem',
+      color: theme.colors.textMuted,
+    },
+    track: {
+      height: '6px',
+      backgroundColor: theme.colors.border,
+      borderRadius: '3px',
+      overflow: 'hidden',
+    },
+    fill: {
+      height: '100%',
+      backgroundColor: getColor(percentage),
+      transition: 'width 0.4s ease-out',
+      width: `${percentage}%`,
+    }
   };
 
   return (
-    <div className="progress-container">
-      <div className="progress-info">
-        <span className="progress-text">{rendered} / {required} hrs</span>
-        <span className="progress-percentage">{percentage}%</span>
+    <div style={styles.container}>
+      <div style={styles.info}>
+        <span style={{ fontWeight: 600 }}>{rendered} / {required} hrs</span>
+        <span>{percentage}%</span>
       </div>
-      <div className="progress-track">
-        <div 
-          className={`progress-fill ${getColor(percentage)}`} 
-          style={{ width: `${percentage}%` }}
-        ></div>
+      <div style={styles.track}>
+        <div style={styles.fill} />
       </div>
     </div>
   );

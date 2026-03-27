@@ -1,80 +1,101 @@
 import React from 'react';
-import { gradesEvaluations } from '../../data/mockData';
-import { Award, FileText, Star, MessageSquare } from 'lucide-react';
-import '../../assets/css/students/GradesEvaluationsPage.css';
+import { 
+  Award, FileText, CheckCircle, 
+  MessageSquare, User, Building2,
+  TrendingUp, Download, Info,
+  Star, ShieldCheck
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { gradesEvaluations, progressState } from '../../data/mockData';
 
-export default function GradesEvaluationsPage() {
-  const { overallGrade, coordinatorRemarks, evaluations } = gradesEvaluations;
-
-  const getScoreColor = (score) => {
-    if (score >= 95) return '#10B981'; // Green
-    if (score >= 90) return '#3B82F6'; // Blue
-    return '#F59E0B'; // Amber
+const GradesEvaluationsPage = () => {
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+    },
+    gradeHero: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '40px',
+      padding: '40px',
+      background: 'linear-gradient(135deg, #FFF 0%, #EBF1FF 100%)',
+    },
+    scoreGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      gap: '20px',
+    },
+    criteriaCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    }
   };
 
   return (
-    <div className="grades-container">
-      <div className="page-header">
-        <h1>Grades & Evaluations</h1>
-        <p>Review your performance scoring and coordinator feedback.</p>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Grades & Evaluations</h1>
+        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+          <Download size={18} /> Export OJT Report
+        </button>
+      </header>
+
+      <div style={styles.gradeHero}>
+        <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: theme.colors.primary, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(30, 64, 175, 0.2)' }}>
+          <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{gradesEvaluations.overallGrade}</div>
+          <div style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8 }}>FINAL GRADE</div>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.primary, marginBottom: '8px' }}>
+            <ShieldCheck size={20} />
+            <span style={{ fontWeight: 700, fontSize: '1rem' }}>Coordinator Verified</span>
+          </div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 12px 0' }}>{progressState.company}</h2>
+          <p style={{ margin: 0, color: theme.colors.textMuted, lineHeight: 1.6, maxWidth: '600px' }}>
+            "{gradesEvaluations.coordinatorRemarks}"
+          </p>
+        </div>
       </div>
 
-      <div className="grades-grid">
-        {/* Overall Grade Card (Left) */}
-        <div className="grades-sidebar">
-          <div className="grade-card overall-card">
-            <Award size={40} className="grade-icon" />
-            <div className="grade-info">
-              <label>Overall Rating</label>
-              <h2>{overallGrade}</h2>
-              <span className="grade-sub">Equivalent to Excellent</span>
+      <div style={styles.scoreGrid}>
+        {gradesEvaluations.evaluations.map((evalItem, i) => (
+          <div key={i} style={styles.criteriaCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{evalItem.criteria}</span>
+              <span style={{ fontWeight: 800, color: theme.colors.primary, fontSize: '1.1rem' }}>{evalItem.score}%</span>
+            </div>
+            <div style={{ height: '8px', backgroundColor: theme.colors.bgSecondary, borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${evalItem.score}%`, backgroundColor: theme.colors.primary }}></div>
             </div>
           </div>
+        ))}
+      </div>
 
-          <div className="grade-card remarks-card">
-            <div className="card-title">
-              <MessageSquare size={18} />
-              <h4>Coordinator Remarks</h4>
-            </div>
-            <p className="remarks-text">"{coordinatorRemarks}"</p>
-          </div>
-        </div>
-
-        {/* Detailed Scores (Right) */}
-        <div className="grades-main">
-          <div className="grade-card evaluation-card">
-            <div className="card-title">
-              <FileText size={18} />
-              <h4>Performance Evaluation</h4>
-            </div>
-            
-            <div className="evaluation-list">
-              {evaluations.map((item, index) => (
-                <div key={index} className="eval-item">
-                  <div className="eval-left">
-                    <Star size={16} className="star-icon" />
-                    <span>{item.criteria}</span>
-                  </div>
-                  <div className="eval-right">
-                    <div className="score-bar-bg">
-                      <div 
-                        className="score-bar-fill" 
-                        style={{ 
-                          width: `${item.score}%`,
-                          backgroundColor: getScoreColor(item.score)
-                        }}
-                      ></div>
-                    </div>
-                    <span className="score-text" style={{ color: getScoreColor(item.score) }}>
-                      {item.score}/100
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <div style={{ ...commonStyles.dashboardCard, padding: '32px', backgroundColor: theme.colors.bgSecondary, border: `1px dashed ${theme.colors.border}` }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageSquare size={18} color={theme.colors.primary} />
+          Employer Feedback Details
+        </h3>
+        <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem', lineHeight: 1.6 }}>
+          Detailed performance metrics and qualitative feedback from your industry supervisor (Alex Mercer) are available in the detailed transcript. These evaluations are used for final credit processing.
+        </p>
+        <button style={{ marginTop: '20px', ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+          Request Feedback Review
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default GradesEvaluationsPage;

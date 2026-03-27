@@ -1,50 +1,106 @@
-// src/components/admin/Sidebar.jsx
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
-  BarChart2, Users, CheckCircle, Briefcase, 
-  Settings2, FileText, Settings, Bell, Home, X 
+  LayoutDashboard, Users, FileCheck, Briefcase, 
+  BarChart2, ShieldAlert, Settings, LogOut, GraduationCap,
+  ChevronRight
 } from 'lucide-react';
-import '../../assets/css/admin/Sidebar.css';
+import { theme } from '../../styles/theme';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-const Sidebar = ({ isOpen, toggleSidebar }) => {
+const Sidebar = () => {
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [isOpen, setIsOpen] = useState(!isMobile);
+
   const navItems = [
-    { title: 'Dashboard', path: '/admin/dashboard', icon: <Home size={20} /> },
-    { title: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
-    { title: 'Account Verification', path: '/admin/verification', icon: <CheckCircle size={20} /> },
-    { title: 'Internship Oversight', path: '/admin/oversight', icon: <Briefcase size={20} /> },
-    { title: 'Matching Engine', path: '/admin/matching', icon: <Settings2 size={20} /> },
-    { title: 'System Reports', path: '/admin/reports', icon: <BarChart2 size={20} /> },
-    { title: 'Audit Logs', path: '/admin/audit', icon: <FileText size={20} /> },
-    { title: 'System Settings', path: '/admin/settings', icon: <Settings size={20} /> },
-    { title: 'Notifications Center', path: '/admin/notifications', icon: <Bell size={20} /> },
+    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'User Management', path: '/admin/users', icon: Users },
+    { name: 'Account Verification', path: '/admin/verification', icon: FileCheck },
+    { name: 'Internship Oversight', path: '/admin/oversight', icon: Briefcase },
+    { name: 'Matching Engine', path: '/admin/matching', icon: Settings },
+    { name: 'System Reports', path: '/admin/reports', icon: BarChart2 },
+    { name: 'Audit Logs', path: '/admin/audit', icon: ShieldAlert },
+    { name: 'System Settings', path: '/admin/settings', icon: Settings },
   ];
 
-  return (
-    <aside className={`admin-sidebar ${isOpen ? 'open' : ''}`}>
-      <div className="sidebar-header">
-        <div className="logo">
-          <Briefcase size={28} className="logo-icon" />
-          <span className="logo-text">InternLink <span className="logo-role">Admin</span></span>
-        </div>
-        <button className="close-sidebar-btn" onClick={toggleSidebar}>
-          <X size={24} />
-        </button>
-      </div>
+  const styles = {
+    sidebar: {
+      width: '260px',
+      height: '100vh',
+      backgroundColor: theme.colors.primary,
+      color: '#fff',
+      position: 'fixed',
+      left: 0,
+      top: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      zIndex: 1000,
+      transition: 'transform 0.3s ease',
+      transform: isMobile && !isOpen ? 'translateX(-100%)' : 'translateX(0)',
+      boxShadow: theme.shadows.lg,
+    },
+    brand: {
+      padding: '32px 24px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      borderBottom: '1px solid rgba(255,255,255,0.1)',
+    },
+    brandText: {
+      fontSize: '1.25rem',
+      fontWeight: 800,
+      letterSpacing: '0.5px',
+    },
+    nav: {
+      flex: 1,
+      padding: '24px 12px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    },
+    navLink: (isActive) => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 16px',
+      borderRadius: '12px',
+      color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
+      backgroundColor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
+      textDecoration: 'none',
+      fontSize: '0.875rem',
+      fontWeight: 500,
+      transition: 'all 0.2s ease',
+    }),
+    footer: {
+      padding: '24px',
+      borderTop: '1px solid rgba(255,255,255,0.1)',
+    }
+  };
 
-      <nav className="sidebar-nav">
-        {navItems.map((item, index) => (
+  return (
+    <aside style={styles.sidebar}>
+      <div style={styles.brand}>
+        <GraduationCap size={28} />
+        <span style={styles.brandText}>Admin Panel</span>
+      </div>
+      <nav style={styles.nav}>
+        {navItems.map((item) => (
           <NavLink 
-            key={index} 
+            key={item.path} 
             to={item.path} 
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-            onClick={() => { if (window.innerWidth < 768) toggleSidebar(); }}
+            style={({ isActive }) => styles.navLink(isActive)}
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-title">{item.title}</span>
+            <item.icon size={20} />
+            <span>{item.name}</span>
           </NavLink>
         ))}
       </nav>
+      <div style={styles.footer}>
+        <NavLink to="/login" style={styles.navLink(false)}>
+          <LogOut size={20} />
+          <span>Exit Admin</span>
+        </NavLink>
+      </div>
     </aside>
   );
 };

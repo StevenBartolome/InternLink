@@ -1,22 +1,26 @@
+// src/pages/coordinator/ProgressMonitoringPage.jsx
 import React, { useState } from 'react';
 import { Search, Filter, Calendar, CheckSquare, Clock, X } from 'lucide-react';
 import ProgressBar from '../../components/ProgressBar/ProgressBar';
 import StatusBadge from '../../components/StatusBadge/StatusBadge';
 import { mockProgressData } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/ProgressMonitoringPage.css';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ProgressMonitoringPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [completionFilter, setCompletionFilter] = useState('All');
-  const [selectedStudent, setSelectedStudent] = useState(null); // For Detail Modal
-
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
+  
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const students = mockProgressData.students;
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          student.company.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Calculate percentage for filter
     const pct = (student.hoursRendered / student.hoursRequired) * 100;
     let matchesCompletion = true;
     if (completionFilter === 'High') matchesCompletion = pct >= 80;
@@ -26,32 +30,265 @@ const ProgressMonitoringPage = () => {
     return matchesSearch && matchesCompletion;
   });
 
-  const openDetail = (student) => {
-    setSelectedStudent(student);
-  };
-
-  const closeDetail = () => {
-    setSelectedStudent(null);
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.5rem',
+    },
+    filtersBar: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '1rem',
+      padding: '1rem 1.5rem',
+      flexWrap: 'wrap',
+    },
+    searchWrapper: {
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      flex: 1,
+      maxWidth: '400px',
+      backgroundColor: theme.colors.bgSecondary,
+      borderRadius: '8px',
+      border: `1px solid ${theme.colors.border}`,
+      padding: '0.5rem 0.75rem',
+    },
+    searchInput: {
+      background: 'none',
+      border: 'none',
+      paddingLeft: '24px',
+      fontSize: '0.875rem',
+      color: theme.colors.textMain,
+      width: '100%',
+      outline: 'none',
+    },
+    searchIcon: {
+      color: theme.colors.textMuted,
+      position: 'absolute',
+      left: '10px',
+    },
+    filtersGroup: {
+      display: 'flex',
+      gap: '1rem',
+    },
+    filterItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      backgroundColor: theme.colors.bgSecondary,
+      border: `1px solid ${theme.colors.border}`,
+      borderRadius: '8px',
+      padding: '0.5rem 0.75rem',
+      fontSize: '0.875rem',
+      color: theme.colors.textMuted,
+    },
+    select: {
+      background: 'none',
+      border: 'none',
+      color: theme.colors.textMain,
+      fontSize: '0.875rem',
+      fontWeight: 500,
+      cursor: 'pointer',
+      outline: 'none',
+    },
+    progressGrid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))',
+      gap: '1.5rem',
+    },
+    card: (isHovered) => ({
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.25rem',
+      cursor: 'pointer',
+      transition: theme.transitions.default,
+      transform: isHovered ? 'translateY(-4px)' : 'none',
+      boxShadow: isHovered ? '0 6px 16px rgba(0,0,0,0.1)' : theme.shadows.sm,
+    }),
+    cardHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '1rem',
+    },
+    avatar: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '50%',
+      objectFit: 'cover',
+    },
+    studentName: {
+      fontSize: '1rem',
+      fontWeight: 600,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    companyText: {
+      fontSize: '0.875rem',
+      color: theme.colors.textMuted,
+      margin: 0,
+    },
+    stats: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
+    },
+    statRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    statLabel: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      fontSize: '0.875rem',
+      color: theme.colors.textMuted,
+    },
+    statValue: {
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      color: theme.colors.textMain,
+    },
+    divider: {
+      height: '1px',
+      backgroundColor: theme.colors.border,
+      margin: '0.25rem 0',
+    },
+    cardFooter: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      borderTop: `1px solid ${theme.colors.border}`,
+      paddingTop: '0.75rem',
+      fontSize: '0.75rem',
+      color: theme.colors.textMuted,
+    },
+    btnLink: {
+      background: 'none',
+      border: 'none',
+      color: theme.colors.primary,
+      fontWeight: 600,
+      fontSize: '0.75rem',
+      cursor: 'pointer',
+    },
+    modalOverlay: {
+      ...commonStyles.modalOverlay,
+    },
+    modalContent: {
+      ...commonStyles.modalContent,
+      maxWidth: '800px',
+      maxHeight: '90vh',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: 0,
+      overflow: 'hidden',
+    },
+    modalHeader: {
+      padding: '1.5rem',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      h3: {
+        fontSize: '1.25rem',
+        fontWeight: 700,
+        margin: 0,
+      }
+    },
+    modalClose: {
+      background: 'none',
+      border: 'none',
+      color: theme.colors.textMuted,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    modalBody: {
+      padding: '1.5rem',
+      overflowY: 'auto',
+      flex: 1,
+    },
+    profileHeader: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '1rem',
+      marginBottom: '2rem',
+    },
+    avatarLarge: {
+      width: '64px',
+      height: '64px',
+      borderRadius: '50%',
+      objectFit: 'cover',
+    },
+    section: {
+      marginBottom: '2rem',
+      h5: {
+        fontSize: '0.875rem',
+        fontWeight: 600,
+        color: theme.colors.textMuted,
+        marginBottom: '1rem',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+      }
+    },
+    tableContainer: {
+      width: '100%',
+      overflowX: 'auto',
+      borderRadius: '8px',
+      border: `1px solid ${theme.colors.border}`,
+    },
+    table: {
+      width: '100%',
+      borderCollapse: 'collapse',
+      th: {
+        textAlign: 'left',
+        padding: '12px 16px',
+        backgroundColor: '#f9fafb',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        fontSize: '0.75rem',
+        fontWeight: 600,
+        color: theme.colors.textMuted,
+        textTransform: 'uppercase',
+      },
+      td: {
+        padding: '12px 16px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        fontSize: '0.875rem',
+        color: theme.colors.textMain,
+      }
+    },
+    modalFooter: {
+      padding: '1rem 1.5rem',
+      borderTop: `1px solid ${theme.colors.border}`,
+      display: 'flex',
+      justifyContent: 'flex-end',
+    }
   };
 
   return (
-    <div className="progress-monitoring-page">
+    <div style={styles.container}>
       {/* Filters Bar */}
-      <div className="dashboard-card filters-bar">
-        <div className="search-wrapper">
-          <Search size={18} className="search-icon" />
+      <div style={styles.filtersBar}>
+        <div style={styles.searchWrapper}>
+          <Search size={18} style={styles.searchIcon} />
           <input 
             type="text" 
             placeholder="Search student or company..." 
+            style={styles.searchInput}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
-        <div className="filters-group">
-          <div className="filter-item">
+        <div style={styles.filtersGroup}>
+          <div style={styles.filterItem}>
             <Filter size={16} />
-            <select value={completionFilter} onChange={(e) => setCompletionFilter(e.target.value)}>
+            <select style={styles.select} value={completionFilter} onChange={(e) => setCompletionFilter(e.target.value)}>
               <option value="All">All Progress</option>
               <option value="High">80%+ Complete</option>
               <option value="Mid">50% - 79% Complete</option>
@@ -62,46 +299,52 @@ const ProgressMonitoringPage = () => {
       </div>
 
       {/* Progress Cards Grid */}
-      <div className="progress-grid">
+      <div style={styles.progressGrid}>
         {filteredStudents.map((student) => (
-          <div key={student.id} className="progress-card dashboard-card" onClick={() => openDetail(student)}>
-            <div className="card-header-student">
-              <img src={student.avatar} alt={student.name} className="avatar-small" />
+          <div 
+            key={student.id} 
+            style={styles.card(hoveredCard === student.id)} 
+            onMouseEnter={() => setHoveredCard(student.id)}
+            onMouseLeave={() => setHoveredCard(null)}
+            onClick={() => setSelectedStudent(student)}
+          >
+            <div style={styles.cardHeader}>
+              <img src={student.avatar} alt={student.name} style={styles.avatar} />
               <div>
-                <h4>{student.name}</h4>
-                <p className="company-text">{student.company}</p>
+                <h4 style={styles.studentName}>{student.name}</h4>
+                <p style={styles.companyText}>{student.company}</p>
               </div>
             </div>
 
-            <div className="progress-stats">
-              <div className="stat-row">
-                <div className="stat-label">
+            <div style={styles.stats}>
+              <div style={styles.statRow}>
+                <div style={styles.statLabel}>
                   <Clock size={16} /> Hours Rendered
                 </div>
-                <div className="stat-value">{student.hoursRendered} / {student.hoursRequired}</div>
+                <div style={styles.statValue}>{student.hoursRendered} / {student.hoursRequired}</div>
               </div>
               <ProgressBar value={student.hoursRendered} max={student.hoursRequired} />
 
-              <div className="divider"></div>
+              <div style={styles.divider}></div>
 
-              <div className="stat-row">
-                <div className="stat-label">
+              <div style={styles.statRow}>
+                <div style={styles.statLabel}>
                   <CheckSquare size={16} /> Tasks done
                 </div>
-                <div className="stat-value">{student.taskCompletionRate}</div>
+                <div style={styles.statValue}>{student.taskCompletionRate}</div>
               </div>
 
-              <div className="stat-row">
-                <div className="stat-label">
+              <div style={styles.statRow}>
+                <div style={styles.statLabel}>
                   <Calendar size={16} /> Attendance Rate
                 </div>
-                <div className="stat-value">{student.attendanceRate}</div>
+                <div style={styles.statValue}>{student.attendanceRate}</div>
               </div>
             </div>
 
-            <div className="card-footer-date">
+            <div style={styles.cardFooter}>
               <span>Last active: {student.lastActivityDate}</span>
-              <button className="btn-link btn-sm">View Details</button>
+              <button style={styles.btnLink}>View Details</button>
             </div>
           </div>
         ))}
@@ -109,83 +352,84 @@ const ProgressMonitoringPage = () => {
 
       {/* Detail Modal */}
       {selectedStudent && (
-        <div className="modal-backdrop" onClick={closeDetail}>
-          <div className="modal-content modal-large" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Internship Progress Details</h3>
-              <button className="modal-close-btn" onClick={closeDetail}>
+        <div style={styles.modalOverlay} onClick={() => setSelectedStudent(null)}>
+          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalHeader.h3}>Internship Progress Details</h3>
+              <button style={styles.modalClose} onClick={() => setSelectedStudent(null)}>
                 <X size={20} />
               </button>
             </div>
             
-            <div className="modal-body">
-              <div className="profile-header-modal">
-                <img src={selectedStudent.avatar} alt={selectedStudent.name} className="avatar-large" />
-                <div className="profile-header-text">
-                  <h4>{selectedStudent.name}</h4>
-                  <p>{selectedStudent.company} • {selectedStudent.supervisor}</p>
+            <div style={styles.modalBody}>
+              <div style={styles.profileHeader}>
+                <img src={selectedStudent.avatar} alt={selectedStudent.name} style={styles.avatarLarge} />
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 4px 0' }}>{selectedStudent.name}</h4>
+                  <p style={{ color: theme.colors.textMuted, margin: 0 }}>{selectedStudent.company} • {selectedStudent.supervisor}</p>
                 </div>
               </div>
 
-              <div className="modal-tabs">
-                <div className="modal-tab-content">
-                  <div className="section">
-                    <h5>Attendance Logs</h5>
-                    <div className="dashboard-table-container">
-                      <table className="dashboard-table">
-                        <thead>
-                          <tr>
-                            <th>Date</th>
-                            <th>Time In</th>
-                            <th>Time Out</th>
-                            <th>Hours</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedStudent.attendanceLogs.map((log, index) => (
-                            <tr key={index}>
-                              <td>{log.date}</td>
-                              <td>{log.timeIn}</td>
-                              <td>{log.timeOut}</td>
-                              <td>{log.hours}h</td>
-                              <td><StatusBadge status={log.status} /></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
-                  <div className="section">
-                    <h5>Task Management</h5>
-                    <div className="dashboard-table-container">
-                      <table className="dashboard-table">
-                        <thead>
-                          <tr>
-                            <th>Task Description</th>
-                            <th>Due Date</th>
-                            <th>Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedStudent.taskLogs.map((task, index) => (
-                            <tr key={index}>
-                              <td>{task.task}</td>
-                              <td>{task.dueDate}</td>
-                              <td><StatusBadge status={task.status} /></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              <div style={styles.section}>
+                <h5>Attendance Logs</h5>
+                <div style={styles.tableContainer}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.table.th}>Date</th>
+                        <th style={styles.table.th}>Time In</th>
+                        <th style={styles.table.th}>Time Out</th>
+                        <th style={styles.table.th}>Hours</th>
+                        <th style={styles.table.th}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudent.attendanceLogs.map((log, index) => (
+                        <tr key={index}>
+                          <td style={styles.table.td}>{log.date}</td>
+                          <td style={styles.table.td}>{log.timeIn}</td>
+                          <td style={styles.table.td}>{log.timeOut}</td>
+                          <td style={styles.table.td}>{log.hours}h</td>
+                          <td style={styles.table.td}><StatusBadge status={log.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              <div className="modal-actions">
-                <button className="dashboard-btn dashboard-btn-secondary" onClick={closeDetail}>Close</button>
+              <div style={styles.section}>
+                <h5>Task Management</h5>
+                <div style={styles.tableContainer}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.table.th}>Task Description</th>
+                        <th style={styles.table.th}>Due Date</th>
+                        <th style={styles.table.th}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedStudent.taskLogs.map((task, index) => (
+                        <tr key={index}>
+                          <td style={styles.table.td}>{task.task}</td>
+                          <td style={styles.table.td}>{task.dueDate}</td>
+                          <td style={styles.table.td}><StatusBadge status={task.status} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+            </div>
+
+            <div style={styles.modalFooter}>
+              <button 
+                style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, color: theme.colors.textMain, border: `1px solid ${theme.colors.border}` }} 
+                onClick={() => setSelectedStudent(null)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

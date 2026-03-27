@@ -1,207 +1,200 @@
 import React, { useState } from 'react';
-import { Award, Check, AlertCircle } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import { mockGradesData } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/GradeManagementPage.css';
+import { 
+  Search, Filter, Download, MoreVertical, 
+  Award, FileText, CheckCircle, AlertCircle,
+  ArrowUpDown, ChevronRight, User, BookOpen
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { mockStudents } from '../../data/coordinatorMockData';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const GradeManagementPage = () => {
-  const [activeTab, setActiveTab ] = useState('For Grading');
-  const [assignedGrades, setAssignedGrades] = useState({});
-  const [gradesData, setGradesData] = useState(mockGradesData);
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
 
-  const handleGradeChange = (studentName, grade) => {
-    setAssignedGrades(prev => ({ ...prev, [studentName]: grade }));
-  };
+  // Filter students who have grades or are eligible for grading
+  const filteredStudents = mockStudents.filter(student => {
+    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'All' || student.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
 
-  const handleSubmitGrade = (studentName) => {
-    const grade = assignedGrades[studentName];
-    if (!grade) {
-      alert("Please select a grade first.");
-      return;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: '16px',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    controls: {
+      display: 'flex',
+      gap: '12px',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    },
+    searchBox: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      backgroundColor: theme.colors.white,
+      padding: '10px 16px',
+      borderRadius: '12px',
+      border: `1px solid ${theme.colors.border}`,
+      width: isMobile ? '100%' : '300px',
+    },
+    input: {
+      border: 'none',
+      outline: 'none',
+      width: '100%',
+      fontSize: '0.875rem',
+      color: theme.colors.textMain,
+    },
+    tableContainer: {
+      ...commonStyles.dashboardTableContainer,
+    },
+    table: {
+      ...commonStyles.dashboardTable,
+    },
+    th: {
+      ...commonStyles.dashboardTableTh,
+    },
+    td: {
+      ...commonStyles.dashboardTableTd,
+    },
+    studentInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    },
+    avatar: {
+      width: '32px',
+      height: '32px',
+      borderRadius: '8px',
+      backgroundColor: theme.colors.bgAccent,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: theme.colors.primary,
+      fontWeight: 'bold',
+    },
+    gradeBadge: (score) => ({
+      ...commonStyles.dashboardBadge,
+      backgroundColor: score >= 90 ? '#DEF7EC' : (score >= 75 ? '#E1EFFE' : '#FEF3C7'),
+      color: score >= 90 ? '#03543F' : (score >= 75 ? '#1E429F' : '#92400E'),
+    }),
+    actionBtn: {
+      padding: '8px',
+      borderRadius: '8px',
+      border: 'none',
+      backgroundColor: 'transparent',
+      color: theme.colors.textMuted,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        backgroundColor: theme.colors.bgSecondary,
+        color: theme.colors.primary,
+      }
     }
-
-    // Update local state to move to Graded
-    const studentToGrade = gradesData.ongoing.find(s => s.name === studentName) || 
-                          gradesData.forGrading.find(s => s.name === studentName);
-                          
-    if (!studentToGrade) return;
-
-    const newGradedEntry = {
-      studentName: studentToGrade.name,
-      company: studentToGrade.company,
-      supervisor: studentToGrade.supervisor,
-      finalGrade: grade,
-      dateGraded: new Date().toISOString().split('T')[0]
-    };
-
-    setGradesData(prev => ({
-      ...prev,
-      forGrading: prev.forGrading.filter(s => s.name !== studentName),
-      ongoing: prev.ongoing.filter(s => s.name !== studentName),
-      graded: [...prev.graded, newGradedEntry]
-    }));
-
-    // Clear selection
-    const newGrades = { ...assignedGrades };
-    delete newGrades[studentName];
-    setAssignedGrades(newGrades);
   };
 
   return (
-    <div className="grade-management-page">
-      {/* Overview Stats */}
-      <div className="grades-overview dashboard-card">
-        <div className="overview-item">
-          <span className="overview-label">Overall Class Average</span>
-          <h2 className="overview-value text-primary">{gradesData.stats.averageGrade}</h2>
-        </div>
-        <div className="overview-item">
-          <span className="overview-label">Total Graded</span>
-          <h2 className="overview-value">{gradesData.graded.length}</h2>
-        </div>
-        <div className="overview-item">
-          <span className="overview-label">Pending Grading</span>
-          <h2 className="overview-value">{gradesData.forGrading.length}</h2>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="grades-tabs">
-        {['For Grading', 'Graded', 'Ongoing'].map((tab) => (
-          <button 
-            key={tab} 
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab}
-            <span className="tab-count">
-              {tab === 'For Grading' ? gradesData.forGrading.length :
-               tab === 'Graded' ? gradesData.graded.length : 
-               gradesData.ongoing.length}
-            </span>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Grade Management</h1>
+        <div style={styles.controls}>
+          <div style={styles.searchBox}>
+            <Search size={18} />
+            <input 
+              style={styles.input} 
+              placeholder="Search student or ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+            <Filter size={18} />
+            Filter
           </button>
-        ))}
+          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+            <Download size={18} />
+            Export Grades
+          </button>
+        </div>
       </div>
 
-      {/* Content */}
-      <div className="grades-content">
-        {activeTab === 'For Grading' && (
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Company / Supervisor</th>
-                  <th>Hours Rendered</th>
-                  <th>Assign Grade</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gradesData.forGrading.length === 0 ? (
-                  <tr><td colSpan="5" className="text-center text-muted">No students pending grading.</td></tr>
-                ) : (
-                  gradesData.forGrading.map((student) => (
-                    <tr key={student.id}>
-                      <td><strong>{student.name}</strong></td>
-                      <td>
-                        <div className="company-info">
-                          <span>{student.company}</span>
-                          <span className="supervisor-name">{student.supervisor}</span>
-                        </div>
-                      </td>
-                      <td>{student.hoursRendered} / {student.hoursRequired} hrs</td>
-                      <td>
-                        <select 
-                          className="grade-select"
-                          value={assignedGrades[student.name] || ''}
-                          onChange={(e) => handleGradeChange(student.name, e.target.value)}
-                        >
-                          <option value="">Select Grade</option>
-                          <option value="1.0">1.0 (Excellent)</option>
-                          <option value="1.25">1.25</option>
-                          <option value="1.5">1.5</option>
-                          <option value="1.75">1.75</option>
-                          <option value="2.0">2.0</option>
-                          <option value="2.25">2.25</option>
-                          <option value="2.5">2.5</option>
-                          <option value="3.0">3.0 (Pass)</option>
-                          <option value="5.0">5.0 (Fail)</option>
-                        </select>
-                      </td>
-                      <td>
-                        <button 
-                          className="dashboard-btn dashboard-btn-primary btn-sm"
-                          onClick={() => handleSubmitGrade(student.name)}
-                          disabled={!assignedGrades[student.name]}
-                        >
-                          Submit
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'Graded' && (
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Company / Supervisor</th>
-                  <th>Final Grade</th>
-                  <th>Date Graded</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gradesData.graded.map((entry, index) => (
-                  <tr key={index}>
-                    <td><strong>{entry.studentName}</strong></td>
-                    <td>
-                      <div className="company-info">
-                        <span>{entry.company}</span>
-                        <span className="supervisor-name">{entry.supervisor}</span>
-                      </div>
-                    </td>
-                    <td><span className="grade-badge">{entry.finalGrade}</span></td>
-                    <td>{entry.dateGraded}</td>
-                    <td><StatusBadge status="Graded" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {activeTab === 'Ongoing' && (
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Student Name</th>
-                  <th>Company</th>
-                  <th>Hours Progress</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gradesData.ongoing.map((student) => (
-                  <tr key={student.id}>
-                    <td><strong>{student.name}</strong></td>
-                    <td>{student.company}</td>
-                    <td>{student.hoursRendered} / {student.hoursRequired} hrs</td>
-                    <td><StatusBadge status="Ongoing" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      <div style={styles.tableContainer}>
+        <table style={styles.table}>
+          <thead>
+            <tr>
+              <th style={styles.th}>Student</th>
+              <th style={styles.th}>Course</th>
+              <th style={styles.th}>Company</th>
+              <th style={styles.th}>OJT Hours</th>
+              <th style={styles.th}>Final Grade</th>
+              <th style={styles.th}>Status</th>
+              <th style={styles.th}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredStudents.map((student) => (
+              <tr key={student.id}>
+                <td style={styles.td}>
+                  <div style={styles.studentInfo}>
+                    <div style={styles.avatar}>{student.name.charAt(0)}</div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{student.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{student.studentId}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style={styles.td}>{student.course}</td>
+                <td style={styles.td}>{student.company || 'Not Placed'}</td>
+                <td style={styles.td}>{student.renderedHours || 0} / {student.requiredHours || 400}</td>
+                <td style={styles.td}>
+                  {student.grade ? (
+                    <span style={styles.gradeBadge(student.grade)}>{student.grade}%</span>
+                  ) : (
+                    <span style={{ color: theme.colors.textMuted, fontStyle: 'italic' }}>Pending</span>
+                  )}
+                </td>
+                <td style={styles.td}>
+                  <span style={{ 
+                    ...commonStyles.dashboardBadge,
+                    ...(student.status === 'Completed' ? commonStyles.badgeSuccess : 
+                       student.status === 'Placed' ? commonStyles.badgeInfo : commonStyles.badgeWarning)
+                  }}>
+                    {student.status}
+                  </span>
+                </td>
+                <td style={styles.td}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button style={styles.actionBtn} title="View Details">
+                      <FileText size={18} />
+                    </button>
+                    <button style={styles.actionBtn} title="Edit Grade" onClick={() => alert('Grade Edit opened for ' + student.name)}>
+                      <Award size={18} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

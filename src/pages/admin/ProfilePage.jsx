@@ -1,118 +1,111 @@
-// src/pages/admin/ProfilePage.jsx
 import React, { useState } from 'react';
 import { adminProfile } from '../../data/adminMockData';
-import { Mail, Shield, Award, CheckCircle, Edit2, MapPin, Phone } from 'lucide-react';
-import '../../assets/css/students/ProfilePage.css'; // Share Student Profile CSS
+import { Mail, Shield, Award, CheckCircle, Edit2, MapPin, Phone, ShieldCheck, User } from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 
-export default function ProfilePage() {
+const AdminProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     email: adminProfile.email,
     systemName: adminProfile.systemName
   });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
-    setTimeout(() => {
-      setIsSaving(false);
-      setShowToast(true);
-      setIsEditing(false);
-      setTimeout(() => setShowToast(false), 3000);
-    }, 1000);
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+      maxWidth: '900px',
+    },
+    header: {
+      ...commonStyles.dashboardCard,
+      padding: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '32px',
+      background: 'linear-gradient(135deg, #fff 0%, #f0f9ff 100%)',
+    },
+    avatar: {
+      width: '100px',
+      height: '100px',
+      borderRadius: '24px',
+      backgroundColor: theme.colors.primary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#fff',
+      boxShadow: theme.shadows.md,
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+      gap: '24px',
+    },
+    section: {
+      ...commonStyles.dashboardCard,
+      padding: '24px',
+    },
+    infoRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      padding: '12px 0',
+      borderBottom: `1px solid ${theme.colors.bgSecondary}`,
+    }
   };
 
   return (
-    <div className="profile-container">
-      {showToast && (
-        <div className="toast success">
-          <CheckCircle size={20} />
-          <span>Changes saved successfully!</span>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.avatar}>
+          <Shield size={48} />
         </div>
-      )}
-
-      {/* Profile Header Card */}
-      <div className="profile-header-card">
-        <div className="profile-cover"></div>
-        <div className="profile-info-section">
-          {adminProfile.avatar ? (
-            <img src={adminProfile.avatar} alt="Avatar" className="profile-avatar-lg" />
-          ) : (
-            <div className="profile-avatar-lg-placeholder"><Shield size={40} /></div>
-          )}
-          <div className="profile-info">
-            <h1>{adminProfile.name}</h1>
-            <p className="student-id">System ID: ADM-001</p>
-            <div className="badge-container">
-              <span className="course-badge">{adminProfile.role}</span>
-              <span className="year-badge">System Root</span>
-            </div>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>{adminProfile.name}</h1>
+            <ShieldCheck size={20} color={theme.colors.success} />
           </div>
+          <p style={{ color: theme.colors.textMuted, margin: '4px 0 16px 0' }}>{adminProfile.role} • System Administrator</p>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+            onClick={() => setIsEditing(!isEditing)}
+          >
+            <Edit2 size={16} /> Edit Details
+          </button>
         </div>
       </div>
 
-      <div className="profile-grid">
-        {/* Contact Info Card */}
-        <div className="profile-card">
-          <div className="card-header-flex">
-            <h3>Contact & Details</h3>
-            <button className="edit-icon-btn" onClick={() => setIsEditing(!isEditing)}>
-              <Edit2 size={16} />
-            </button>
+      <div style={styles.grid}>
+        <div style={styles.section}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>Admin Credentials</h3>
+          <div style={styles.infoRow}>
+            <span style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>Email Address</span>
+            <span style={{ fontWeight: 600 }}>{adminProfile.email}</span>
           </div>
-
-          <form onSubmit={handleSave} className="profile-form">
-            <div className="form-group">
-              <label><Mail size={16} /> Email Address</label>
-              {isEditing ? (
-                <input type="email" name="email" value={formData.email} onChange={handleChange} required />
-              ) : (
-                <span className="static-text">{formData.email}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label><Award size={16} /> System Name</label>
-              {isEditing ? (
-                <input type="text" name="systemName" value={formData.systemName} onChange={handleChange} required />
-              ) : (
-                <span className="static-text">{formData.systemName}</span>
-              )}
-            </div>
-
-            {isEditing && (
-              <button type="submit" className="save-btn" disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            )}
-          </form>
+          <div style={styles.infoRow}>
+            <span style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>System Node</span>
+            <span style={{ fontWeight: 600 }}>{adminProfile.systemName}</span>
+          </div>
+          <div style={styles.infoRow}>
+            <span style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>Account Level</span>
+            <span style={{ fontWeight: 600, color: theme.colors.primary }}>Root ACCESS</span>
+          </div>
         </div>
 
-        {/* System Node Card */}
-        <div className="profile-card">
-          <div className="card-header-flex">
-            <h3>System Authority</h3>
+        <div style={styles.section}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>Security Modules</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {["System Integrity", "User Audit", "Global Broadcast", "Secure Matching"].map(tag => (
+              <span key={tag} style={{ ...commonStyles.dashboardBadge, backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>{tag}</span>
+            ))}
           </div>
-          <div className="section-block">
-            <h4>Access Permissions</h4>
-            <div className="skills-list">
-              <span className="skill-chip">Global Settings Edit</span>
-              <span className="skill-chip">Audit View</span>
-              <span className="skill-chip">Delete Accounts</span>
-              <span className="skill-chip">Bypass Verification</span>
-            </div>
+          <div style={{ marginTop: '24px', padding: '16px', backgroundColor: theme.colors.bgSecondary, borderRadius: '12px', fontSize: '0.8rem', color: theme.colors.textMuted }}>
+            Your account has full read/write access to the core InternLink engine and all its sub-modules.
           </div>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default AdminProfilePage;

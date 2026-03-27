@@ -1,9 +1,21 @@
+// src/components/Footer/Footer.jsx
 import React from 'react';
-import '../../assets/css/students/Footer.css';
+import { theme } from '../../styles/theme';
 
 const Footer = () => {
+  const styles = {
+    footer: {
+      textAlign: 'center',
+      padding: '2.5rem 1rem',
+      backgroundColor: theme.colors.white,
+      borderTop: `1px solid ${theme.colors.border}`,
+      color: theme.colors.textMuted,
+      fontSize: '0.9rem',
+    }
+  };
+
   return (
-    <footer className="footer">
+    <footer style={styles.footer}>
       <p>&copy; {new Date().getFullYear()} InternLink. All rights reserved.</p>
     </footer>
   );

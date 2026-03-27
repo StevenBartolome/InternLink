@@ -1,39 +1,89 @@
 import React from 'react';
-import '../../assets/css/students/SystemFlow.css';
+import { theme } from '../../styles/theme';
+import { ChevronRight, ArrowRight, UserCheck, ShieldCheck, MailCheck, Rocket } from 'lucide-react';
 
 const SystemFlow = () => {
   const steps = [
-    { number: '1', title: 'Company Registration', desc: 'Admin adds partner companies to the platform.', icon: 'fa-building' },
-    { number: '2', title: 'Internship Posting', desc: 'Companies post internship openings with skill requirements.', icon: 'fa-file-signature' },
-    { number: '3', title: 'Student Application', desc: 'Students browse matched opportunities and apply.', icon: 'fa-paper-plane' },
-    { number: '4', title: 'Approval', desc: 'OJT Head approves the internship placement.', icon: 'fa-signature' },
-    { number: '5', title: 'Internship Monitoring', desc: 'Students submit weekly reports; OJT Head monitors progress.', icon: 'fa-chart-line' },
-    { number: '6', title: 'Evaluation', desc: 'Employers evaluate students; OJT Head assigns final grades.', icon: 'fa-star' }
+    { title: 'Identity Verification', desc: 'Secure blockchain-based KYC for students and employers.', icon: ShieldCheck, color: '#3B82F6' },
+    { title: 'Automated Matching', desc: 'AI-driven engine pairing skills with requirements.', icon: UserCheck, color: '#10B981' },
+    { title: 'Smart Contracts', desc: 'Immutable internship agreements and term sheets.', icon: MailCheck, color: '#F59E0B' },
+    { title: 'Career Launch', desc: 'Successful transition from intern to professional hire.', icon: Rocket, color: '#8B5CF6' }
   ];
 
-  return (
-    <section className="section-flow" id="flow">
-      <div className="section-header">
-        <h2>Recommended System Flow</h2>
-        <p>A complete lifecycle for internship management, matching, and monitoring.</p>
-      </div>
+  const styles = {
+    container: {
+      padding: '40px 0',
+      width: '100%',
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+      gap: '32px',
+      position: 'relative',
+    },
+    card: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '20px',
+      padding: '32px',
+      backgroundColor: theme.colors.white,
+      borderRadius: '24px',
+      border: `1px solid ${theme.colors.border}`,
+      boxShadow: theme.shadows.sm,
+      position: 'relative',
+      zIndex: 1,
+    },
+    iconBox: (color) => ({
+      width: '52px',
+      height: '52px',
+      borderRadius: '16px',
+      backgroundColor: `${color}10`,
+      color: color,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }),
+    title: {
+      fontSize: '1.25rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    desc: {
+      fontSize: '0.925rem',
+      color: theme.colors.textMuted,
+      lineHeight: 1.6,
+      margin: 0,
+    },
+    arrow: {
+      position: 'absolute',
+      right: '-24px',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: theme.colors.border,
+      display: window.innerWidth > 1200 ? 'block' : 'none',
+    }
+  };
 
-      <div className="flow-timeline">
+  return (
+    <div style={styles.container}>
+      <div style={styles.grid}>
         {steps.map((step, index) => (
-          <div className="flow-item" key={index}>
-            <div className="flow-number">{step.number}</div>
-            <div className="flow-content glass-effect">
-              <div className="flow-icon">
-                <i className={`fa-solid ${step.icon}`}></i>
-              </div>
-              <h3>{step.title}</h3>
-              <p>{step.desc}</p>
+          <div key={index} style={styles.card}>
+            <div style={styles.iconBox(step.color)}>
+              <step.icon size={26} />
             </div>
-            {index < steps.length - 1 && <div className="flow-connector"></div>}
+            <h3 style={styles.title}>{step.title}</h3>
+            <p style={styles.desc}>{step.desc}</p>
+            {index < steps.length - 1 && (
+              <div style={styles.arrow}>
+                <ArrowRight size={24} />
+              </div>
+            )}
           </div>
         ))}
       </div>
-    </section>
+    </div>
   );
 };
 

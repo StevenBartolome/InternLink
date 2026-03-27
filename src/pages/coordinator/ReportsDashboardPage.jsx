@@ -1,148 +1,139 @@
-import React, { useState } from 'react';
-import { BarChart2, Download, TrendingUp, Users, Award, BookOpen } from 'lucide-react';
-import ProgressBar from '../../components/ProgressBar/ProgressBar';
+import React from 'react';
+import { 
+  BarChart2, TrendingUp, Users, 
+  CheckCircle, PieChart, Download,
+  Calendar, ArrowUpRight, ArrowDownRight
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { mockReportsData } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/ReportsDashboardPage.css';
 
 const ReportsDashboardPage = () => {
-  const [term, setTerm] = useState('1st Sem 2024-2025');
-  const data = mockReportsData;
+  const { summary, placementRate, gradeDistribution, topEmployers } = mockReportsData;
 
-  const handleExport = () => {
-    alert('Exporting Report... (UI functionality only)');
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+      gap: '20px',
+    },
+    statCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    },
+    mainGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+      gap: '24px',
+    },
+    employerList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    },
+    employerItem: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '12px 16px',
+      backgroundColor: theme.colors.bgSecondary,
+      borderRadius: '12px',
+    }
   };
 
   return (
-    <div className="reports-dashboard-page">
-      {/* Header with Filters */}
-      <div className="page-header-actions">
-        <div className="filter-item">
-          <label>Academic Term:</label>
-          <select value={term} onChange={(e) => setTerm(e.target.value)}>
-            <option value="1st Sem 2024-2025">1st Sem 2024-2025</option>
-            <option value="2nd Sem 2024-2025">2nd Sem 2024-2025</option>
-            <option value="Summer 2025">Summer 2025</option>
-          </select>
-        </div>
-        <button className="dashboard-btn dashboard-btn-primary" onClick={handleExport}>
-          <Download size={16} /> Export Report
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>System Reports & Analytics</h1>
+        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+          <Download size={18} />
+          Export All Data
         </button>
       </div>
 
-      {/* Summary Stats cards */}
-      <div className="reports-stats-grid">
-        <div className="report-stat-card dashboard-card">
-          <Users size={24} className="stat-icon text-primary" />
+      <div style={styles.statsGrid}>
+        <div style={styles.statCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.primary }}>
+            <Users size={24} />
+            <TrendingUp size={16} />
+          </div>
           <div>
-            <span className="stat-label">Total Enrolled</span>
-            <h3 className="stat-value">{data.summary.totalEnrolled}</h3>
+            <div style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Total Enrolled</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{summary.totalEnrolled}</div>
           </div>
         </div>
-        <div className="report-stat-card dashboard-card">
-          <TrendingUp size={24} className="stat-icon text-success" />
+        <div style={styles.statCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.success }}>
+            <CheckCircle size={24} />
+            <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>+5%</span>
+          </div>
           <div>
-            <span className="stat-label">Total Placed</span>
-            <h3 className="stat-value">{data.summary.totalPlaced}</h3>
+            <div style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Placement Rate</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{placementRate.overall}%</div>
           </div>
         </div>
-        <div className="report-stat-card dashboard-card">
-          <Award size={24} className="stat-icon text-info" />
-          <div>
-            <span className="stat-label">Total Completed</span>
-            <h3 className="stat-value">{data.summary.totalCompleted}</h3>
+        <div style={styles.statCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: theme.colors.warning }}>
+            <TrendingUp size={24} />
           </div>
-        </div>
-        <div className="report-stat-card dashboard-card">
-          <BookOpen size={24} className="stat-icon text-warning" />
           <div>
-            <span className="stat-label">Avg Final Grade</span>
-            <h3 className="stat-value">{data.summary.averageGrade}</h3>
+            <div style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Average Grade</div>
+            <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{summary.averageGrade}</div>
           </div>
         </div>
       </div>
 
-      <div className="reports-grid">
-        {/* Placement Rate Card */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h4>Placement Rate</h4>
-            <span className="large-percentage">{data.placementRate.overall}%</span>
-          </div>
-          <div className="breakdown-list">
-            <h5>Breakdown by Course</h5>
-            {data.placementRate.breakdown.map((item, index) => (
-              <div key={index} className="breakdown-item">
-                <div className="breakdown-info">
-                  <span>{item.course}</span>
-                  <span>{item.placed}/{item.total} Students</span>
+      <div style={styles.mainGrid}>
+        <div style={commonStyles.dashboardCard}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>Placement breakdown by Course</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {placementRate.breakdown.map((item, idx) => (
+              <div key={idx}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 600 }}>{item.course}</span>
+                  <span style={{ color: theme.colors.textMuted }}>{item.placed} / {item.total} Students</span>
                 </div>
-                <ProgressBar value={item.rate} max={100} size="sm" />
+                <div style={{ height: '8px', backgroundColor: theme.colors.bgSecondary, borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${item.rate}%`, backgroundColor: theme.colors.primary, borderRadius: '4px' }}></div>
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Completion Rate Card */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h4>Completion Rate</h4>
-            <span className="large-percentage">{data.completionRate.overall}%</span>
-          </div>
-          <p className="card-description">Percentage of students who have completed all required internship hours.</p>
-          <ProgressBar value={data.completionRate.overall} max={100} size="lg" />
-        </div>
-      </div>
-
-      <div className="reports-grid">
-        {/* Grade Distribution */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h4>Grade Distribution</h4>
-          </div>
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Grade Range</th>
-                  <th>Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.gradeDistribution.map((item, index) => (
-                  <tr key={index}>
-                    <td>{item.label}</td>
-                    <td><strong>{item.count}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Top Employer Partners */}
-        <div className="dashboard-card">
-          <div className="card-header">
-            <h4>Top Employer Partners</h4>
-          </div>
-          <div className="dashboard-table-container">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Company</th>
-                  <th>Interns</th>
-                  <th>Avg Eval</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.topEmployers.map((item, index) => (
-                  <tr key={index}>
-                    <td><strong>{item.company}</strong></td>
-                    <td>{item.interns}</td>
-                    <td><span className="rating-badge">{item.avgEvaluation}%</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div style={commonStyles.dashboardCard}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '20px' }}>Top Performing Employers</h3>
+          <div style={styles.employerList}>
+            {topEmployers.map((emp, idx) => (
+              <div key={idx} style={styles.employerItem}>
+                <div>
+                  <div style={{ fontWeight: 700, color: theme.colors.textMain }}>{emp.company}</div>
+                  <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{emp.interns} Interns Hosted</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: theme.colors.success }}>{emp.avgEvaluation}%</div>
+                  <div style={{ fontSize: '0.7rem', color: theme.colors.textMuted }}>Avg. Eval</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

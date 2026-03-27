@@ -5,12 +5,14 @@ import { userNotifications, studentProfile } from '../../data/mockData';
 import { notifications as employerNotifications, companyProfile } from '../../data/employerMockData';
 import { adminProfile } from '../../data/adminMockData';
 import Modal from '../Modal/Modal';
-import '../../assets/css/students/Topbar.css';
+import { theme } from '../../styles/theme';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const Topbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   
   const isEmployer = location.pathname.startsWith('/employer');
   const isAdmin = location.pathname.startsWith('/admin');
@@ -75,43 +77,148 @@ const Topbar = () => {
     role: "Student"
   };
 
+  const styles = {
+    topbar: {
+      height: '70px',
+      backgroundColor: theme.colors.white,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: isMobile ? '0 16px 0 60px' : '0 24px',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+      position: 'sticky',
+      top: 0,
+      zIndex: 900,
+    },
+    left: {
+      display: 'flex',
+      alignItems: 'center',
+      h2: {
+        fontSize: '1.25rem',
+        fontWeight: 700,
+        color: theme.colors.textMain,
+        margin: 0,
+      }
+    },
+    right: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+    },
+    notification: {
+      position: 'relative',
+      cursor: 'pointer',
+      padding: '8px',
+      borderRadius: '50%',
+      backgroundColor: theme.colors.bgSecondary,
+      color: theme.colors.textMuted,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: theme.transitions.default,
+    },
+    badge: {
+      position: 'absolute',
+      top: '5px',
+      right: '5px',
+      backgroundColor: theme.colors.danger,
+      color: '#fff',
+      fontSize: '10px',
+      fontWeight: 'bold',
+      minWidth: '16px',
+      height: '16px',
+      borderRadius: '8px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0 4px',
+    },
+    profile: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      cursor: 'pointer',
+      padding: '4px 8px',
+      borderRadius: '12px',
+      transition: theme.transitions.default,
+    },
+    avatar: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      objectFit: 'cover',
+    },
+    avatarPlaceholder: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      backgroundColor: theme.colors.bgAccent,
+      color: theme.colors.primary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    userInfo: {
+      display: isMobile ? 'none' : 'flex',
+      flexDirection: 'column',
+    },
+    username: {
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      color: theme.colors.textMain,
+    },
+    userrole: {
+      fontSize: '0.75rem',
+      color: theme.colors.textMuted,
+    },
+    logoutBtn: {
+      padding: '8px',
+      borderRadius: '8px',
+      border: 'none',
+      backgroundColor: 'transparent',
+      color: theme.colors.textMuted,
+      cursor: 'pointer',
+      transition: theme.transitions.default,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }
+  };
+
   return (
     <>
-      <header className="topbar">
-        <div className="topbar-left">
-          <h2>{getTitle(location.pathname)}</h2>
+      <header style={styles.topbar}>
+        <div style={styles.left}>
+          <h2 style={styles.left.h2}>{getTitle(location.pathname)}</h2>
         </div>
         
-        <div className="topbar-right">
-          {/* Topbar Brand link with Hat */}
-          <div className="topbar-brand-mini">
-            {isAdmin ? <Briefcase size={20} className="hat-icon text-red-500" /> : isEmployer ? <Briefcase size={20} className="hat-icon" /> : <GraduationCap size={20} className="hat-icon" />}
-            <span>InternLink</span>
+        <div style={styles.right}>
+          <div 
+            style={styles.notification} 
+            onClick={() => navigate(isEmployer ? '/employer/notifications' : '/notifications')}
+          >
+            <Bell size={20} />
+            {unreadCount > 0 && <span style={styles.badge}>{unreadCount}</span>}
           </div>
 
-          <div className="topbar-divider"></div>
-
-          <div className="notification-bell" onClick={() => navigate(isEmployer ? '/employer/notifications' : '/notifications')}>
-            <Bell size={21} className="bell-icon" />
-            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-          </div>
-
-          <div className="topbar-divider"></div>
-
-          <div className="topbar-profile" onClick={() => navigate(isAdmin ? '/admin/profile' : isEmployer ? '/employer/profile' : '/profile')}>
+          <div 
+            style={styles.profile} 
+            onClick={() => navigate(isAdmin ? '/admin/profile' : isEmployer ? '/employer/profile' : '/profile')}
+          >
             {profileData.avatar ? (
-              <img src={profileData.avatar} alt="Avatar" className="topbar-avatar" />
+              <img src={profileData.avatar} alt="Avatar" style={styles.avatar} />
             ) : (
-              <div className="topbar-avatar-placeholder"><User size={20} /></div>
+              <div style={styles.avatarPlaceholder}><User size={20} /></div>
             )}
-            <div className="topbar-user-info">
-              <span className="user-name">{profileData.name}</span>
-              <span className="user-role">{profileData.role}</span>
+            <div style={styles.userInfo}>
+              <span style={styles.username}>{profileData.name}</span>
+              <span style={styles.userrole}>{profileData.role}</span>
             </div>
           </div>
 
-          <button className="topbar-logout-btn" onClick={() => setIsModalOpen(true)} title="Logout">
-            <LogOut size={18} />
+          <button style={styles.logoutBtn} onClick={() => setIsModalOpen(true)} title="Logout">
+            <LogOut size={20} />
           </button>
         </div>
       </header>
@@ -130,3 +237,4 @@ const Topbar = () => {
 };
 
 export default Topbar;
+

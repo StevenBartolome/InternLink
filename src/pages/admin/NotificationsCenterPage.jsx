@@ -1,23 +1,22 @@
-// src/pages/admin/NotificationsCenterPage.jsx
 import React, { useState } from 'react';
 import { Bell, Send, CheckCircle, Info, MessageSquare, Megaphone, Trash2 } from 'lucide-react';
 import { notificationsList, sentAnnouncements } from '../../data/adminMockData';
-import '../../assets/css/admin/NotificationsCenterPage.css';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const NotificationsCenterPage = () => {
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const [notifications, setNotifications] = useState(notificationsList);
   const [announcements, setAnnouncements] = useState(sentAnnouncements);
   const [activeTab, setActiveTab] = useState('All');
 
-  // Form State
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [target, setTarget] = useState('All');
 
   const handleSendAnnouncement = (e) => {
     e.preventDefault();
-    if (!title || !message) return;
-
     const newAnnouncement = {
       id: announcements.length + 1,
       title,
@@ -25,81 +24,93 @@ const NotificationsCenterPage = () => {
       dateSent: new Date().toISOString().split('T')[0],
       sentBy: "Juan dela Cruz"
     };
-
     setAnnouncements([newAnnouncement, ...announcements]);
     setTitle('');
     setMessage('');
-    setTarget('All');
   };
 
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr',
+      gap: '24px',
+    },
+    card: {
+      ...commonStyles.dashboardCard,
+    },
+    formGroup: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      marginBottom: '16px',
+    },
+    input: {
+      padding: '12px',
+      borderRadius: '8px',
+      border: `1px solid ${theme.colors.border}`,
+      outline: 'none',
+    },
+    notificationItem: (read) => ({
+      padding: '16px',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      backgroundColor: read ? 'transparent' : theme.colors.bgAccent,
+      display: 'flex',
+      gap: '12px',
+    })
   };
-
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Unread') return !n.read;
-    return n.type === activeTab.toLowerCase();
-  });
 
   return (
-    <div className="notifications-center-page">
-      <div className="notifications-grid">
-        {/* Left: Broadcast Form & History */}
-        <div className="grid-left">
-          <div className="notify-card broadcast-card">
-            <div className="card-header">
-              <Megaphone size={20} className="header-icon" />
-              <h3>Broadcast Announcement</h3>
+    <div style={styles.container}>
+      <header>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Notification Center</h1>
+      </header>
+
+      <div style={styles.grid}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={styles.card}>
+            <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Megaphone size={20} color={theme.colors.primary} />
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Global Broadcast</h3>
             </div>
-            <div className="card-content">
-              <form onSubmit={handleSendAnnouncement} className="broadcast-form">
-                <div className="form-group">
-                  <label>Announcement Title</label>
-                  <input type="text" placeholder="e.g. System Maintenance Schedule" required value={title} onChange={e => setTitle(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>Message</label>
-                  <textarea rows="4" placeholder="Write your message here..." required value={message} onChange={e => setMessage(e.target.value)} style={{ resize: 'none' }} />
-                </div>
-                <div className="form-group">
-                  <label>Target Audience</label>
-                  <select value={target} onChange={e => setTarget(e.target.value)}>
-                    <option value="All">All Users</option>
-                    <option value="Students">Students Only</option>
-                    <option value="Employers">Employers Only</option>
-                    <option value="Coordinators">Coordinators Only</option>
-                  </select>
-                </div>
-                <button type="submit" className="send-btn">
-                  <Send size={18} /> Send Announcement
-                </button>
-              </form>
-            </div>
+            <form onSubmit={handleSendAnnouncement} style={{ padding: '24px' }}>
+              <div style={styles.formGroup}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Title</label>
+                <input style={styles.input} value={title} onChange={e => setTitle(e.target.value)} required />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Message Body</label>
+                <textarea style={{ ...styles.input, minHeight: '100px', resize: 'none' }} value={message} onChange={e => setMessage(e.target.value)} required />
+              </div>
+              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '100%' }}>
+                <Send size={18} /> Send Announcement
+              </button>
+            </form>
           </div>
 
-          <div className="notify-card sent-history-card">
-            <div className="card-header">
-              <MessageSquare size={20} className="header-icon" />
-              <h3>Sent Announcements</h3>
+          <div style={styles.card}>
+            <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}` }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Announcement History</h3>
             </div>
-            <div className="card-content table-responsive">
-              <table className="announcements-table">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Target</th>
-                    <th>Date Sent</th>
+                  <tr style={{ textAlign: 'left', backgroundColor: theme.colors.bgSecondary }}>
+                    <th style={{ padding: '12px 20px', fontSize: '0.85rem' }}>Title</th>
+                    <th style={{ padding: '12px 20px', fontSize: '0.85rem' }}>Target</th>
+                    <th style={{ padding: '12px 20px', fontSize: '0.85rem' }}>Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {announcements.map(ann => (
-                    <tr key={ann.id}>
-                      <td className="text-bold">{ann.title}</td>
-                      <td>
-                        <span className={`target-badge ${ann.target.toLowerCase()}`}>{ann.target}</span>
-                      </td>
-                      <td className="date-cell">{ann.dateSent}</td>
+                    <tr key={ann.id} style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
+                      <td style={{ padding: '12px 20px', fontSize: '0.9rem', fontWeight: 600 }}>{ann.title}</td>
+                      <td style={{ padding: '12px 20px' }}><span style={{ ...commonStyles.dashboardBadge, backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>{ann.target}</span></td>
+                      <td style={{ padding: '12px 20px', fontSize: '0.8rem', color: theme.colors.textMuted }}>{ann.dateSent}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -108,48 +119,23 @@ const NotificationsCenterPage = () => {
           </div>
         </div>
 
-        {/* Right: System Notifications Inbox */}
-        <div className="grid-right">
-          <div className="notify-card inbox-card">
-            <div className="card-header">
-              <div className="header-left">
-                <Bell size={20} className="header-icon" />
-                <h3>System Notifications</h3>
+        <div style={styles.card}>
+          <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>System Logistics</h3>
+            <button style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Mark All Read</button>
+          </div>
+          <div>
+            {notifications.map(n => (
+              <div key={n.id} style={styles.notificationItem(n.read)}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.colors.primary }}>
+                  <Info size={16} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMain }}>{n.message}</div>
+                  <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted, marginTop: '4px' }}>{n.timestamp}</div>
+                </div>
               </div>
-              <button className="mark-read-btn" onClick={handleMarkAllRead}>Mark all as read</button>
-            </div>
-            
-            <div className="inbox-tabs">
-              {['All', 'Unread', 'System', 'Announcement'].map(tab => (
-                <button key={tab} className={`inbox-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="card-content inbox-content">
-              {filteredNotifications.length === 0 ? (
-                <div className="empty-inbox">
-                  <CheckCircle size={40} className="empty-icon" />
-                  <p>All caught up! No notifications found.</p>
-                </div>
-              ) : (
-                <div className="notifications-list">
-                  {filteredNotifications.map(n => (
-                    <div key={n.id} className={`notification-item ${!n.read ? 'unread' : ''}`}>
-                      <div className={`notification-icon ${n.type}`}>
-                        <Info size={18} />
-                      </div>
-                      <div className="notification-details">
-                        <p className="notification-msg">{n.message}</p>
-                        <span className="notification-time">{n.timestamp}</span>
-                      </div>
-                      {!n.read && <span className="unread-dot"></span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            ))}
           </div>
         </div>
       </div>

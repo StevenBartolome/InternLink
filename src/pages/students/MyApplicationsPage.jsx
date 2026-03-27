@@ -1,99 +1,139 @@
 import React, { useState } from 'react';
+import { 
+  FileText, Clock, CheckCircle2, 
+  XCircle, Filter, Search, 
+  ChevronRight, ArrowRight, Building2,
+  Calendar, ExternalLink, MoreVertical
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { applicationRecords } from '../../data/mockData';
-import { ChevronDown, ChevronUp, Clock, CheckCircle2, XCircle, Search } from 'lucide-react';
-import '../../assets/css/students/MyApplicationsPage.css';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-export default function MyApplicationsPage() {
-  const [expandedId, setExpandedId] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+const MyApplicationsPage = () => {
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [filter, setFilter] = useState('All');
 
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+  const filteredApps = filter === 'All' 
+    ? applicationRecords 
+    : applicationRecords.filter(app => app.status === filter);
 
-  const getStatusBadge = (status) => {
-    switch(status) {
-      case 'Approved':
-        return <span className="status-badge approved"><CheckCircle2 size={14} /> Approved</span>;
-      case 'Rejected':
-        return <span className="status-badge rejected"><XCircle size={14} /> Rejected</span>;
-      default:
-        return <span className="status-badge pending"><Clock size={14} /> Pending</span>;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    filterBar: {
+      display: 'flex',
+      gap: '12px',
+      overflowX: 'auto',
+      paddingBottom: '8px',
+    },
+    appList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    },
+    appCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: isMobile ? 'flex-start' : 'center',
+      justifyContent: 'space-between',
+      gap: '20px',
+      padding: '24px',
+      transition: 'all 0.2s ease',
+      ':hover': {
+        transform: 'translateX(4px)',
+        borderColor: theme.colors.primary,
+      }
+    },
+    companyInfo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+    },
+    statusBadge: (status) => {
+      const colors = {
+        Approved: commonStyles.badgeSuccess,
+        Pending: commonStyles.badgeWarning,
+        Rejected: commonStyles.badgeDanger,
+        Shortlisted: commonStyles.badgeInfo,
+      };
+      return {
+        ...commonStyles.dashboardBadge,
+        ...(colors[status] || commonStyles.badgeInfo),
+      };
     }
   };
 
-  const filteredApplications = applicationRecords.filter(app => 
-    app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    app.position.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   return (
-    <div className="applications-container">
-      <div className="page-header">
-        <h1>My Applications</h1>
-        <p>Track the status of your sent internship applications.</p>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>My Applications</h1>
+        <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Total: {applicationRecords.length}</span>
+      </header>
+
+      <div style={styles.filterBar}>
+        {['All', 'Approved', 'Pending', 'Rejected', 'Shortlisted'].map(f => (
+          <button 
+            key={f} 
+            style={{ 
+              ...commonStyles.dashboardBtn, 
+              backgroundColor: filter === f ? theme.colors.primary : theme.colors.bgSecondary,
+              color: filter === f ? '#fff' : theme.colors.textMuted,
+              borderRadius: '20px',
+              padding: '8px 20px',
+            }}
+            onClick={() => setFilter(f)}
+          >
+            {f}
+          </button>
+        ))}
       </div>
 
-      <div className="top-utils">
-        <div className="search-box">
-          <Search size={18} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search company or position..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="applications-list">
-        {filteredApplications.length === 0 ? (
-          <p className="empty-state">No applications found matches.</p>
-        ) : (
-          filteredApplications.map(app => {
-            const isExpanded = expandedId === app.id;
-            return (
-              <div key={app.id} className={`application-card ${isExpanded ? 'active-shadow' : ''}`}>
-                <div className="app-summary" onClick={() => toggleExpand(app.id)}>
-                  <div className="app-left">
-                    <div className="company-logo-placeholder">
-                      {app.company.charAt(0)}
-                    </div>
-                    <div>
-                      <h3>{app.position}</h3>
-                      <p className="company-text">{app.company}</p>
-                    </div>
-                  </div>
-
-                  <div className="app-right">
-                    <span className="app-date">Applied on {app.dateApplied}</span>
-                    {getStatusBadge(app.status)}
-                    <button className="expand-btn">
-                      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Expandable Details Row */}
-                <div className={`app-details ${isExpanded ? 'expanded' : ''}`}>
-                  <div className="details-content">
-                    <div className="detail-block">
-                      <h4>Cover Letter / Remarks</h4>
-                      <p>{app.coverLetter || "No cover letter submitted."}</p>
-                    </div>
-                    <div className="detail-block document-block">
-                      <h4>Submitted Documents</h4>
-                      <div className="doc-item">
-                        <span>📄 Juan_DelaCruz_Resume_2026.pdf</span>
-                      </div>
-                    </div>
-                  </div>
+      <div style={styles.appList}>
+        {filteredApps.map(app => (
+          <div key={app.id} style={styles.appCard}>
+            <div style={styles.companyInfo}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifySelf: 'center', color: theme.colors.primary, fontWeight: 800 }}>
+                {app.company.charAt(0)}
+              </div>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{app.position}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted, marginTop: '4px' }}>
+                  <Building2 size={14} />
+                  <span>{app.company}</span>
+                  <span>•</span>
+                  <Calendar size={14} />
+                  <span>Applied {app.dateApplied}</span>
                 </div>
               </div>
-            );
-          })
-        )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', width: isMobile ? '100%' : 'auto', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+              <span style={styles.statusBadge(app.status)}>{app.status}</span>
+              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '10px' }}>
+                <ExternalLink size={18} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-}
+};
+
+export default MyApplicationsPage;

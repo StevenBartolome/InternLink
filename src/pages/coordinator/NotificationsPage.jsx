@@ -1,84 +1,138 @@
 import React, { useState } from 'react';
-import { Bell, Check, Filter, AlertCircle, FileText, Activity } from 'lucide-react';
+import { 
+  Bell, Mail, MessageSquare, AlertCircle, 
+  CheckCircle, Clock, Trash2, Check,
+  Search, Filter
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { mockNotifications } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/NotificationsPage.css';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const NotificationsPage = () => {
-  const [activeTab, setActiveTab ] = useState('All');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const [notifications, setNotifications] = useState(mockNotifications);
+  const [filter, setFilter] = useState('all');
 
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Unread') return !n.read;
-    return n.type === activeTab;
-  });
+  const filteredNotifs = filter === 'all' 
+    ? notifications 
+    : notifications.filter(n => n.type.toLowerCase() === filter);
 
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const markAsRead = (id) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-
-  const getIcon = (type) => {
-    switch (type) {
-      case 'Application': return <FileText size={20} className="icon-app" />;
-      case 'Listing': return <AlertCircle size={20} className="icon-list" />;
-      case 'Progress': return <Activity size={20} className="icon-prog" />;
-      default: return <Bell size={20} className="icon-def" />;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+      maxWidth: '1000px',
+      margin: '0 auto',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    filterBar: {
+      display: 'flex',
+      gap: '12px',
+      overflowX: 'auto',
+      paddingBottom: '8px',
+    },
+    notifList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    },
+    notifCard: (isRead) => ({
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      gap: '20px',
+      padding: '20px',
+      cursor: 'pointer',
+      backgroundColor: isRead ? theme.colors.white : 'rgba(59, 130, 246, 0.05)',
+      borderLeft: isRead ? `1px solid ${theme.colors.border}` : `4px solid ${theme.colors.primary}`,
+      transition: 'all 0.2s ease',
+    }),
+    iconBox: (type) => {
+      const colors = {
+        application: { bg: '#E1EFFE', color: '#1E429F' },
+        listing: { bg: '#DEF7EC', color: '#03543F' },
+        progress: { bg: '#FEF3C7', color: '#92400E' },
+        system: { bg: '#F3F4F6', color: '#374151' },
+      };
+      const color = colors[type.toLowerCase()] || colors.system;
+      return {
+        width: '48px',
+        height: '48px',
+        borderRadius: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: color.bg,
+        color: color.color,
+        flexShrink: 0,
+      };
     }
   };
 
   return (
-    <div className="notifications-page">
-      <div className="page-header-actions">
-        <button className="dashboard-btn dashboard-btn-secondary btn-sm" onClick={markAllAsRead}>
-          <Check size={16} /> Mark all as read
-        </button>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Notifications</h1>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.8rem' }}>
+            Mark all as read
+          </button>
+        </div>
       </div>
 
-      <div className="notifications-tabs">
-        {['All', 'Unread', 'Application', 'Listing', 'Progress'].map((tab) => (
+      <div style={styles.filterBar}>
+        {['All', 'Application', 'Listing', 'Progress', 'System'].map(f => (
           <button 
-            key={tab} 
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            key={f} 
+            style={{ 
+              ...commonStyles.dashboardBtn, 
+              backgroundColor: filter === f.toLowerCase() ? theme.colors.primary : theme.colors.bgSecondary,
+              color: filter === f.toLowerCase() ? '#fff' : theme.colors.textMuted,
+              padding: '8px 16px',
+              borderRadius: '20px',
+            }}
+            onClick={() => setFilter(f.toLowerCase())}
           >
-            {tab === 'Application' ? 'Applications' : tab === 'Listing' ? 'Listings' : tab === 'Progress' ? 'Progress' : tab}
-            <span className="tab-count">
-              {tab === 'All' ? notifications.length : 
-               tab === 'Unread' ? notifications.filter(n => !n.read).length :
-               notifications.filter(n => n.type === tab).length}
-            </span>
+            {f}
           </button>
         ))}
       </div>
 
-      <div className="notifications-list dashboard-card">
-        {filteredNotifications.length === 0 ? (
-          <div className="empty-state">
-            <Bell size={48} className="empty-icon" />
-            <p>No notifications found.</p>
-          </div>
-        ) : (
-          filteredNotifications.map((n) => (
-            <div 
-              key={n.id} 
-              className={`notification-item ${n.read ? 'read' : 'unread'}`}
-              onClick={() => markAsRead(n.id)}
-            >
-              <div className="notif-icon-wrapper">
-                {getIcon(n.type)}
-              </div>
-              <div className="notif-content">
-                <p className="notif-message">{n.message}</p>
-                <span className="notif-time">{n.timestamp}</span>
-              </div>
-              {!n.read && <span className="unread-dot"></span>}
+      <div style={styles.notifList}>
+        {filteredNotifs.map(notif => (
+          <div key={notif.id} style={styles.notifCard(notif.read)}>
+            <div style={styles.iconBox(notif.type)}>
+              {notif.type === 'Application' && <Mail size={22} />}
+              {notif.type === 'Listing' && <MessageSquare size={22} />}
+              {notif.type === 'Progress' && <Clock size={22} />}
+              {notif.type === 'System' && <AlertCircle size={22} />}
+              {!['Application', 'Listing', 'Progress', 'System'].includes(notif.type) && <Bell size={22} />}
             </div>
-          ))
-        )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 700, color: theme.colors.textMain }}>{notif.type}</span>
+                <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{notif.timestamp}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: theme.colors.textMuted }}>{notif.message}</p>
+            </div>
+            {!notif.read && (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '10px', height: '10px', backgroundColor: theme.colors.primary, borderRadius: '50%' }}></div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

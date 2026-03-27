@@ -2,17 +2,43 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../Sidebar/Sidebar';
 import Topbar from '../Topbar/Topbar';
-import '../../assets/css/students/MainLayout.css';
+import { theme } from '../../styles/theme';
 
 const MainLayout = () => {
+  const styles = {
+    layout: {
+      display: 'flex',
+      minHeight: '100vh',
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    main: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      marginLeft: '260px', // Matches Student Sidebar width
+      minWidth: 0,
+    },
+    content: {
+      flex: 1,
+      padding: '24px',
+      marginTop: '70px', // Matches Topbar height
+    }
+  };
+
+  // Handle mobile responsiveness (simplified for layout)
+  const isMobile = window.innerWidth <= 1024;
+  if (isMobile) {
+    styles.main.marginLeft = '0';
+  }
+
   return (
-    <div className="layout-container">
+    <div style={styles.layout}>
       <Sidebar />
-      <div className="main-content">
+      <div style={styles.main}>
         <Topbar />
-        <div className="page-content">
-          <Outlet /> {/* This renders the child routes/pages */}
-        </div>
+        <main style={styles.content}>
+          <Outlet />
+        </main>
       </div>
     </div>
   );

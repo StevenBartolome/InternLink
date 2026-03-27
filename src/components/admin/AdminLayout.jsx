@@ -1,44 +1,42 @@
-// src/components/admin/AdminLayout.jsx
-import React, { useState, useEffect } from 'react';
-import { useLocation, Outlet } from 'react-router-dom';
-import Sidebar from '../Sidebar/Sidebar';
-import Topbar from '../Topbar/Topbar';
-import '../../assets/css/admin/AdminLayout.css';
+import React from 'react';
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import Topbar from './Topbar';
+import { theme } from '../../styles/theme';
 
 const AdminLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const location = useLocation();
-  const [pageTitle, setPageTitle] = useState('Dashboard');
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const styles = {
+    layout: {
+      display: 'flex',
+      minHeight: '100vh',
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    main: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      marginLeft: '260px', // Matches Sidebar width
+      minWidth: 0, // Prevent flex items from overflowing
+    },
+    content: {
+      flex: 1,
+      padding: '24px',
+      marginTop: '70px', // Matches Topbar height
+    }
   };
 
-  useEffect(() => {
-    const path = location.pathname;
-    if (path.includes('/admin/dashboard')) setPageTitle('Dashboard');
-    else if (path.includes('/admin/users')) setPageTitle('User Management');
-    else if (path.includes('/admin/verification')) setPageTitle('Account Verification');
-    else if (path.includes('/admin/oversight')) setPageTitle('Internship Oversight');
-    else if (path.includes('/admin/matching')) setPageTitle('Matching Engine Settings');
-    else if (path.includes('/admin/reports')) setPageTitle('System Reports');
-    else if (path.includes('/admin/audit')) setPageTitle('Audit Logs');
-    else if (path.includes('/admin/settings')) setPageTitle('System Settings');
-    else if (path.includes('/admin/notifications')) setPageTitle('Notifications Center');
-    else if (path.includes('/admin/login')) setPageTitle('Login');
-  }, [location]);
+  // Handle mobile responsiveness (simplified for layout)
+  const isMobile = window.innerWidth <= 1024;
+  if (isMobile) {
+    styles.main.marginLeft = '0';
+  }
 
   return (
-    <div className="admin-layout">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-      {isSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={toggleSidebar}></div>
-      )}
-
-      <div className="layout-main">
-        <Topbar toggleSidebar={toggleSidebar} title={pageTitle} />
-        <main className="layout-content">
+    <div style={styles.layout}>
+      <Sidebar />
+      <div style={styles.main}>
+        <Topbar />
+        <main style={styles.content}>
           <Outlet />
         </main>
       </div>

@@ -1,130 +1,170 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, ChevronDown, ChevronUp } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import { mockApplications } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/ApplicationTrackingPage.css';
+import { 
+  Search, Filter, Calendar, 
+  CheckCircle, XCircle, Clock, 
+  ExternalLink, FileText, ChevronRight,
+  Target, Briefcase, GraduationCap
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { mockEmployerListings } from '../../data/coordinatorMockData';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ApplicationTrackingPage = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [expandedRow, setExpandedRow] = useState(null);
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [activeTab, setActiveTab] = useState('all');
 
-  const filteredApplications = mockApplications.filter(app => {
-    const matchesSearch = app.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         app.employer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         app.position.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
+  // Simulated applications derived from mockEmployerListings for tracking
+  const mockApplications = [
+    { id: 'APP001', student: 'Alice Johnson', company: 'Google', position: 'Frontend Intern', date: '2023-10-15', status: 'Pending' },
+    { id: 'APP002', student: 'Bob Smith', company: 'Microsoft', position: 'Backend Intern', date: '2023-10-16', status: 'Shortlisted' },
+    { id: 'APP003', student: 'Charlie Brown', company: 'Amazon', position: 'Cloud Engineer', date: '2023-10-14', status: 'Approved' },
+    { id: 'APP004', student: 'David Wilson', company: 'Meta', position: 'Data Science Intern', date: '2023-10-12', status: 'Rejected' },
+  ];
 
-  const toggleRow = (id) => {
-    setExpandedRow(expandedRow === id ? null : id);
-  };
+  const filteredApps = activeTab === 'all' ? mockApplications : mockApplications.filter(app => app.status.toLowerCase() === activeTab);
 
-  const handleExport = () => {
-    alert('Exporting to CSV... (UI functionality only)');
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    tabs: {
+      display: 'flex',
+      gap: '8px',
+      borderBottom: `1px solid ${theme.colors.border}`,
+      paddingBottom: '2px',
+    },
+    tab: (isActive) => ({
+      padding: '12px 20px',
+      cursor: 'pointer',
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      color: isActive ? theme.colors.primary : theme.colors.textMuted,
+      borderBottom: isActive ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+      transition: 'all 0.2s ease',
+    }),
+    cardGrid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
+      gap: '20px',
+    },
+    appCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    },
+    cardHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+    },
+    statusBadge: (status) => {
+      const colors = {
+        pending: { bg: '#FEF3C7', text: '#92400E' },
+        shortlisted: { bg: '#E1EFFE', text: '#1E429F' },
+        approved: { bg: '#DEF7EC', text: '#03543F' },
+        rejected: { bg: '#FDE8E8', text: '#9B1C1C' },
+      };
+      const color = colors[status.toLowerCase()] || { bg: '#F3F4F6', text: '#374151' };
+      return {
+        ...commonStyles.dashboardBadge,
+        backgroundColor: color.bg,
+        color: color.text,
+      };
+    },
+    detailRow: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      fontSize: '0.875rem',
+      color: theme.colors.textMuted,
+    },
+    actions: {
+      display: 'flex',
+      gap: '12px',
+      marginTop: '8px',
+      paddingTop: '16px',
+      borderTop: `1px solid ${theme.colors.border}`,
+    }
   };
 
   return (
-    <div className="application-tracking-page">
-      {/* Header with Actions */}
-      <div className="page-header-actions">
-        <button className="dashboard-btn dashboard-btn-secondary" onClick={handleExport}>
-          <Download size={16} /> Export to CSV
-        </button>
-      </div>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>Application Tracking</h1>
+        <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Total: {mockApplications.length}</span>
+      </header>
 
-      {/* Filters Bar */}
-      <div className="dashboard-card filters-bar">
-        <div className="search-wrapper">
-          <Search size={18} className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Search by student, company, or position..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <div className="filters-group">
-          <div className="filter-item">
-            <Filter size={16} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="All">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+      <div style={styles.tabs}>
+        {['All', 'Pending', 'Shortlisted', 'Approved', 'Rejected'].map(status => (
+          <div 
+            key={status} 
+            style={styles.tab(activeTab === status.toLowerCase())}
+            onClick={() => setActiveTab(status.toLowerCase())}
+          >
+            {status}
           </div>
-        </div>
+        ))}
       </div>
 
-      {/* Applications Table */}
-      <div className="dashboard-table-container">
-        <table className="dashboard-table">
-          <thead>
-            <tr>
-              <th></th>
-              <th>Student Name</th>
-              <th>Employer</th>
-              <th>Position</th>
-              <th>Date Applied</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredApplications.map((app) => (
-              <React.Fragment key={app.id}>
-                <tr className={`application-row ${expandedRow === app.id ? 'expanded' : ''}`} onClick={() => toggleRow(app.id)}>
-                  <td>
-                    {expandedRow === app.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                  </td>
-                  <td><strong>{app.studentName}</strong></td>
-                  <td>{app.employer}</td>
-                  <td>{app.position}</td>
-                  <td>{app.dateApplied}</td>
-                  <td><StatusBadge status={app.status} /></td>
-                  <td>
-                    <button className="dashboard-btn dashboard-btn-secondary btn-sm" onClick={(e) => { e.stopPropagation(); toggleRow(app.id); }}>
-                      View Details
-                    </button>
-                  </td>
-                </tr>
-                {expandedRow === app.id && (
-                  <tr className="expanded-row-content">
-                    <td colSpan="7">
-                      <div className="details-panel">
-                        <div className="details-section">
-                          <h5>Cover Letter</h5>
-                          <p className="cover-letter-text">"{app.coverLetter}"</p>
-                        </div>
-                        <div className="details-section">
-                          <h5>Skills</h5>
-                          <div className="skills-list">
-                            {app.skills.map((skill, index) => (
-                              <span key={index} className="skill-tag">{skill}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="details-actions">
-                          <button className="dashboard-btn dashboard-btn-primary btn-sm">View Student Profile</button>
-                          {app.status === 'Pending' && (
-                            <>
-                              <button className="dashboard-btn dashboard-btn-success btn-sm">Approve</button>
-                              <button className="dashboard-btn dashboard-btn-danger btn-sm">Reject</button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
+      <div style={styles.cardGrid}>
+        {filteredApps.map(app => (
+          <div key={app.id} style={styles.appCard}>
+            <div style={styles.cardHeader}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ padding: '10px', backgroundColor: theme.colors.bgAccent, borderRadius: '12px', color: theme.colors.primary }}>
+                  <GraduationCap size={24} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{app.student}</h3>
+                  <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{app.id}</span>
+                </div>
+              </div>
+              <span style={styles.statusBadge(app.status)}>{app.status}</span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={styles.detailRow}>
+                <Briefcase size={16} />
+                <span>{app.position} at <strong>{app.company}</strong></span>
+              </div>
+              <div style={styles.detailRow}>
+                <Calendar size={16} />
+                <span>Applied on {app.date}</span>
+              </div>
+            </div>
+
+            <div style={styles.actions}>
+              <button 
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}
+                onClick={() => alert('Viewing details for ' + app.id)}
+              >
+                <FileText size={16} />
+                View File
+              </button>
+              <button 
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+                title="Open Company Portal"
+              >
+                <ExternalLink size={16} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

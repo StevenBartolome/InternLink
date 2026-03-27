@@ -1,164 +1,162 @@
 import React, { useState } from 'react';
-import { Cpu, Check, X, Sliders, AlertCircle } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
-import { mockSuggestedMatches, mockEmployerListings } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/AutomatedMatchingPage.css';
+import { 
+  Database, UserCheck, Briefcase, Zap, 
+  Search, Sliders, CheckCircle, XCircle,
+  AlertCircle, ArrowRight, Star
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
+import { mockStudents, mockEmployerListings } from '../../data/coordinatorMockData';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const AutomatedMatchingPage = () => {
-  const [activeTab, setActiveTab] = useState('All');
-  const [matches, setMatches] = useState(mockSuggestedMatches);
-  const [selectedMatch, setSelectedMatch] = useState(null); // For Override Modal
-  const [selectedCompany, setSelectedCompany] = useState('');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchResults, setMatchResults] = useState([]);
 
-  const filteredMatches = matches.filter(match => {
-    if (activeTab === 'All') return true;
-    return match.status === activeTab;
-  });
-
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'score-high';
-    if (score >= 60) return 'score-mid';
-    return 'score-low';
+  const handleRunMatching = () => {
+    setIsMatching(true);
+    // Simulate matching engine process
+    setTimeout(() => {
+      const results = mockStudents.slice(0, 5).map((student, idx) => ({
+        id: `M${idx}`,
+        student: student.name,
+        company: mockEmployerListings[idx % mockEmployerListings.length].company,
+        position: mockEmployerListings[idx % mockEmployerListings.length].position,
+        score: Math.floor(Math.random() * 20) + 80, // 80-99%
+      }));
+      setMatchResults(results);
+      setIsMatching(false);
+    }, 2000);
   };
 
-  const handleAccept = (id) => {
-    setMatches(prev => prev.map(m => m.id === id ? { ...m, status: 'Accepted' } : m));
-  };
-
-  const handleOverride = (id) => {
-    const match = matches.find(m => m.id === id);
-    setSelectedMatch(match);
-  };
-
-  const submitOverride = () => {
-    if (!selectedCompany) {
-      alert("Please select a company.");
-      return;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    engineCard: {
+      ...commonStyles.dashboardCard,
+      background: 'linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '24px',
+      padding: '48px',
+      textAlign: 'center',
+    },
+    resultsGrid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(360px, 1fr))',
+      gap: '20px',
+    },
+    matchCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+    },
+    scoreBadge: {
+      width: '64px',
+      height: '64px',
+      borderRadius: '50%',
+      border: `4px solid ${theme.colors.bgAccent}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '1.1rem',
+      fontWeight: 800,
+      color: theme.colors.primary,
     }
-    setMatches(prev => prev.map(m => m.id === selectedMatch.id ? { 
-      ...m, 
-      status: 'Overridden', 
-      matchedCompany: selectedCompany,
-      matchScore: 'N/A (Manual)'
-    } : m));
-    setSelectedMatch(null);
-    setSelectedCompany('');
   };
 
   return (
-    <div className="automated-matching-page">
-      {/* Intro Banner */}
-      <div className="match-banner dashboard-card">
-        <div className="banner-content">
-          <Cpu size={40} className="banner-icon" />
-          <div>
-            <h2>AI-Suggested Matches</h2>
-            <p>We've analyzed student skills and internship requirements to find the best placements.</p>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={styles.title}>Automated Matching Engine</h1>
+        <button 
+          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+          onClick={() => setMatchResults([])}
+        >
+          Reset Engine
+        </button>
+      </header>
+
+      {!matchResults.length ? (
+        <div style={styles.engineCard}>
+          <div style={{ padding: '24px', backgroundColor: '#fff', borderRadius: '50%', boxShadow: theme.shadows.md }}>
+            <Zap size={48} color={theme.colors.primary} />
           </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="match-tabs">
-        {['All', 'Pending', 'Accepted', 'Overridden'].map((tab) => (
+          <div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Ready to Pair Interns?</h2>
+            <p style={{ color: theme.colors.textMuted, maxWidth: '500px' }}>
+              Our AI engine analyzes student skills, preferences, and company requirements to find the best possible matches.
+            </p>
+          </div>
           <button 
-            key={tab} 
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
+            style={{ 
+              ...commonStyles.dashboardBtn, 
+              ...commonStyles.dashboardBtnPrimary,
+              padding: '16px 32px',
+              fontSize: '1rem',
+              borderRadius: '16px'
+            }}
+            onClick={handleRunMatching}
+            disabled={isMatching}
           >
-            {tab}
-            <span className="tab-count">
-              {tab === 'All' ? matches.length : matches.filter(m => m.status === tab).length}
-            </span>
+            {isMatching ? 'Processing Neural Network...' : 'Run Matching Algorithm'}
           </button>
-        ))}
-      </div>
-
-      {/* Table */}
-      <div className="dashboard-table-container">
-        <table className="dashboard-table">
-          <thead>
-            <tr>
-              <th>Student Name</th>
-              <th>Skills Summary</th>
-              <th>Matched Company</th>
-              <th>Position</th>
-              <th>Match Score</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredMatches.map((match) => (
-              <tr key={match.id}>
-                <td><strong>{match.studentName}</strong></td>
-                <td><span className="skills-summary">{match.skills}</span></td>
-                <td>{match.matchedCompany}</td>
-                <td>{match.position}</td>
-                <td>
-                  <span className={`score-badge ${getScoreColor(match.matchScore)}`}>
-                    {match.matchScore}{typeof match.matchScore === 'number' ? '%' : ''}
-                  </span>
-                </td>
-                <td><StatusBadge status={match.status} /></td>
-                <td>
-                  {match.status === 'Pending' && (
-                    <div className="action-buttons">
-                      <button className="dashboard-btn btn-success btn-sm" onClick={() => handleAccept(match.id)}>
-                        <Check size={16} /> Accept
-                      </button>
-                      <button className="dashboard-btn btn-secondary btn-sm" onClick={() => handleOverride(match.id)}>
-                        <Sliders size={16} /> Override
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.success }}>
+            <CheckCircle size={20} />
+            <span style={{ fontWeight: 700 }}>Generated {matchResults.length} high-confidence matches.</span>
+          </div>
+          <div style={styles.resultsGrid}>
+            {matchResults.map(match => (
+              <div key={match.id} style={styles.matchCard}>
+                <div style={styles.scoreBadge}>{match.score}%</div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>{match.student}</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted, marginTop: '4px' }}>
+                    <Briefcase size={14} />
+                    <span>{match.position} at {match.company}</span>
+                  </div>
+                </div>
+                <button style={{ ...commonStyles.dashboardBtn, padding: '8px', backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>
+                  <ArrowRight size={20} />
+                </button>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Override Modal */}
-      {selectedMatch && (
-        <div className="modal-backdrop" onClick={() => setSelectedMatch(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Manual Match Override</h3>
-              <button className="modal-close-btn" onClick={() => setSelectedMatch(null)}>
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className="modal-body">
-              <p>Override match for <strong>{selectedMatch.studentName}</strong></p>
-              
-              <div className="form-group">
-                <label>Select Alternative Company:</label>
-                <select 
-                  className="match-select"
-                  value={selectedCompany} 
-                  onChange={(e) => setSelectedCompany(e.target.value)}
-                >
-                  <option value="">Select a company</option>
-                  {mockEmployerListings.map(l => (
-                    <option key={l.id} value={l.companyName}>{l.companyName} - {l.position}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="modal-actions">
-                <button className="dashboard-btn dashboard-btn-primary" onClick={submitOverride}>
-                  Confirm Override
-                </button>
-                <button className="dashboard-btn dashboard-btn-secondary" onClick={() => setSelectedMatch(null)}>
-                  Cancel
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
+
+      {/* Stats Summary Small */}
+      <div style={{ ...commonStyles.dashboardCard, display: 'flex', justifyContent: 'space-around', padding: '24px' }}>
+        <div>
+          <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted, textTransform: 'uppercase' }}>Unplaced Students</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{mockStudents.filter(s => s.status !== 'Placed').length}</div>
+        </div>
+        <div style={{ borderLeft: `1px solid ${theme.colors.border}` }}></div>
+        <div>
+          <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted, textTransform: 'uppercase' }}>Open Listings</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{mockEmployerListings.length}</div>
+        </div>
+      </div>
     </div>
   );
 };

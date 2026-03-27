@@ -1,180 +1,123 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { 
+  Star, Plus, Trash2, 
+  CheckCircle, Zap, ShieldCheck,
+  Search, Info, Trophy, Layout
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { studentProfile } from '../../data/mockData';
-import { Plus, X, Award, PlusCircle, Trash2, ArrowLeft, CheckCircle } from 'lucide-react';
-import '../../assets/css/students/SkillsManagerPage.css';
 
-export default function SkillsManagerPage() {
-  const navigate = useNavigate();
-  const [skills, setSkills] = useState([...studentProfile.skills]);
-  const [certs, setCerts] = useState([...studentProfile.certifications]);
-  
+const SkillsManagerPage = () => {
+  const [skills, setSkills] = useState(studentProfile.skills);
   const [newSkill, setNewSkill] = useState('');
-  const [newCert, setNewCert] = useState({ title: '', issuer: '', date: '' });
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-
-  // Skills Handlers
-  const handleAddSkill = (e) => {
-    e.preventDefault();
-    if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+  const addSkill = () => {
+    if (newSkill.trim() && !skills.includes(newSkill)) {
       setSkills([...skills, newSkill.trim()]);
       setNewSkill('');
     }
   };
 
-  const handleRemoveSkill = (skillToRemove) => {
-    setSkills(skills.filter(skill => skill !== skillToRemove));
+  const removeSkill = (skill) => {
+    setSkills(skills.filter(s => s !== skill));
   };
 
-  // Certifications Handlers
-  const handleAddCert = (e) => {
-    e.preventDefault();
-    if (newCert.title && newCert.issuer && newCert.date) {
-      setCerts([...certs, { id: Date.now(), ...newCert }]);
-      setNewCert({ title: '', issuer: '', date: '' });
+  const styles = {
+    container: {
+      maxWidth: '800px',
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    skillBadge: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '8px 16px',
+      borderRadius: '20px',
+      backgroundColor: theme.colors.bgAccent,
+      color: theme.colors.primary,
+      fontWeight: 600,
+      fontSize: '0.9rem',
+      border: `1px solid ${theme.colors.glassBorder}`,
+      transition: 'all 0.2s ease',
+      ':hover': { transform: 'translateY(-2px)', boxShadow: theme.shadows.sm }
+    },
+    inputGroup: {
+      display: 'flex',
+      gap: '12px',
+      marginBottom: '32px',
+    },
+    input: {
+      flex: 1,
+      padding: '12px 20px',
+      borderRadius: '12px',
+      border: `1px solid ${theme.colors.border}`,
+      fontSize: '1rem',
+      outline: 'none',
+      ':focus': { borderColor: theme.colors.primary }
     }
   };
 
-  const handleRemoveCert = (id) => {
-    setCerts(certs.filter(cert => cert.id !== id));
-  };
-
-  const handleSaveAll = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    }, 1000);
-  };
-
   return (
-    <div className="skills-manager-container">
-      {showToast && (
-        <div className="toast success">
-          <CheckCircle size={20} />
-          <span>Skills & Certifications saved successfully!</span>
-        </div>
-      )}
+    <div style={styles.container}>
+      <header>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Skills Portfolio</h1>
+        <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem', marginTop: '4px' }}>Highlight your technical expertise to improve AI matching with internships.</p>
+      </header>
 
-      <div className="page-header">
-        <div className="header-actions">
-          <button onClick={() => navigate(-1)} className="back-btn">
-            <ArrowLeft size={16} /> Back to Profile
-          </button>
-          <button className="save-changes-btn" onClick={handleSaveAll} disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Changes'}
+      <div style={commonStyles.dashboardCard}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Zap size={18} color={theme.colors.warning} fill={theme.colors.warning} />
+          Add Your Skills
+        </h3>
+        <div style={styles.inputGroup}>
+          <input 
+            style={styles.input} 
+            placeholder="e.g., Python, UI Design, Project Management..." 
+            value={newSkill}
+            onChange={(e) => setNewSkill(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+          />
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '0 24px' }}
+            onClick={addSkill}
+          >
+            Add Skill
           </button>
         </div>
-        <h1>Skills & Certifications Manager</h1>
-        <p>Manage your technical profile to match internship requirements.</p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+          {skills.map((skill, index) => (
+            <div key={index} style={styles.skillBadge}>
+              {skill}
+              <button 
+                style={{ background: 'none', border: 'none', color: theme.colors.textMuted, cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                onClick={() => removeSkill(skill)}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="skills-grid">
-        {/* Left: Skills Manager */}
-        <div className="manager-card">
-          <div className="card-header">
-            <h3>My Core Skills</h3>
-            <span className="count-badge">{skills.length} Skills</span>
-          </div>
-
-          <form onSubmit={handleAddSkill} className="add-item-form">
-            <input 
-              type="text" 
-              placeholder="Add a new skill (e.g. Python, SQL)" 
-              value={newSkill}
-              onChange={(e) => setNewSkill(e.target.value)}
-            />
-            <button type="submit" className="add-btn">
-              <Plus size={20} /> Add
-            </button>
-          </form>
-
-          <div className="skills-chip-container">
-            {skills.map((skill, index) => (
-              <div key={index} className="interactive-skill-chip">
-                <span>{skill}</span>
-                <button 
-                  type="button" 
-                  className="remove-skill-btn"
-                  onClick={() => handleRemoveSkill(skill)}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ ...commonStyles.dashboardCard, backgroundColor: '#F0F9FF', border: '1px solid #BAE6FD' }}>
+          <Trophy size={24} color="#0284C7" style={{ marginBottom: '12px' }} />
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, color: '#0369A1' }}>Top Skill Badge</h4>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#075985' }}>You are in the top 10% of candidates for React.js roles based on your verified skills.</p>
         </div>
-
-        {/* Right: Certifications Manager */}
-        <div className="manager-card">
-          <div className="card-header">
-            <h3>Certifications</h3>
-            <span className="count-badge">{certs.length} Earned</span>
-          </div>
-
-          <form onSubmit={handleAddCert} className="add-cert-form">
-            <div className="form-group">
-              <input 
-                type="text" 
-                placeholder="Certification Title" 
-                value={newCert.title}
-                onChange={(e) => setNewCert({ ...newCert, title: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-row">
-              <input 
-                type="text" 
-                placeholder="Issuer" 
-                value={newCert.issuer}
-                onChange={(e) => setNewCert({ ...newCert, issuer: e.target.value })}
-                required
-              />
-              <input 
-                type="text" 
-                placeholder="Date (e.g., Jan 2026)" 
-                value={newCert.date}
-                onChange={(e) => setNewCert({ ...newCert, date: e.target.value })}
-                required
-              />
-            </div>
-            <button type="submit" className="add-cert-btn">
-              <PlusCircle size={18} /> Add Certification
-            </button>
-          </form>
-
-          <div className="certifications-list">
-            {certs.length === 0 ? (
-              <p className="empty-state">No certifications added yet.</p>
-            ) : (
-              certs.map((cert) => (
-                <div key={cert.id} className="interactive-cert-item">
-                  <div className="cert-left">
-                    <div className="cert-icon">
-                      <Award size={22} className="icon-award" />
-                    </div>
-                    <div className="cert-info">
-                      <h5>{cert.title}</h5>
-                      <span className="issuer">{cert.issuer}</span>
-                      <span className="date">{cert.date}</span>
-                    </div>
-                  </div>
-                  <button 
-                    type="button" 
-                    className="delete-cert-btn"
-                    onClick={() => handleRemoveCert(cert.id)}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
+        <div style={{ ...commonStyles.dashboardCard, backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+          <ShieldCheck size={24} color="#16A34A" style={{ marginBottom: '12px' }} />
+          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.95rem', fontWeight: 700, color: '#15803D' }}>Verified Status</h4>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: '#166534' }}>All mentioned skills are verified through your uploaded projects and certifications.</p>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default SkillsManagerPage;

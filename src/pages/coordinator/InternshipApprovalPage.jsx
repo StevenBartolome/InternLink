@@ -1,113 +1,168 @@
 import React, { useState } from 'react';
-import { Check, X, AlertCircle, Calendar, Users, Briefcase } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
+import { 
+  CheckSquare, XCircle, Search, 
+  MapPin, Clock, Building2, 
+  ExternalLink, ChevronRight, FileCheck,
+  MoreVertical, Filter
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { mockEmployerListings } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/InternshipApprovalPage.css';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipApprovalPage = () => {
-  const [activeTab, setActiveTab] = useState('Pending');
-  const [remarks, setRemarks] = useState({});
-  const [listings, setListings] = useState(mockEmployerListings);
+  const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [filter, setFilter] = useState('Pending');
 
-  const filteredListings = listings.filter(listing => listing.status === activeTab);
+  const filteredListings = mockEmployerListings.filter(listing => 
+    filter === 'All' || listing.status === filter
+  );
 
-  const handleApprove = (id) => {
-    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'Approved', remarks: 'Approved' } : l));
-  };
-
-  const handleFlag = (id) => {
-    const remarkText = remarks[id] || 'Flagged for review';
-    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'Flagged', remarks: remarkText } : l));
-  };
-
-  const handleRemarkChange = (id, value) => {
-    setRemarks(prev => ({ ...prev, [id]: value }));
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: '16px',
+    },
+    title: {
+      fontSize: '1.5rem',
+      fontWeight: 800,
+      color: theme.colors.textMain,
+      margin: 0,
+    },
+    filterBar: {
+      display: 'flex',
+      gap: '8px',
+      backgroundColor: theme.colors.bgSecondary,
+      padding: '4px',
+      borderRadius: '12px',
+    },
+    filterBtn: (isActive) => ({
+      padding: '8px 16px',
+      borderRadius: '10px',
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      cursor: 'pointer',
+      border: 'none',
+      transition: 'all 0.2s ease',
+      backgroundColor: isActive ? theme.colors.white : 'transparent',
+      color: isActive ? theme.colors.primary : theme.colors.textMuted,
+      boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.05)' : 'none',
+    }),
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(400px, 1fr))',
+      gap: '20px',
+    },
+    listingCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+    },
+    companyBar: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+    },
+    companyLogo: {
+      width: '40px',
+      height: '40px',
+      borderRadius: '10px',
+      backgroundColor: theme.colors.bgAccent,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: theme.colors.primary,
+      fontWeight: 800,
+    },
+    actions: {
+      display: 'flex',
+      gap: '12px',
+      marginTop: '8px',
+    }
   };
 
   return (
-    <div className="internship-approval-page">
-      {/* Tabs */}
-      <div className="approval-tabs">
-        {['Pending', 'Approved', 'Flagged'].map((tab) => (
-          <button 
-            key={tab} 
-            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab} Listings
-            <span className="tab-count">
-              {listings.filter(l => l.status === tab).length}
-            </span>
-          </button>
-        ))}
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Internship Approvals</h1>
+        <div style={styles.filterBar}>
+          {['Pending', 'Approved', 'Rejected', 'All'].map(s => (
+            <button 
+              key={s} 
+              style={styles.filterBtn(filter === s)}
+              onClick={() => setFilter(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Listings Grid */}
-      <div className="listings-grid">
-        {filteredListings.length === 0 ? (
-          <div className="empty-state dashboard-card">
-            <Briefcase size={48} className="empty-icon" />
-            <p>No {activeTab.toLowerCase()} listings found.</p>
-          </div>
-        ) : (
-          filteredListings.map((listing) => (
-            <div key={listing.id} className="listing-card dashboard-card">
-              <div className="listing-header">
+      <div style={styles.grid}>
+        {filteredListings.map(listing => (
+          <div key={listing.id} style={styles.listingCard}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={styles.companyBar}>
+                <div style={styles.companyLogo}>{listing.company.charAt(0)}</div>
                 <div>
-                  <h4 className="position-title">{listing.position}</h4>
-                  <p className="company-name">{listing.companyName}</p>
-                </div>
-                <StatusBadge status={listing.status} />
-              </div>
-
-              <div className="listing-details">
-                <div className="detail-item">
-                  <Briefcase size={16} />
-                  <span>{listing.department}</span>
-                </div>
-                <div className="detail-item">
-                  <Users size={16} />
-                  <span>{listing.slots} Slots</span>
-                </div>
-                <div className="detail-item">
-                  <Calendar size={16} />
-                  <span>{listing.duration}</span>
-                </div>
-                <div className="detail-item">
-                  <AlertCircle size={16} />
-                  <span>Submitted: {listing.dateSubmitted}</span>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{listing.position}</h3>
+                  <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{listing.company}</span>
                 </div>
               </div>
+              <span style={{ 
+                ...commonStyles.dashboardBadge,
+                ...(listing.status === 'Approved' ? commonStyles.badgeSuccess : 
+                   listing.status === 'Pending' ? commonStyles.badgeWarning : commonStyles.badgeDanger)
+              }}>
+                {listing.status}
+              </span>
+            </div>
 
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted }}>
+                <MapPin size={16} />
+                <span>{listing.location}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted }}>
+                <Clock size={16} />
+                <span>{listing.type}</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: theme.colors.textMain, margin: '8px 0', lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {listing.description || 'No description provided for this internship listing.'}
+            </p>
+
+            <div style={styles.actions}>
               {listing.status === 'Pending' ? (
-                <div className="listing-actions">
-                  <div className="remarks-input-wrapper">
-                    <input 
-                      type="text" 
-                      placeholder="Add remarks or reason for flag..." 
-                      value={remarks[listing.id] || ''}
-                      onChange={(e) => handleRemarkChange(listing.id, e.target.value)}
-                    />
-                  </div>
-                  <div className="action-buttons">
-                    <button className="dashboard-btn btn-success btn-sm" onClick={() => handleApprove(listing.id)}>
-                      <Check size={16} /> Approve
-                    </button>
-                    <button className="dashboard-btn btn-danger btn-sm" onClick={() => handleFlag(listing.id)}>
-                      <X size={16} /> Flag/Reject
-                    </button>
-                  </div>
-                </div>
+                <>
+                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.success }}>
+                    <FileCheck size={18} />
+                    Approve
+                  </button>
+                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger }}>
+                    <XCircle size={18} />
+                    Reject
+                  </button>
+                </>
               ) : (
-                <div className="listing-footer">
-                  <p className="remarks-text">
-                    <strong>Remarks:</strong> {listing.remarks || 'No remarks provided.'}
-                  </p>
-                </div>
+                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}>
+                  <ExternalLink size={18} />
+                  View Listing Details
+                </button>
               )}
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
     </div>
   );

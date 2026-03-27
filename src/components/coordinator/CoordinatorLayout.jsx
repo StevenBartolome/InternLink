@@ -1,54 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import '../../styles/coordinator-global.css';
-import '../../assets/css/coordinator/CoordinatorLayout.css';
+import { theme } from '../../styles/theme';
 
 const CoordinatorLayout = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const location = useLocation();
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
+  const styles = {
+    layout: {
+      display: 'flex',
+      minHeight: '100vh',
+      backgroundColor: theme.colors.bgSecondary,
+    },
+    main: {
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      marginLeft: '270px', // Slightly wider for coordinator
+      minWidth: 0,
+    },
+    content: {
+      flex: 1,
+      padding: '24px',
+      marginTop: '70px',
+    }
   };
 
-  useEffect(() => {
-    // Add coordinator theme class to body
-    document.body.classList.add('coordinator-theme');
-    
-    return () => {
-      // Cleanup on unmount
-      document.body.classList.remove('coordinator-theme');
-    };
-  }, []);
-
-  // Map pathname to Page Title
-  const getPageTitle = (pathname) => {
-    if (pathname.includes('dashboard')) return 'Dashboard Overview';
-    if (pathname.includes('students')) return 'Student Directory';
-    if (pathname.includes('applications')) return 'Application Tracking';
-    if (pathname.includes('approvals')) return 'Internship Approvals';
-    if (pathname.includes('progress')) return 'Progress Monitoring';
-    if (pathname.includes('grades')) return 'Grade Management';
-    if (pathname.includes('matching')) return 'Automated Matching';
-    if (pathname.includes('evaluation')) return 'Student Evaluation';
-    if (pathname.includes('reports')) return 'Reports Dashboard';
-    if (pathname.includes('notifications')) return 'Notifications';
-    return 'Coordinator Dashboard';
-  };
+  const isMobile = window.innerWidth <= 1024;
+  if (isMobile) {
+    styles.main.marginLeft = '0';
+  }
 
   return (
-    <div className="coordinator-layout">
-      <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
-      
-      <div className="coordinator-main-wrapper">
-        <Topbar 
-          title={getPageTitle(location.pathname)} 
-          toggleSidebar={toggleSidebar} 
-        />
-        
-        <main className="coordinator-main-content">
+    <div style={styles.layout}>
+      <Sidebar />
+      <div style={styles.main}>
+        <Topbar />
+        <main style={styles.content}>
           <Outlet />
         </main>
       </div>

@@ -36,7 +36,7 @@
   box-shadow: none;
 }
 
-.dashboard-btn {
+.welcome-banner .dashboard-btn {
   padding: 0.625rem 1.25rem;
   border-radius: 30px;
   font-size: 0.875rem;
@@ -45,25 +45,25 @@
   transition: all 0.2s ease;
 }
 
-.dashboard-btn-primary {
+.welcome-banner .dashboard-btn-primary {
   background-color: #ffffff;
   color: #1e40af;
   border: none;
 }
 
-.dashboard-btn-primary:hover {
+.welcome-banner .dashboard-btn-primary:hover {
   background-color: rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
 }
 
-.dashboard-btn-secondary {
+.welcome-banner .dashboard-btn-secondary {
   background-color: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.3);
   backdrop-filter: blur(4px);
 }
 
-.dashboard-btn-secondary:hover {
+.welcome-banner .dashboard-btn-secondary:hover {
   background-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }

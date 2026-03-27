@@ -1,127 +1,119 @@
-// src/pages/admin/AuditLogsPage.jsx
 import React, { useState } from 'react';
-import { Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Shield, Search, Download, 
+  Filter, Calendar, Activity,
+  Server, User, Info, 
+  Trash2, RotateCcw
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { auditLogs } from '../../data/adminMockData';
-import '../../assets/css/admin/AuditLogsPage.css';
 
 const AuditLogsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRole, setSelectedRole] = useState('All');
-  const [selectedType, setSelectedType] = useState('All');
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
 
-  const roles = ['All', 'Admin', 'Coordinator', 'Employer', 'Supervisor'];
-  const types = ['All', 'Create', 'Update', 'Delete', 'Login', 'System'];
+  const filteredLogs = auditLogs.filter(log => 
+    log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    log.action.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  // Filter Logic
-  const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.affectedRecord.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole === 'All' || log.role === selectedRole;
-    const matchesType = selectedType === 'All' || log.type === selectedType;
-    return matchesSearch && matchesRole && matchesType;
-  });
-
-  // Pagination Logic
-  const indexOfLastRow = currentPage * rowsPerPage;
-  const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredLogs.slice(indexOfFirstRow, indexOfLastRow);
-  const totalPages = Math.ceil(filteredLogs.length / rowsPerPage);
-
-  const paginate = (pageNumber) => {
-    if (pageNumber > 0 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    tableContainer: {
+      ...commonStyles.dashboardTableContainer,
+    },
+    table: {
+      ...commonStyles.dashboardTable,
+    },
+    th: {
+      ...commonStyles.dashboardTableTh,
+    },
+    td: {
+      ...commonStyles.dashboardTableTd,
+    },
+    typeBadge: (type) => {
+      const colors = {
+        Update: { color: theme.colors.warning, bg: '#FEF3C7' },
+        Create: { color: theme.colors.success, bg: '#DEF7EC' },
+        Delete: { color: theme.colors.danger, bg: '#FDE8E8' },
+        System: { color: theme.colors.primary, bg: '#E1EFFE' },
+        Login: { color: theme.colors.textMuted, bg: '#F3F4F6' },
+      };
+      const c = colors[type] || colors.System;
+      return {
+        ...commonStyles.dashboardBadge,
+        color: c.color,
+        backgroundColor: c.bg,
+      };
     }
   };
 
   return (
-    <div className="audit-logs-page">
-      {/* Filter Bar */}
-      <div className="filter-bar">
-        <div className="search-group">
-          <div className="search-wrapper">
-            <Search size={18} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search by user or action..." 
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            />
-          </div>
-        </div>
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Security Audit Logs</h1>
+        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+          <Download size={18} />
+          Export CSV
+        </button>
+      </header>
 
-        <div className="select-group">
-          <div className="select-wrapper">
-            <Filter size={16} className="select-icon" />
-            <select value={selectedRole} onChange={e => { setSelectedRole(e.target.value); setCurrentPage(1); }}>
-              {roles.map(r => <option key={r} value={r}>{r} Role</option>)}
-            </select>
-          </div>
-
-          <div className="select-wrapper">
-            <Filter size={16} className="select-icon" />
-            <select value={selectedType} onChange={e => { setSelectedType(e.target.value); setCurrentPage(1); }}>
-              {types.map(t => <option key={t} value={t}>{t} Type</option>)}
-            </select>
-          </div>
-
-          <button className="export-btn">
-            <Download size={18} /> Export Logs
-          </button>
+      <div style={{ ...commonStyles.dashboardCard, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <Search size={18} color={theme.colors.textMuted} />
+        <input 
+          placeholder="Search by user or action..." 
+          style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem' }}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}><Filter size={18} /></button>
+          <button style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}><Calendar size={18} /></button>
         </div>
       </div>
 
-      {/* Logs Table */}
-      <div className="table-responsive">
-        <table className="logs-table">
+      <div style={styles.tableContainer}>
+        <table style={styles.table}>
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>User Name</th>
-              <th>Role</th>
-              <th>Action</th>
-              <th>Affected Record</th>
-              <th>IP Address</th>
+              <th style={styles.th}>Timestamp</th>
+              <th style={styles.th}>User</th>
+              <th style={styles.th}>Action</th>
+              <th style={styles.th}>Affected Record</th>
+              <th style={styles.th}>Type</th>
+              <th style={styles.th}>IP Address</th>
             </tr>
           </thead>
           <tbody>
-            {currentRows.map(log => (
+            {filteredLogs.map(log => (
               <tr key={log.id}>
-                <td className="timestamp-cell">{log.timestamp}</td>
-                <td className="user-cell">{log.user}</td>
-                <td>
-                  <span className={`role-badge ${log.role.toLowerCase()}`}>{log.role}</span>
+                <td style={{ ...styles.td, fontSize: '0.8rem', color: theme.colors.textMuted }}>{log.timestamp}</td>
+                <td style={styles.td}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <User size={14} color={theme.colors.primary} />
+                    <span style={{ fontWeight: 600 }}>{log.user}</span>
+                  </div>
                 </td>
-                <td>
-                  <span className={`action-badge ${log.type.toLowerCase()}`}>{log.action}</span>
+                <td style={styles.td}>{log.action}</td>
+                <td style={styles.td}>{log.affectedRecord}</td>
+                <td style={styles.td}>
+                  <span style={styles.typeBadge(log.type)}>{log.type}</span>
                 </td>
-                <td className="record-cell">{log.affectedRecord}</td>
-                <td className="ip-cell">{log.ipAddress}</td>
+                <td style={{ ...styles.td, fontSize: '0.8rem', fontFamily: 'monospace' }}>{log.ipAddress}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      {/* Pagination Container */}
-      {filteredLogs.length > rowsPerPage && (
-        <div className="pagination-container">
-          <span className="pagination-info">
-            Showing {indexOfFirstRow + 1} to {Math.min(indexOfLastRow, filteredLogs.length)} of {filteredLogs.length} entries
-          </span>
-          <div className="pagination-controls">
-            <button className="page-btn" onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>
-              <ChevronLeft size={16} /> Previous
-            </button>
-            <span className="page-indicator">Page <strong>{currentPage}</strong> of {totalPages}</span>
-            <button className="page-btn" onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>
-              Next <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

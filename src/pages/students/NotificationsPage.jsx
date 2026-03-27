@@ -1,99 +1,140 @@
 import React, { useState } from 'react';
+import { 
+  Bell, Mail, CheckCircle2, 
+  Clock, AlertCircle, Info,
+  MoreVertical, Check, Trash2,
+  Briefcase, ShieldAlert
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { userNotifications } from '../../data/mockData';
-import { Bell, CheckCircle2, Info, AlertCircle, Inbox } from 'lucide-react';
-import '../../assets/css/students/NotificationsPage.css';
 
-export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState([...userNotifications]);
-  const [activeTab, setActiveTab] = useState('All');
+const NotificationsPage = () => {
+  const [notifications, setNotifications] = useState(userNotifications);
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAsRead = (id) => {
+    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
-  const toggleReadStatus = (id) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: !n.read } : n
-    ));
+  const deleteNotification = (id) => {
+    setNotifications(notifications.filter(n => n.id !== id));
   };
 
-  const getNotificationIcon = (type) => {
-    switch(type) {
-      case 'application': return <CheckCircle2 size={18} className="notify-icon success" />;
-      case 'system': return <Info size={18} className="notify-icon info" />;
-      default: return <AlertCircle size={18} className="notify-icon warning" />;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+      maxWidth: '800px',
+      margin: '0 auto',
+    },
+    header: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    notificationList: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '12px',
+    },
+    notificationItem: (read) => ({
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      gap: '16px',
+      padding: '20px',
+      backgroundColor: read ? theme.colors.bgPrimary : theme.colors.bgAccent,
+      borderLeft: `4px solid ${read ? 'transparent' : theme.colors.primary}`,
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+      ':hover': { transform: 'translateX(4px)' }
+    }),
+    iconWrapper: (type) => {
+      const colors = {
+        application: { color: theme.colors.primary, bg: '#EBF1FF' },
+        system: { color: theme.colors.warning, bg: '#FEF3C7' },
+        alert: { color: theme.colors.danger, bg: '#FDE8E8' }
+      };
+      const c = colors[type] || colors.system;
+      return {
+        width: '40px',
+        height: '40px',
+        borderRadius: '10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: c.color,
+        backgroundColor: c.bg,
+      };
     }
   };
-
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === 'Unread') return !n.read;
-    if (activeTab === 'Applications') return n.type === 'application';
-    if (activeTab === 'System') return n.type === 'system';
-    return true; // All
-  });
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <div className="notifications-container">
-      <div className="page-header justify-between">
-        <div>
-          <h1>Notifications</h1>
-          <p>Stay updated with system alerts and application updates.</p>
-        </div>
-        {unreadCount > 0 && (
-          <button onClick={markAllAsRead} className="mark-read-btn">
-            Mark all as read
-          </button>
-        )}
-      </div>
-
-      <div className="notifications-content">
-        {/* Filter Tabs */}
-        <div className="filter-tabs">
-          {['All', 'Unread', 'Applications', 'System'].map(tab => (
-            <button 
-              key={tab}
-              className={`tab-btn ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-              {tab === 'Unread' && unreadCount > 0 && <span className="tab-badge">{unreadCount}</span>}
-              {tab === 'All' && <span className="tab-badge secondary">{notifications.length}</span>}
-            </button>
-          ))}
-        </div>
-
-        {/* Notifications List */}
-        <div className="notifications-list">
-          {filteredNotifications.length === 0 ? (
-            <div className="empty-notifications">
-              <Inbox size={48} className="empty-icon-notify" />
-              <h3>No notifications found</h3>
-              <p>You have no notifications in this category at the moment.</p>
-            </div>
-          ) : (
-            filteredNotifications.map(n => (
-              <div 
-                key={n.id} 
-                className={`notification-item ${!n.read ? 'unread' : ''}`}
-                onClick={() => toggleReadStatus(n.id)}
-              >
-                <div className="notify-left">
-                  <div className={`icon-wrapper ${n.type}`}>
-                    {getNotificationIcon(n.type)}
-                  </div>
-                  <div className="notify-info">
-                    <p className="notify-message">{n.message}</p>
-                    <span className="notify-time">{n.timestamp}</span>
-                  </div>
-                </div>
-                {!n.read && <div className="unread-dot"></div>}
-              </div>
-            ))
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Notifications</h1>
+          {unreadCount > 0 && (
+            <span style={{ backgroundColor: theme.colors.danger, color: '#fff', fontSize: '0.75rem', fontWeight: 800, padding: '2px 8px', borderRadius: '10px' }}>
+              {unreadCount} NEW
+            </span>
           )}
         </div>
+        <button 
+          style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}
+          onClick={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+        >
+          Mark all as read
+        </button>
+      </header>
+
+      <div style={styles.notificationList}>
+        {notifications.length > 0 ? (
+          notifications.map(notif => (
+            <div key={notif.id} style={styles.notificationItem(notif.read)}>
+              <div style={styles.iconWrapper(notif.type)}>
+                {notif.type === 'application' && <Briefcase size={20} />}
+                {notif.type === 'system' && <Info size={20} />}
+                {notif.type === 'alert' && <ShieldAlert size={20} />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted, fontWeight: 600, textTransform: 'uppercase' }}>{notif.type}</span>
+                  <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{notif.timestamp}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.95rem', color: theme.colors.textMain, lineHeight: 1.5, fontWeight: notif.read ? 400 : 600 }}>
+                  {notif.message}
+                </p>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+                  {!notif.read && (
+                    <button 
+                      style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      onClick={() => markAsRead(notif.id)}
+                    >
+                      Mark as Read
+                    </button>
+                  )}
+                  <button 
+                    style={{ background: 'none', border: 'none', color: theme.colors.danger, fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                    onClick={() => deleteNotification(notif.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ ...commonStyles.dashboardCard, textAlign: 'center', padding: '60px' }}>
+            <Bell size={48} color={theme.colors.border} style={{ marginBottom: '16px' }} />
+            <h3 style={{ margin: 0, color: theme.colors.textMuted }}>You're all caught up!</h3>
+          </div>
+        )}
       </div>
     </div>
   );
-}
+};
+
+export default NotificationsPage;

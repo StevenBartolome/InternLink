@@ -3,12 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import '../../styles/supervisor/global.css'; // Import global styles for supervisor
-import '../../assets/css/supervisor/SupervisorLayout.css';
+import { theme } from '../../styles/theme';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const SupervisorLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [pageTitle, setPageTitle] = useState('Dashboard');
 
   const toggleSidebar = () => {
@@ -23,19 +24,38 @@ const SupervisorLayout = () => {
     else if (path.includes('/tasks')) setPageTitle('Task Management');
     else if (path.includes('/evaluation')) setPageTitle('Evaluation');
     else if (path.includes('/notifications')) setPageTitle('Notifications');
+    else if (path.includes('/profile')) setPageTitle('My Profile');
   }, [location]);
 
+  const styles = {
+    layout: {
+      minHeight: '100vh',
+      backgroundColor: theme.colors.bgSecondary,
+      display: 'flex',
+    },
+    main: {
+      flex: 1,
+      marginLeft: isMobile ? 0 : '280px',
+      display: 'flex',
+      flexDirection: 'column',
+      width: '100%',
+    },
+    content: {
+      flex: 1,
+      padding: isMobile ? '16px' : '24px',
+      maxWidth: '1400px',
+      margin: '0 auto',
+      width: '100%',
+    }
+  };
+
   return (
-    <div className="supervisor-layout">
+    <div style={styles.layout}>
       <Sidebar isOpen={isSidebarOpen} toggleSidebar={toggleSidebar} />
       
-      {isSidebarOpen && (
-        <div className="sidebar-backdrop" onClick={toggleSidebar}></div>
-      )}
-
-      <div className="layout-main">
+      <div style={styles.main}>
         <Topbar toggleSidebar={toggleSidebar} title={pageTitle} />
-        <main className="layout-content">
+        <main style={styles.content}>
           <Outlet />
         </main>
       </div>

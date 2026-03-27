@@ -1,140 +1,128 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { 
+  User, Mail, Phone, MapPin, 
+  Calendar, GraduationCap, Edit,
+  ShieldCheck, ExternalLink, Github,
+  FileText, Award, Star
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { studentProfile } from '../../data/mockData';
-import { Mail, Phone, MapPin, Award, CheckCircle, Edit2, Plus, FileText, Download, Eye, Upload } from 'lucide-react';
-import '../../assets/css/students/ProfilePage.css';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 
-export default function ProfilePage() {
-  const navigate = useNavigate();
-  const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    email: studentProfile.email,
-    contact: studentProfile.contact,
-    address: studentProfile.address
-  });
+const ProfilePage = () => {
+  const isMobile = useMediaQuery('(max-width: 1024px)');
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [showToast, setShowToast] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
-    // Simulate API save
-    setTimeout(() => {
-      setIsSaving(false);
-      setShowToast(true);
-      setIsEditing(false); // Turn off edit mode
-      setTimeout(() => setShowToast(false), 3000);
-    }, 1000);
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    headerCard: {
+      ...commonStyles.dashboardCard,
+      display: 'flex',
+      flexDirection: isMobile ? 'column' : 'row',
+      alignItems: 'center',
+      gap: '32px',
+      padding: '40px',
+    },
+    avatar: {
+      width: '120px',
+      height: '120px',
+      borderRadius: '50%',
+      border: `4px solid ${theme.colors.bgAccent}`,
+      boxShadow: theme.shadows.md,
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
+      gap: '24px',
+    },
+    section: {
+      ...commonStyles.dashboardCard,
+      padding: '24px',
+    },
+    infoItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 0',
+      borderBottom: `1px solid ${theme.colors.bgSecondary}`,
+    },
+    badge: {
+      ...commonStyles.dashboardBadge,
+      backgroundColor: theme.colors.bgAccent,
+      color: theme.colors.primary,
+      margin: '4px',
+    }
   };
 
   return (
-    <div className="profile-container">
-      {showToast && (
-        <div className="toast success">
-          <CheckCircle size={20} />
-          <span>Changes saved successfully!</span>
-        </div>
-      )}
-
-      {/* Profile Header Card */}
-      <div className="profile-header-card">
-        <div className="profile-cover"></div>
-        <div className="profile-info-section">
-          <img src={studentProfile.avatar} alt="Avatar" className="profile-avatar-lg" />
-          <div className="profile-info">
-            <h1>{studentProfile.name}</h1>
-            <p className="student-id">{studentProfile.id}</p>
-            <div className="badge-container">
-              <span className="course-badge">{studentProfile.course}</span>
-              <span className="year-badge">{studentProfile.yearLevel}</span>
-            </div>
+    <div style={styles.container}>
+      <div style={styles.headerCard}>
+        <img src={studentProfile.avatar} alt={studentProfile.name} style={styles.avatar} />
+        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>{studentProfile.name}</h1>
+            <ShieldCheck size={20} color={theme.colors.success} />
+          </div>
+          <p style={{ color: theme.colors.textMuted, fontSize: '1rem', margin: '4px 0 16px 0' }}>{studentProfile.course}</p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
+            <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+              <Edit size={16} /> Edit Profile
+            </button>
+            <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+              <ExternalLink size={16} /> View Public Link
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="profile-grid">
-        {/* Left Column: Contact & About */}
-        <div className="profile-card">
-          <div className="card-header-flex">
-            <h3>Contact & Details</h3>
-            <button className="edit-icon-btn" onClick={() => setIsEditing(!isEditing)} title="Edit Profile">
-              <Edit2 size={16} />
-            </button>
+      <div style={styles.grid}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={styles.section}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700 }}>Contact Information</h3>
+            <div style={styles.infoItem}><Mail size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{studentProfile.email}</span></div>
+            <div style={styles.infoItem}><Phone size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{studentProfile.contact}</span></div>
+            <div style={styles.infoItem}><MapPin size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{studentProfile.address}</span></div>
+            <div style={styles.infoItem}><Calendar size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>Joined March 2024</span></div>
           </div>
 
-          <form onSubmit={handleSave} className="profile-form">
-            <div className="form-group">
-              <label><Mail size={16} /> Email Address</label>
-              {isEditing ? (
-                <input type="email" name="email" value={formData.email} onChange={handleChange} required />
-              ) : (
-                <span className="static-text">{formData.email}</span>
-              )}
+          <div style={styles.section}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700 }}>Social & Portfolio</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {studentProfile.portfolioLinks.map(link => (
+                <a key={link.id} href={link.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.primary, textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
+                  {link.url.includes('github') ? <Github size={18} /> : <ExternalLink size={18} />}
+                  {link.url.replace('https://', '')}
+                </a>
+              ))}
             </div>
-
-            <div className="form-group">
-              <label><Phone size={16} /> Contact Number</label>
-              {isEditing ? (
-                <input type="text" name="contact" value={formData.contact} onChange={handleChange} required />
-              ) : (
-                <span className="static-text">{formData.contact}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label><MapPin size={16} /> Home Address</label>
-              {isEditing ? (
-                <textarea name="address" value={formData.address} onChange={handleChange} rows="3" required />
-              ) : (
-                <span className="static-text textarea-text">{formData.address}</span>
-              )}
-            </div>
-
-            {isEditing && (
-              <button type="submit" className="save-btn" disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            )}
-          </form>
+          </div>
         </div>
 
-        {/* Right Column: Skills & Certifications */}
-        <div className="profile-card">
-          <div className="card-header-flex">
-            <h3>Skills & Certifications</h3>
-            <button className="edit-icon-btn" onClick={() => navigate('/skills')} title="Add/Edit Skills">
-              <Plus size={16} />
-            </button>
-          </div>
-
-          <div className="section-block">
-            <h4>Technical Skills</h4>
-            <div className="skills-list">
-              {studentProfile.skills.map((skill, index) => (
-                <span key={index} className="skill-chip">{skill}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={styles.section}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700 }}>Technical Skills</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+              {studentProfile.skills.map((skill, i) => (
+                <span key={i} style={styles.badge}>{skill}</span>
               ))}
             </div>
           </div>
 
-          <div className="section-block certifications-wrap">
-            <h4>Certifications</h4>
-            <div className="cert-list">
-              {studentProfile.certifications.map((cert) => (
-                <div key={cert.id} className="cert-item">
-                  <div className="cert-icon">
-                    <Award size={24} className="icon-award" />
+          <div style={styles.section}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700 }}>Certifications</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {studentProfile.certifications.map(cert => (
+                <div key={cert.id} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                  <div style={{ backgroundColor: theme.colors.bgAccent, padding: '10px', borderRadius: '10px', color: theme.colors.primary }}>
+                    <Award size={24} />
                   </div>
-                  <div className="cert-details">
-                    <h5>{cert.title}</h5>
-                    <p className="cert-issuer">{cert.issuer}</p>
-                    <p className="cert-date">{cert.date}</p>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{cert.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>{cert.issuer} • {cert.date}</div>
                   </div>
                 </div>
               ))}
@@ -142,45 +130,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-
-      {/* New Section: Resume & Documents */}
-      <div className="profile-full-card">
-        <div className="card-header-flex">
-          <h3>Resume & Documents</h3>
-          <button className="upload-link-btn" onClick={() => navigate('/resume')}>
-            <Upload size={16} /> Upload Resume
-          </button>
-        </div>
-        
-        <div className="resume-preview-container">
-          <div className="resume-document-card">
-            <div className="doc-icon">
-              <FileText size={40} className="text-primary" />
-            </div>
-            <div className="doc-info">
-              <h4>{studentProfile.resumeFiles[0]?.filename || "Resume_Default.pdf"}</h4>
-              <p>Uploaded on {studentProfile.resumeFiles[0]?.date || "Mar 15, 2026"}</p>
-            </div>
-            <div className="doc-actions">
-              <button className="icon-action-btn" title="View"><Eye size={18} /></button>
-              <button className="icon-action-btn" title="Download"><Download size={18} /></button>
-            </div>
-          </div>
-
-          <div className="resume-visual-preview">
-            <div className="resume-skeleton">
-              <div className="skel-line header"></div>
-              <div className="skel-line sub"></div>
-              <div className="skel-box"></div>
-              <div className="skel-line"></div>
-              <div className="skel-line"></div>
-            </div>
-            <div className="resume-overlay">
-              <button className="btn-view-sample"> <Eye size={16} /> View Sample Resume</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
-}
+};
+
+export default ProfilePage;

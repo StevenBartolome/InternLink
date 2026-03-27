@@ -1,38 +1,45 @@
 // src/components/supervisor/StatusBadge.jsx
 import React from 'react';
-import '../../assets/css/supervisor/StatusBadge.css';
+import { theme } from '../../styles/theme';
 
 const StatusBadge = ({ status }) => {
-  const getStatusClass = (status) => {
-    if (!status) return 'status-default';
+  const getStyles = (status) => {
+    if (!status) return { backgroundColor: theme.colors.border, color: theme.colors.textMuted };
     const lower = status.toLowerCase();
     
-    // Attendance statuses
-    if (lower === 'present') return 'status-success';
-    if (lower === 'absent') return 'status-danger';
-    if (lower === 'late') return 'status-warning';
-    if (lower === 'no log') return 'status-neutral';
-    
-    // Task statuses
-    if (lower === 'done') return 'status-success';
-    if (lower === 'in progress') return 'status-info';
-    if (lower === 'not started') return 'status-neutral';
-    
-    // Evaluation statuses
-    if (lower === 'evaluated') return 'status-success';
-    if (lower === 'eligible') return 'status-info';
-    
-    return 'status-default';
-  };
+    // Default base styles
+    let styles = {
+      padding: '4px 10px',
+      borderRadius: '20px',
+      fontSize: '0.75rem',
+      fontWeight: '600',
+      display: 'inline-block',
+    };
 
-  const getStatusText = (status) => {
-    if (!status) return 'Unknown';
-    return status;
+    // Attendance & Task & Evaluation statuses
+    if (['present', 'done', 'evaluated'].includes(lower)) {
+      styles.backgroundColor = '#dcfce7'; 
+      styles.color = '#16a34a';
+    } else if (['absent', 'danger'].includes(lower)) {
+      styles.backgroundColor = '#fee2e2';
+      styles.color = '#dc2626';
+    } else if (['late', 'warning'].includes(lower)) {
+      styles.backgroundColor = '#fef3c7';
+      styles.color = '#d97706';
+    } else if (['in progress', 'eligible', 'info'].includes(lower)) {
+      styles.backgroundColor = '#eff6ff';
+      styles.color = '#2563eb';
+    } else {
+      styles.backgroundColor = '#f3f4f6';
+      styles.color = '#4b5563';
+    }
+    
+    return styles;
   };
 
   return (
-    <span className={`status-badge ${getStatusClass(status)}`}>
-      {getStatusText(status)}
+    <span style={getStyles(status)}>
+      {status || 'Unknown'}
     </span>
   );
 };

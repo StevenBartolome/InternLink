@@ -1,176 +1,161 @@
 import React, { useState } from 'react';
-import { FileSpreadsheet, Check, AlertCircle, Star } from 'lucide-react';
-import StatusBadge from '../../components/StatusBadge/StatusBadge';
+import { 
+  ClipboardCheck, Star, User, 
+  MessageCircle, Send, CheckCircle2,
+  AlertCircle, ChevronRight, Search
+} from 'lucide-react';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 import { mockStudents } from '../../data/coordinatorMockData';
-import '../../assets/css/coordinator/StudentEvaluationPage.css';
-
-const criteriaList = [
-  { id: 1, name: "Academic Preparedness", weight: 20 },
-  { id: 2, name: "Professional Behavior", weight: 25 },
-  { id: 3, name: "Technical Skills", weight: 30 },
-  { id: 4, name: "Communication", weight: 15 },
-  { id: 5, name: "Adaptability", weight: 10 }
-];
 
 const StudentEvaluationPage = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [scores, setScores] = useState({});
-  const [remarks, setRemarks] = useState('');
-  const [evaluatedStudents, setEvaluatedStudents] = useState([]);
 
-  const studentsDue = mockStudents.filter(s => s.status === 'Placed' && s.hoursRendered >= 300 && !evaluatedStudents.includes(s.id));
+  const studentsForEvaluation = mockStudents.filter(s => s.status === 'Placed');
 
-  const handleScoreChange = (criteriaId, score) => {
-    const val = parseFloat(score);
-    if (isNaN(val) || val < 1 || val > 10) return;
-    setScores(prev => ({ ...prev, [criteriaId]: val }));
-  };
-
-  const calculateOverall = () => {
-    let total = 0;
-    criteriaList.forEach(c => {
-      const score = scores[c.id] || 0;
-      total += (score / 10) * c.weight; // score out of 10, weight as percentage
-    });
-    return Math.round(total);
-  };
-
-  const getLetterGrade = (score) => {
-    if (score >= 90) return 'A (Excellent)';
-    if (score >= 80) return 'B (Good)';
-    if (score >= 75) return 'C (Satisfactory)';
-    return 'F (Fail)';
-  };
-
-  const handleSubmit = () => {
-    if (Object.keys(scores).length < criteriaList.length) {
-      alert("Please score all criteria.");
-      return;
+  const styles = {
+    container: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '24px',
+    },
+    mainLayout: {
+      display: 'grid',
+      gridTemplateColumns: '320px 1fr',
+      gap: '24px',
+      alignItems: 'start',
+    },
+    sidebar: {
+      ...commonStyles.dashboardCard,
+      padding: '20px',
+      maxHeight: 'calc(100vh - 150px)',
+      overflowY: 'auto',
+    },
+    studentItem: (isSelected) => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px',
+      borderRadius: '12px',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      backgroundColor: isSelected ? theme.colors.bgAccent : 'transparent',
+      border: `1px solid ${isSelected ? theme.colors.primary : 'transparent'}`,
+    }),
+    formCard: {
+      ...commonStyles.dashboardCard,
+      padding: '32px',
+    },
+    ratingGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gap: '24px',
+      margin: '24px 0',
+    },
+    criteria: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
     }
-    
-    setEvaluatedStudents([...evaluatedStudents, selectedStudent.id]);
-    alert(`Evaluation submitted for ${selectedStudent.name}. Score: ${calculateOverall()}%`);
-    setSelectedStudent(null);
-    setScores({});
-    setRemarks('');
   };
 
   return (
-    <div className="student-evaluation-page">
-      {!selectedStudent ? (
-        <div className="evaluation-list">
-          <div className="dashboard-card">
-            <div className="card-header">
-              <h3>Students Due for Evaluation</h3>
-              <p className="text-muted">Students who have rendered significant hours.</p>
-            </div>
-            
-            <div className="dashboard-table-container">
-              <table className="dashboard-table">
-                <thead>
-                  <tr>
-                    <th>Student Name</th>
-                    <th>Company</th>
-                    <th>Hours Rendered</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {studentsDue.length === 0 ? (
-                    <tr><td colSpan="4" className="text-center text-muted">No students pending evaluation.</td></tr>
-                  ) : (
-                    studentsDue.map((student) => (
-                      <tr key={student.id}>
-                        <td><strong>{student.name}</strong></td>
-                        <td>{student.company}</td>
-                        <td>{student.hoursRendered} / {student.hoursRequired} hrs</td>
-                        <td>
-                          <button className="dashboard-btn dashboard-btn-primary btn-sm" onClick={() => setSelectedStudent(student)}>
-                            Evaluate
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+    <div style={styles.container}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: theme.colors.textMain }}>Student Performance Evaluation</h1>
+      
+      <div style={styles.mainLayout}>
+        <div style={styles.sidebar}>
+          <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: theme.colors.textMuted }} />
+            <input 
+              placeholder="Search students..." 
+              style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: '10px', border: `1px solid ${theme.colors.border}`, fontSize: '0.875rem' }} 
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {studentsForEvaluation.map(student => (
+              <div 
+                key={student.id} 
+                style={styles.studentItem(selectedStudent?.id === student.id)}
+                onClick={() => setSelectedStudent(student)}
+              >
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: theme.colors.bgSecondary, display: 'flex', alignItems: 'center', justifySelf: 'center', fontWeight: 'bold', color: theme.colors.primary, fontSize: '12px' }}>
+                  {student.name.charAt(0)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: theme.colors.textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{student.company}</div>
+                </div>
+                <ChevronRight size={16} style={{ color: theme.colors.textMuted }} />
+              </div>
+            ))}
           </div>
         </div>
-      ) : (
-        <div className="evaluation-form dashboard-card">
-          <div className="form-header">
-            <button className="dashboard-btn dashboard-btn-secondary btn-sm" onClick={() => setSelectedStudent(null)}>
-              ← Back to List
-            </button>
-            <h3>Evaluation for {selectedStudent.name}</h3>
-          </div>
 
-          <div className="form-body">
-            <div className="rubric-section">
-              <h5>Performance Rubric</h5>
-              <div className="dashboard-table-container">
-                <table className="dashboard-table">
-                  <thead>
-                    <tr>
-                      <th>Criteria</th>
-                      <th>Weight (%)</th>
-                      <th>Score (1-10)</th>
-                      <th>Weighted</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {criteriaList.map((c) => (
-                      <tr key={c.id}>
-                        <td>{c.name}</td>
-                        <td>{c.weight}%</td>
-                        <td>
-                          <input 
-                            type="number" 
-                            min="1" 
-                            max="10" 
-                            className="score-input"
-                            value={scores[c.id] || ''}
-                            onChange={(e) => handleScoreChange(c.id, e.target.value)}
-                          />
-                        </td>
-                        <td>{scores[c.id] ? `${((scores[c.id] / 10) * c.weight).toFixed(1)}%` : '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        <div>
+          {selectedStudent ? (
+            <div style={styles.formCard}>
+              <header style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '32px', borderBottom: `1px solid ${theme.colors.border}`, paddingBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <img src={selectedStudent.avatar} alt="Student" style={{ width: '64px', height: '64px', borderRadius: '16px' }} />
+                  <div>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>{selectedStudent.name}</h2>
+                    <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{selectedStudent.studentId} • {selectedStudent.course}</span>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ ...commonStyles.dashboardBadge, ...commonStyles.badgeInfo }}>Midterm Evaluation</span>
+                </div>
+              </header>
 
-            <div className="summary-section">
-              <div className="score-box">
-                <span className="box-label">Overall Score</span>
-                <h2 className="box-value">{calculateOverall()}%</h2>
-                <span className="box-grade">{getLetterGrade(calculateOverall())}</span>
+              <p style={{ color: theme.colors.textMuted, fontSize: '0.94rem' }}>
+                Please evaluate the student based on their performance at <strong>{selectedStudent.company}</strong>. 
+                Your feedback will account for 40% of their final grade.
+              </p>
+
+              <div style={styles.ratingGrid}>
+                {[
+                  { label: 'Technical Proficiency', val: 5 },
+                  { label: 'Professionalism', val: 5 },
+                  { label: 'Communication Skills', val: 4 },
+                  { label: 'Punctuality', val: 5 }
+                ].map((item, idx) => (
+                  <div key={idx} style={styles.criteria}>
+                    <label style={{ fontSize: '0.875rem', fontWeight: 600 }}>{item.label}</label>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {[1,2,3,4,5].map(star => (
+                        <Star key={star} size={18} fill={star <= item.val ? theme.colors.warning : 'none'} color={star <= item.val ? theme.colors.warning : theme.colors.border} />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="remarks-box">
-                <label>Coordinator Remarks:</label>
+              <div style={{ marginTop: '24px' }}>
+                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, marginBottom: '8px' }}>Coordinator Remarks</label>
                 <textarea 
-                  rows="4" 
-                  placeholder="Enter feedback or performance notes..."
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
+                  placeholder="Enter detailed feedback..." 
+                  style={{ width: '100%', minHeight: '120px', padding: '16px', borderRadius: '12px', border: `1px solid ${theme.colors.border}`, outline: 'none', fontSize: '0.9rem' }}
                 />
               </div>
-            </div>
 
-            <div className="form-actions">
-              <button className="dashboard-btn btn-success" onClick={handleSubmit}>
-                Submit Evaluation
-              </button>
-              <button className="dashboard-btn dashboard-btn-secondary" onClick={() => setSelectedStudent(null)}>
-                Cancel
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>Save Draft</button>
+                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '12px 32px' }}>
+                  <Send size={18} />
+                  Submit Evaluation
+                </button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div style={{ ...commonStyles.dashboardCard, padding: '80px', textAlign: 'center', opacity: 0.6 }}>
+              <div style={{ marginBottom: '16px', color: theme.colors.textMuted }}><ClipboardCheck size={64} /></div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Select a student to begin evaluation</h3>
+              <p style={{ fontSize: '0.875rem' }}>Evaluation forms will be enabled once the student completes 50% of their OJT hours.</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
