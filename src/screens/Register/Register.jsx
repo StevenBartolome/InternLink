@@ -41,6 +41,7 @@ const Register = () => {
       height: '100vh',
       width: '100vw',
       overflow: 'hidden',
+      fontFamily: "'Inter', sans-serif",
     },
     brandSide: {
       flex: 1,
@@ -76,6 +77,7 @@ const Register = () => {
       lineHeight: 1.2,
       marginBottom: '1.5rem',
       fontWeight: 800,
+      fontFamily: "'Outfit', sans-serif",
     },
     textYellow: {
       color: '#EAB308',
@@ -129,6 +131,7 @@ const Register = () => {
       fontWeight: 800,
       color: theme.colors.textMain,
       marginBottom: '0.5rem',
+      fontFamily: "'Outfit', sans-serif",
     },
     formSubtitle: {
       color: theme.colors.textMuted,

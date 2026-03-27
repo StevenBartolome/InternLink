@@ -14,6 +14,7 @@ const LandingPage = () => {
     landingPage: {
       display: 'flex',
       flexDirection: 'column',
+      fontFamily: "'Inter', sans-serif",
     }
   };
 
@@ -29,3 +30,4 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+
