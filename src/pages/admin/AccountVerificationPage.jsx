@@ -1,16 +1,44 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   ShieldCheck, FileText, CheckCircle, 
-  XCircle, Clock, ExternalLink,
-  Search, Filter, AlertCircle
+  XCircle, ExternalLink, AlertCircle
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { verificationsList } from '../../data/adminMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import Toast from '../../components/coordinator/Toast';
 
 const AccountVerificationPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const [verifications, setVerifications] = useState(verificationsList);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const handleApprove = (id, name) => {
+    setVerifications(prev =>
+      prev.map(v => v.id === id ? { ...v, status: 'Approved', remarks: null } : v)
+    );
+    showToast(`${name}'s account has been approved successfully.`, 'success');
+  };
+
+  const handleReject = (id, name) => {
+    setVerifications(prev =>
+      prev.map(v => v.id === id ? { ...v, status: 'Rejected', remarks: 'Rejected by admin.' } : v)
+    );
+    showToast(`${name}'s account has been rejected.`, 'error');
+  };
+
+  const handleViewDocument = (docName) => {
+    showToast(`Opening document: ${docName}`, 'info');
+  };
+
+  const handleViewHistory = (name) => {
+    showToast(`Viewing full history for ${name}.`, 'info');
+  };
 
   const styles = {
     container: {
@@ -58,17 +86,25 @@ const AccountVerificationPage = () => {
 
   return (
     <div style={styles.container}>
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
       <header style={styles.header}>
         <h1 style={styles.title}>Account Verifications</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
           <span style={{ ...commonStyles.dashboardBadge, backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>
-            {verificationsList.filter(v => v.status === 'Pending').length} Pending
+            {verifications.filter(v => v.status === 'Pending').length} Pending
           </span>
         </div>
       </header>
 
       <div style={styles.grid}>
-        {verificationsList.map(req => (
+        {verifications.map(req => (
           <div key={req.id} style={styles.requestCard}>
             <div style={styles.cardHeader}>
               <div>
@@ -90,7 +126,11 @@ const AccountVerificationPage = () => {
                 <div style={{ fontSize: '0.875rem', fontWeight: 600 }}>{req.document}</div>
                 <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>Submitted on {req.dateSubmitted}</div>
               </div>
-              <button style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer' }}>
+              <button
+                title="View document"
+                style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer' }}
+                onClick={() => handleViewDocument(req.document)}
+              >
                 <ExternalLink size={16} />
               </button>
             </div>
@@ -105,17 +145,26 @@ const AccountVerificationPage = () => {
             <div style={{ display: 'flex', gap: '12px', marginTop: 'auto', paddingTop: '12px', borderTop: `1px solid ${theme.colors.border}` }}>
               {req.status === 'Pending' ? (
                 <>
-                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}>
+                  <button
+                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}
+                    onClick={() => handleApprove(req.id, req.name)}
+                  >
                     <CheckCircle size={16} />
                     Approve
                   </button>
-                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, color: theme.colors.danger, flex: 1 }}>
+                  <button
+                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, color: theme.colors.danger, flex: 1 }}
+                    onClick={() => handleReject(req.id, req.name)}
+                  >
                     <XCircle size={16} />
                     Reject
                   </button>
                 </>
               ) : (
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}>
+                <button
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
+                  onClick={() => handleViewHistory(req.name)}
+                >
                   View Full History
                 </button>
               )}

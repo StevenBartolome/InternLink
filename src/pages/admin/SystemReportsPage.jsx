@@ -1,28 +1,34 @@
 import React from 'react';
 import { 
-  BarChart3, TrendingUp, PieChart, 
-  Download, Calendar, Users, 
-  CheckCircle, Briefcase, FileText,
-  ArrowUpRight, ArrowDownRight, Printer, Info
+  BarChart3, TrendingUp,
+  Download, Users, 
+  CheckCircle, Briefcase,
+  ArrowUpRight, Printer, Info
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { reportsData } from '../../data/adminMockData';
+import Toast from '../../components/coordinator/Toast';
+import { useState } from 'react';
 
 const SystemReportsPage = () => {
   const { academicTerm, totalEnrolled, totalPlaced, totalCompleted, placementRate, courseBreakdown, gradeDistribution } = reportsData;
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleExportPDF = () => {
+    showToast('Generating PDF report… Download will start shortly.', 'info');
+    setTimeout(() => showToast('PDF export completed successfully.', 'success'), 1500);
+  };
 
   const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-    },
-    header: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
+    container: { display: 'flex', flexDirection: 'column', gap: '24px' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     statGrid: {
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
@@ -43,14 +49,26 @@ const SystemReportsPage = () => {
 
   return (
     <div style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <header style={styles.header}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>System Reports</h1>
           <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{academicTerm} Analysis</span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}><Printer size={18} /> Print</button>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}><Download size={18} /> Export PDF</button>
+          <button
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+            onClick={handlePrint}
+          >
+            <Printer size={18} /> Print
+          </button>
+          <button
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
+            onClick={handleExportPDF}
+          >
+            <Download size={18} /> Export PDF
+          </button>
         </div>
       </header>
 

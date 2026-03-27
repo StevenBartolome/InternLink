@@ -1,19 +1,43 @@
 import React, { useState } from 'react';
 import { 
-  Shield, Briefcase, Building2, 
-  MapPin, Flag, CheckCircle, 
-  AlertCircle, ExternalLink, Search, Users
+  Briefcase, Building2, 
+  Flag, CheckCircle, 
+  ExternalLink, Users, Shield
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { internshipListings } from '../../data/adminMockData';
+import Toast from '../../components/coordinator/Toast';
 
 const InternshipOversightPage = () => {
   const [filterStatus, setFilterStatus] = useState('All');
+  const [listings, setListings] = useState(internshipListings);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => setToast({ message, type });
 
   const filteredListings = filterStatus === 'All' 
-    ? internshipListings 
-    : internshipListings.filter(l => l.status === filterStatus);
+    ? listings 
+    : listings.filter(l => l.status === filterStatus);
+
+  const handleResolve = (id, title) => {
+    setListings(prev => prev.map(l => l.id === id ? { ...l, status: 'Active', remarks: null } : l));
+    showToast(`Issue resolved for "${title}". Listing is now Active.`, 'success');
+  };
+
+  const handleViewPosting = (title) => {
+    showToast(`Viewing full posting details for: ${title}`, 'info');
+  };
+
+  const handleActions = (title, status) => {
+    if (status === 'Active') {
+      showToast(`Flagging "${title}" for review.`, 'warning');
+      setListings(prev => prev.map(l => l.title === title ? { ...l, status: 'Flagged', remarks: 'Manually flagged by admin.' } : l));
+    } else if (status === 'Pending') {
+      setListings(prev => prev.map(l => l.title === title ? { ...l, status: 'Active' } : l));
+      showToast(`"${title}" has been approved and is now Active.`, 'success');
+    }
+  };
 
   const styles = {
     container: {
@@ -46,6 +70,8 @@ const InternshipOversightPage = () => {
 
   return (
     <div style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Internship Oversight</h1>
         <div style={{ display: 'flex', gap: '8px', backgroundColor: theme.colors.bgSecondary, padding: '4px', borderRadius: '12px' }}>
@@ -110,17 +136,26 @@ const InternshipOversightPage = () => {
             )}
 
             <div style={{ display: 'flex', gap: '12px', marginTop: 'auto', paddingTop: '16px', borderTop: `1px solid ${theme.colors.border}` }}>
-              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}>
+              <button
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
+                onClick={() => handleViewPosting(listing.title)}
+              >
                 <ExternalLink size={16} />
                 View Posting
               </button>
               {listing.status === 'Flagged' ? (
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}>
-                  Resolve Issue
+                <button
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}
+                  onClick={() => handleResolve(listing.id, listing.title)}
+                >
+                  <CheckCircle size={16} /> Resolve Issue
                 </button>
               ) : (
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
-                  Actions
+                <button
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+                  onClick={() => handleActions(listing.title, listing.status)}
+                >
+                  {listing.status === 'Pending' ? 'Approve' : 'Flag'}
                 </button>
               )}
             </div>

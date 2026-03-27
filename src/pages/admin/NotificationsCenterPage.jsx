@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { Bell, Send, CheckCircle, Info, MessageSquare, Megaphone, Trash2 } from 'lucide-react';
+import { Bell, Send, Info, Megaphone } from 'lucide-react';
 import { notificationsList, sentAnnouncements } from '../../data/adminMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import Toast from '../../components/coordinator/Toast';
 
 const NotificationsCenterPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [notifications, setNotifications] = useState(notificationsList);
   const [announcements, setAnnouncements] = useState(sentAnnouncements);
-  const [activeTab, setActiveTab] = useState('All');
+  const [toast, setToast] = useState(null);
 
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [target, setTarget] = useState('All');
+
+  const showToast = (msg, type = 'success') => setToast({ message: msg, type });
 
   const handleSendAnnouncement = (e) => {
     e.preventDefault();
@@ -22,33 +25,28 @@ const NotificationsCenterPage = () => {
       title,
       target,
       dateSent: new Date().toISOString().split('T')[0],
-      sentBy: "Juan dela Cruz"
+      sentBy: 'Juan dela Cruz'
     };
     setAnnouncements([newAnnouncement, ...announcements]);
     setTitle('');
     setMessage('');
+    showToast(`Announcement "${newAnnouncement.title}" sent to ${target}.`, 'success');
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    showToast('All notifications marked as read.', 'info');
   };
 
   const styles = {
-    container: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-    },
+    container: { display: 'flex', flexDirection: 'column', gap: '24px' },
     grid: {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr',
       gap: '24px',
     },
-    card: {
-      ...commonStyles.dashboardCard,
-    },
-    formGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px',
-      marginBottom: '16px',
-    },
+    card: { ...commonStyles.dashboardCard },
+    formGroup: { display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' },
     input: {
       padding: '12px',
       borderRadius: '8px',
@@ -66,6 +64,8 @@ const NotificationsCenterPage = () => {
 
   return (
     <div style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <header>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Notification Center</h1>
       </header>
@@ -83,8 +83,21 @@ const NotificationsCenterPage = () => {
                 <input style={styles.input} value={title} onChange={e => setTitle(e.target.value)} required />
               </div>
               <div style={styles.formGroup}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Target Audience</label>
+                <select style={styles.input} value={target} onChange={e => setTarget(e.target.value)}>
+                  {['All', 'Students', 'Employers', 'Coordinators', 'Supervisors'].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Message Body</label>
-                <textarea style={{ ...styles.input, minHeight: '100px', resize: 'none' }} value={message} onChange={e => setMessage(e.target.value)} required />
+                <textarea
+                  style={{ ...styles.input, minHeight: '100px', resize: 'none' }}
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  required
+                />
               </div>
               <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '100%' }}>
                 <Send size={18} /> Send Announcement
@@ -109,7 +122,9 @@ const NotificationsCenterPage = () => {
                   {announcements.map(ann => (
                     <tr key={ann.id} style={{ borderBottom: `1px solid ${theme.colors.border}` }}>
                       <td style={{ padding: '12px 20px', fontSize: '0.9rem', fontWeight: 600 }}>{ann.title}</td>
-                      <td style={{ padding: '12px 20px' }}><span style={{ ...commonStyles.dashboardBadge, backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>{ann.target}</span></td>
+                      <td style={{ padding: '12px 20px' }}>
+                        <span style={{ ...commonStyles.dashboardBadge, backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>{ann.target}</span>
+                      </td>
                       <td style={{ padding: '12px 20px', fontSize: '0.8rem', color: theme.colors.textMuted }}>{ann.dateSent}</td>
                     </tr>
                   ))}
@@ -122,7 +137,12 @@ const NotificationsCenterPage = () => {
         <div style={styles.card}>
           <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>System Logistics</h3>
-            <button style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Mark All Read</button>
+            <button
+              style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+              onClick={handleMarkAllRead}
+            >
+              Mark All Read
+            </button>
           </div>
           <div>
             {notifications.map(n => (

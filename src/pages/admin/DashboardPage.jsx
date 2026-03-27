@@ -6,14 +6,26 @@ import StatCard from '../../components/StatCard';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import Toast from '../../components/coordinator/Toast';
+import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {
   const { totalUsers, pendingVerifications, activeInternships, systemAlerts, roleDistribution } = dashboardStats;
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [hoveredAction, setHoveredAction] = useState(null);
+  const [toast, setToast] = useState(null);
+  const navigate = useNavigate();
 
   // Get top 5 recent audit logs
   const recentActivity = auditLogs.slice(0, 5);
+
+  const showToast = (message, type = 'info') => setToast({ message, type });
+
+  const handleVerifyAccounts = () => navigate('/admin/verifications');
+  const handleViewReports = () => navigate('/admin/reports');
+  const handleBroadcast = () => navigate('/admin/notifications');
+
+  const handleViewAllActivity = () => navigate('/admin/audit-logs');
 
   const styles = {
     container: {
@@ -200,6 +212,8 @@ const DashboardPage = () => {
 
   return (
     <div style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       {/* Welcome Card */}
       <div style={styles.welcomeBanner}>
         <div>
@@ -246,6 +260,7 @@ const DashboardPage = () => {
             style={styles.actionBtn('verify', 'secondary')}
             onMouseEnter={() => setHoveredAction('verify')}
             onMouseLeave={() => setHoveredAction(null)}
+            onClick={handleVerifyAccounts}
           >
             <CheckCircle size={18} /> Verify Accounts
           </button>
@@ -253,6 +268,7 @@ const DashboardPage = () => {
             style={styles.actionBtn('reports', 'secondary')}
             onMouseEnter={() => setHoveredAction('reports')}
             onMouseLeave={() => setHoveredAction(null)}
+            onClick={handleViewReports}
           >
             <FileText size={18} /> View Reports
           </button>
@@ -260,6 +276,7 @@ const DashboardPage = () => {
             style={styles.actionBtn('broadcast', 'primary')}
             onMouseEnter={() => setHoveredAction('broadcast')}
             onMouseLeave={() => setHoveredAction(null)}
+            onClick={handleBroadcast}
           >
             <Bell size={18} /> Broadcast Announcement
           </button>
@@ -299,7 +316,9 @@ const DashboardPage = () => {
         <div style={styles.dashboardCard}>
           <div style={styles.cardHeader}>
             <h3 style={styles.cardHeader.h3}>Recent Activity</h3>
-            <button style={styles.viewAllBtn}>View All <ArrowRight size={16} /></button>
+            <button style={styles.viewAllBtn} onClick={handleViewAllActivity}>
+              View All <ArrowRight size={16} />
+            </button>
           </div>
           <div style={styles.cardContent}>
             <div style={styles.activityList}>

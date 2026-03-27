@@ -1,21 +1,58 @@
 import React, { useState } from 'react';
 import { 
-  Shield, Search, Download, 
-  Filter, Calendar, Activity,
-  Server, User, Info, 
-  Trash2, RotateCcw
+  Search, Download, 
+  Filter, Calendar,
+  User, AlertTriangle
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { auditLogs } from '../../data/adminMockData';
+import Toast from '../../components/coordinator/Toast';
 
 const AuditLogsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('All');
+  const [toast, setToast] = useState(null);
 
-  const filteredLogs = auditLogs.filter(log => 
-    log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    log.action.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const showToast = (message, type = 'success') => setToast({ message, type });
+
+  const allTypes = ['All', ...new Set(auditLogs.map(l => l.type))];
+
+  const filteredLogs = auditLogs.filter(log => {
+    const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      log.action.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = filterType === 'All' || log.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const handleExportCSV = () => {
+    const headers = ['Timestamp,User,Role,Action,Affected Record,Type,IP Address'];
+    const rows = filteredLogs.map(log =>
+      `"${log.timestamp}","${log.user}","${log.role}","${log.action}","${log.affectedRecord}","${log.type}","${log.ipAddress}"`
+    );
+    const csvContent = [...headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${filteredLogs.length} log entries to CSV.`, 'success');
+  };
+
+  const handleFilterToggle = () => {
+    // Cycle through types
+    const currentIndex = allTypes.indexOf(filterType);
+    const nextIndex = (currentIndex + 1) % allTypes.length;
+    const next = allTypes[nextIndex];
+    setFilterType(next);
+    showToast(`Filter set to: ${next}`, 'info');
+  };
+
+  const handleDateFilter = () => {
+    showToast('Date range filtering is available in the full version.', 'info');
+  };
 
   const styles = {
     container: {
@@ -28,18 +65,10 @@ const AuditLogsPage = () => {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    tableContainer: {
-      ...commonStyles.dashboardTableContainer,
-    },
-    table: {
-      ...commonStyles.dashboardTable,
-    },
-    th: {
-      ...commonStyles.dashboardTableTh,
-    },
-    td: {
-      ...commonStyles.dashboardTableTd,
-    },
+    tableContainer: { ...commonStyles.dashboardTableContainer },
+    table: { ...commonStyles.dashboardTable },
+    th: { ...commonStyles.dashboardTableTh },
+    td: { ...commonStyles.dashboardTableTd },
     typeBadge: (type) => {
       const colors = {
         Update: { color: theme.colors.warning, bg: '#FEF3C7' },
@@ -49,19 +78,27 @@ const AuditLogsPage = () => {
         Login: { color: theme.colors.textMuted, bg: '#F3F4F6' },
       };
       const c = colors[type] || colors.System;
-      return {
-        ...commonStyles.dashboardBadge,
-        color: c.color,
-        backgroundColor: c.bg,
-      };
+      return { ...commonStyles.dashboardBadge, color: c.color, backgroundColor: c.bg };
     }
   };
 
   return (
     <div style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       <header style={styles.header}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Security Audit Logs</h1>
-        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+        <div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Security Audit Logs</h1>
+          {filterType !== 'All' && (
+            <span style={{ fontSize: '0.8rem', color: theme.colors.primary, fontWeight: 600 }}>
+              Showing: {filterType} ({filteredLogs.length} entries)
+            </span>
+          )}
+        </div>
+        <button
+          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+          onClick={handleExportCSV}
+        >
           <Download size={18} />
           Export CSV
         </button>
@@ -76,8 +113,20 @@ const AuditLogsPage = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}><Filter size={18} /></button>
-          <button style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}><Calendar size={18} /></button>
+          <button
+            title={`Filter by type (current: ${filterType})`}
+            style={{ ...commonStyles.dashboardBtn, backgroundColor: filterType !== 'All' ? theme.colors.bgAccent : theme.colors.bgSecondary, padding: '8px', color: filterType !== 'All' ? theme.colors.primary : theme.colors.textMain }}
+            onClick={handleFilterToggle}
+          >
+            <Filter size={18} />
+          </button>
+          <button
+            title="Filter by date range"
+            style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}
+            onClick={handleDateFilter}
+          >
+            <Calendar size={18} />
+          </button>
         </div>
       </div>
 
