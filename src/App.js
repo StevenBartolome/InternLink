@@ -126,7 +126,7 @@ function App() {
           <Route path="/coordinator/students" element={<StudentDirectoryPage />} />
           <Route path="/coordinator/applications" element={<ApplicationTrackingPage />} />
           <Route path="/coordinator/approvals" element={<InternshipApprovalPage />} />
-          <Route path="/coordinator/progress" element={<ProgressMonitoringPage />} />
+          <Route path="/coordinator/monitoring" element={<ProgressMonitoringPage />} />
           <Route path="/coordinator/grades" element={<GradeManagementPage />} />
           <Route path="/coordinator/matching" element={<AutomatedMatchingPage />} />
           <Route path="/coordinator/evaluation" element={<StudentEvaluationPage />} />

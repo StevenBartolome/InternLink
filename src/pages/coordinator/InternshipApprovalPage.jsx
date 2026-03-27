@@ -112,10 +112,10 @@ const InternshipApprovalPage = () => {
           <div key={listing.id} style={styles.listingCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={styles.companyBar}>
-                <div style={styles.companyLogo}>{listing.company.charAt(0)}</div>
+                <div style={styles.companyLogo}>{listing.companyName.charAt(0)}</div>
                 <div>
                   <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{listing.position}</h3>
-                  <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{listing.company}</span>
+                  <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{listing.companyName}</span>
                 </div>
               </div>
               <span style={{ 

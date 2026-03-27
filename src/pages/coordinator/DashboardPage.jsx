@@ -273,6 +273,7 @@ const DashboardPage = () => {
               { label: 'View Students', icon: Users, path: '/coordinator/students', id: 'students' },
               { label: 'Approve Listings', icon: FileCheck, path: '/coordinator/approvals', id: 'approvals' },
               { label: 'Track Applications', icon: FileText, path: '/coordinator/applications', id: 'apps' },
+              { label: 'Monitoring & Logs', icon: Activity, path: '/coordinator/monitoring', id: 'monitoring' },
               { label: 'View Reports', icon: BarChart2, path: '/coordinator/reports', id: 'reports' }
             ].map((item) => (
               <button 

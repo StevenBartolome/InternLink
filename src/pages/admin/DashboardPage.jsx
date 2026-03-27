@@ -202,7 +202,7 @@ const DashboardPage = () => {
     <div style={styles.container}>
       {/* Welcome Card */}
       <div style={styles.welcomeBanner}>
-        <div style={styles.welcomeBanner.content}>
+        <div>
           <h1 style={styles.welcomeBanner.h1}>Welcome back, {adminProfile.name}!</h1>
           <p style={styles.welcomeBanner.p}>System: <strong>{adminProfile.systemName}</strong></p>
           <p style={styles.welcomeBanner.welcomeSubtext}>Monitor and manage the OJT program from this central hub.</p>

@@ -21,7 +21,7 @@ const AutomatedMatchingPage = () => {
       const results = mockStudents.slice(0, 5).map((student, idx) => ({
         id: `M${idx}`,
         student: student.name,
-        company: mockEmployerListings[idx % mockEmployerListings.length].company,
+        company: mockEmployerListings[idx % mockEmployerListings.length].companyName,
         position: mockEmployerListings[idx % mockEmployerListings.length].position,
         score: Math.floor(Math.random() * 20) + 80, // 80-99%
       }));
