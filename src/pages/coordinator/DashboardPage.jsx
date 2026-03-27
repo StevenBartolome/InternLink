@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Users, FileCheck, AlertCircle, FileText, ArrowRight, Activity, BarChart2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import StatCard from '../../components/coordinator/StatCard';
 import { coordinatorProfile, mockNotifications, mockStudents, mockEmployerListings } from '../../data/coordinatorMockData';
 import { theme } from '../../styles/theme';
@@ -9,6 +9,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { showToast } = useOutletContext() || {};
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [hoveredFeedItem, setHoveredFeedItem] = useState(null);
@@ -235,6 +236,7 @@ const DashboardPage = () => {
               style={styles.btnLink(hoveredBtn === 'viewAll')}
               onMouseEnter={() => setHoveredBtn('viewAll')}
               onMouseLeave={() => setHoveredBtn(null)}
+              onClick={() => navigate('/coordinator/notifications')}
             >
               View All <ArrowRight size={16} />
             </button>

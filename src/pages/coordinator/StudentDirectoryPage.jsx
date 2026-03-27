@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Search, Filter, X } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge/StatusBadge';
 import ProgressBar from '../../components/ProgressBar/ProgressBar';
@@ -14,6 +15,7 @@ const StudentDirectoryPage = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { showToast } = useOutletContext() || {};
 
   const filteredStudents = mockStudents.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -394,7 +396,12 @@ const StudentDirectoryPage = () => {
               </div>
 
               <div style={styles.modalActions}>
-                <button style={{...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary}}>View Resume</button>
+                <button 
+                  style={{...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary}}
+                  onClick={() => showToast && showToast(`Downloading ${selectedStudent.name}'s resume...`, 'success')}
+                >
+                  View Resume
+                </button>
                 <button style={{...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary}} onClick={closeProfile}>Close</button>
               </div>
             </div>

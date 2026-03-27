@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Database, UserCheck, Briefcase, Zap, 
   Search, Sliders, CheckCircle, XCircle,
@@ -11,6 +12,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const AutomatedMatchingPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { showToast } = useOutletContext() || {};
   const [isMatching, setIsMatching] = useState(false);
   const [matchResults, setMatchResults] = useState([]);
 
@@ -136,7 +138,10 @@ const AutomatedMatchingPage = () => {
                     <span>{match.position} at {match.company}</span>
                   </div>
                 </div>
-                <button style={{ ...commonStyles.dashboardBtn, padding: '8px', backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, padding: '8px', backgroundColor: theme.colors.bgAccent, color: theme.colors.primary }}
+                  onClick={() => showToast && showToast(`Finalizing match for ${match.student}...`, 'success')}
+                >
                   <ArrowRight size={20} />
                 </button>
               </div>

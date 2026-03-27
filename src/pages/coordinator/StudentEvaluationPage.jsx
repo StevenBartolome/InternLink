@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   ClipboardCheck, Star, User, 
   MessageCircle, Send, CheckCircle2,
@@ -9,6 +10,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { mockStudents } from '../../data/coordinatorMockData';
 
 const StudentEvaluationPage = () => {
+  const { showToast } = useOutletContext() || {};
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   const studentsForEvaluation = mockStudents.filter(s => s.status === 'Placed');
@@ -100,7 +102,7 @@ const StudentEvaluationPage = () => {
                   <img src={selectedStudent.avatar} alt="Student" style={{ width: '64px', height: '64px', borderRadius: '16px' }} />
                   <div>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>{selectedStudent.name}</h2>
-                    <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{selectedStudent.studentId} • {selectedStudent.course}</span>
+                    <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{selectedStudent.id} • {selectedStudent.course}</span>
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
@@ -140,8 +142,19 @@ const StudentEvaluationPage = () => {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>Save Draft</button>
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '12px 32px' }}>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+                  onClick={() => showToast && showToast('Draft saved successfully', 'success')}
+                >
+                  Save Draft
+                </button>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '12px 32px' }}
+                  onClick={() => {
+                    showToast && showToast('Evaluation submitted for review', 'success');
+                    setSelectedStudent(null);
+                  }}
+                >
                   <Send size={18} />
                   Submit Evaluation
                 </button>

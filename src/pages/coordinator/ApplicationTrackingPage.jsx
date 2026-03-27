@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Search, Filter, Calendar, 
   CheckCircle, XCircle, Clock, 
@@ -12,6 +13,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ApplicationTrackingPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { showToast } = useOutletContext() || {};
   const [activeTab, setActiveTab] = useState('all');
 
   // Simulated applications derived from mockEmployerListings for tracking
@@ -151,7 +153,7 @@ const ApplicationTrackingPage = () => {
             <div style={styles.actions}>
               <button 
                 style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}
-                onClick={() => alert('Viewing details for ' + app.id)}
+                onClick={() => showToast ? showToast(`Opening resume for ${app.student}...`, 'info') : alert(`Opening resume for ${app.student}...`)}
               >
                 <FileText size={16} />
                 View File
@@ -159,6 +161,7 @@ const ApplicationTrackingPage = () => {
               <button 
                 style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
                 title="Open Company Portal"
+                onClick={() => showToast ? showToast(`Redirecting to ${app.company} portal...`, 'info') : alert(`Redirecting to ${app.company} portal...`)}
               >
                 <ExternalLink size={16} />
               </button>

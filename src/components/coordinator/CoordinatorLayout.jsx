@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import Toast from './Toast';
 import { theme } from '../../styles/theme';
 
 const CoordinatorLayout = () => {
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
   const styles = {
     layout: {
       display: 'flex',
@@ -36,9 +43,16 @@ const CoordinatorLayout = () => {
       <div style={styles.main}>
         <Topbar />
         <main style={styles.content}>
-          <Outlet />
+          <Outlet context={{ showToast }} />
         </main>
       </div>
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
     </div>
   );
 };

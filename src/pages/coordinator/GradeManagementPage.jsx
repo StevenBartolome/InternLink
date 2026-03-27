@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Search, Filter, Download, MoreVertical, 
   Award, FileText, CheckCircle, AlertCircle,
@@ -11,13 +12,14 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const GradeManagementPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { showToast } = useOutletContext() || {};
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
 
   // Filter students who have grades or are eligible for grading
   const filteredStudents = mockStudents.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+                          student.id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = filterStatus === 'All' || student.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -126,11 +128,17 @@ const GradeManagementPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+            onClick={() => showToast && showToast('Filter options coming soon', 'info')}
+          >
             <Filter size={18} />
             Filter
           </button>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
+            onClick={() => showToast && showToast('Exporting grades to Excel...', 'success')}
+          >
             <Download size={18} />
             Export Grades
           </button>
@@ -158,7 +166,7 @@ const GradeManagementPage = () => {
                     <div style={styles.avatar}>{student.name.charAt(0)}</div>
                     <div>
                       <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{student.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{student.studentId}</div>
+                      <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{student.id}</div>
                     </div>
                   </div>
                 </td>
@@ -183,10 +191,18 @@ const GradeManagementPage = () => {
                 </td>
                 <td style={styles.td}>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={styles.actionBtn} title="View Details">
+                    <button 
+                      style={styles.actionBtn} 
+                      title="View Details"
+                      onClick={() => showToast && showToast(`Viewing full record of ${student.name}`, 'info')}
+                    >
                       <FileText size={18} />
                     </button>
-                    <button style={styles.actionBtn} title="Edit Grade" onClick={() => alert('Grade Edit opened for ' + student.name)}>
+                    <button 
+                      style={styles.actionBtn} 
+                      title="Edit Grade" 
+                      onClick={() => showToast && showToast(`Grade updated for ${student.name}`, 'success')}
+                    >
                       <Award size={18} />
                     </button>
                   </div>

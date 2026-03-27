@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   BarChart2, TrendingUp, Users, 
   CheckCircle, PieChart, Download,
@@ -9,6 +10,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { mockReportsData } from '../../data/coordinatorMockData';
 
 const ReportsDashboardPage = () => {
+  const { showToast } = useOutletContext() || {};
   const { summary, placementRate, gradeDistribution, topEmployers } = mockReportsData;
 
   const styles = {
@@ -63,7 +65,10 @@ const ReportsDashboardPage = () => {
     <div style={styles.container}>
       <div style={styles.header}>
         <h1 style={styles.title}>System Reports & Analytics</h1>
-        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+        <button 
+          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
+          onClick={() => showToast && showToast('Generating full system report...', 'success')}
+        >
           <Download size={18} />
           Export All Data
         </button>

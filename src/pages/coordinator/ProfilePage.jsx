@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   User, Mail, Phone, MapPin, 
   Building, GraduationCap, Award, 
@@ -9,6 +10,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { coordinatorProfile } from '../../data/coordinatorMockData';
 
 const ProfilePage = () => {
+  const { showToast } = useOutletContext() || {};
   const styles = {
     container: {
       display: 'flex',
@@ -84,7 +86,12 @@ const ProfilePage = () => {
       <div style={styles.profileHeader}>
         <div style={styles.avatarWrapper}>
           <img src={coordinatorProfile.avatar} alt="Profile" style={styles.avatar} />
-          <button style={styles.cameraBtn}><Camera size={18} /></button>
+          <button 
+            style={styles.cameraBtn}
+            onClick={() => showToast && showToast('Image upload coming soon', 'info')}
+          >
+            <Camera size={18} />
+          </button>
         </div>
         <div style={{ zIndex: 2 }}>
           <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0 0 8px 0' }}>{coordinatorProfile.name}</h1>
@@ -118,11 +125,17 @@ const ProfilePage = () => {
 
         <div style={styles.infoCard}>
           <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>Account Security</h3>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start' }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start' }}
+            onClick={() => showToast && showToast('Password reset link sent to email', 'success')}
+          >
             <Key size={18} />
             Change Password
           </button>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start' }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start' }}
+            onClick={() => showToast && showToast('Redirecting to session security settings...', 'info')}
+          >
             <Shield size={18} />
             Two-Factor Authentication
           </button>
@@ -133,7 +146,10 @@ const ProfilePage = () => {
         <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem', marginBottom: '24px' }}>
           Your profile information is visible to students and employers within the National University Baliwag network.
         </p>
-        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '200px' }}>
+        <button 
+          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '200px' }}
+          onClick={() => showToast && showToast('Profile editor coming soon', 'info')}
+        >
           Edit Profile
         </button>
       </div>

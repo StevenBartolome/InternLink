@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Bell, Mail, MessageSquare, AlertCircle, 
   CheckCircle, Clock, Trash2, Check,
@@ -11,6 +12,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const NotificationsPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { showToast } = useOutletContext() || {};
   const [notifications, setNotifications] = useState(mockNotifications);
   const [filter, setFilter] = useState('all');
 
@@ -85,7 +87,13 @@ const NotificationsPage = () => {
       <div style={styles.header}>
         <h1 style={styles.title}>Notifications</h1>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.8rem' }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.8rem' }}
+            onClick={() => {
+              setNotifications(prev => prev.map(n => ({...n, read: true})));
+              showToast && showToast('All notifications marked as read', 'success');
+            }}
+          >
             Mark all as read
           </button>
         </div>

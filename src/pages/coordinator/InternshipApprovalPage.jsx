@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   CheckSquare, XCircle, Search, 
   MapPin, Clock, Building2, 
@@ -12,9 +13,16 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipApprovalPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { showToast } = useOutletContext() || {};
   const [filter, setFilter] = useState('Pending');
+  const [listings, setListings] = useState(mockEmployerListings);
 
-  const filteredListings = mockEmployerListings.filter(listing => 
+  const handleAction = (id, newStatus) => {
+    setListings(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
+    showToast && showToast(`Internship listing set to ${newStatus}`, newStatus === 'Approved' ? 'success' : 'info');
+  };
+
+  const filteredListings = listings.filter(listing => 
     filter === 'All' || listing.status === filter
   );
 
@@ -145,17 +153,26 @@ const InternshipApprovalPage = () => {
             <div style={styles.actions}>
               {listing.status === 'Pending' ? (
                 <>
-                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.success }}>
+                  <button 
+                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.success }}
+                    onClick={() => handleAction(listing.id, 'Approved')}
+                  >
                     <FileCheck size={18} />
                     Approve
                   </button>
-                  <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger }}>
+                  <button 
+                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger }}
+                    onClick={() => handleAction(listing.id, 'Rejected')}
+                  >
                     <XCircle size={18} />
                     Reject
                   </button>
                 </>
               ) : (
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
+                  onClick={() => showToast && showToast(`Opening details for ${listing.companyName}...`, 'info')}
+                >
                   <ExternalLink size={18} />
                   View Listing Details
                 </button>
