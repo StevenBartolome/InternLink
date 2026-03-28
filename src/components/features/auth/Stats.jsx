@@ -1,65 +1,108 @@
 // src/components/Stats/Stats.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+
+const StatItem = ({ target, label, suffix = "" }) => {
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (latest) => Math.round(latest));
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const controls = animate(count, target, {
+      duration: 2,
+      ease: "easeOut",
+    });
+    
+    const unsubscribe = rounded.on("change", (latest) => {
+      setDisplayValue(latest);
+    });
+
+    return () => {
+      controls.stop();
+      unsubscribe();
+    };
+  }, [target, count, rounded]);
+
+  const styles = {
+    statItem: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.5rem',
+      padding: '1.5rem',
+    },
+    h3: {
+      fontSize: '3.5rem',
+      fontWeight: 900,
+      color: theme.colors.primary,
+      margin: 0,
+      lineHeight: 1,
+    },
+    p: {
+      color: theme.colors.textMuted,
+      fontSize: '1rem',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.1em',
+      margin: 0,
+    }
+  };
+
+  return (
+    <div style={styles.statItem}>
+      <motion.h3 
+        style={styles.h3}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        {displayValue}{suffix}
+      </motion.h3>
+      <motion.p 
+        style={styles.p}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ delay: 0.5 }}
+      >
+        {label}
+      </motion.p>
+    </div>
+  );
+};
 
 const Stats = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   const styles = {
     statsBanner: {
-      padding: isMobile ? '3rem 1rem' : '4rem 10%',
-      backgroundColor: '#F8FAFC',
+      padding: isMobile ? '4rem 1rem' : '6rem 10%',
+      backgroundColor: theme.colors.white,
       borderTop: `1px solid ${theme.colors.border}`,
       borderBottom: `1px solid ${theme.colors.border}`,
+      position: 'relative',
     },
     statsGrid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
       gap: '2rem',
       textAlign: 'center',
       maxWidth: '1200px',
       margin: '0 auto',
-    },
-    statItem: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.5rem',
-    },
-    h3: {
-      fontSize: isMobile ? '2.2rem' : '2.8rem',
-      fontWeight: 800,
-      color: theme.colors.primary,
-      margin: 0,
-    },
-    p: {
-      color: theme.colors.textMain,
-      fontSize: '0.9rem',
-      fontWeight: 600,
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      margin: 0,
     }
   };
 
   return (
     <section style={styles.statsBanner} id="impact">
       <div style={styles.statsGrid}>
-        <div style={styles.statItem}>
-          <h3 style={styles.h3}>1.2K+</h3>
-          <p style={styles.p}>Students Placed</p>
-        </div>
-        <div style={styles.statItem}>
-          <h3 style={styles.h3}>350+</h3>
-          <p style={styles.p}>Active Companies</p>
-        </div>
-        <div style={styles.statItem}>
-          <h3 style={styles.h3}>95%</h3>
-          <p style={styles.p}>Success Match Rate</p>
-        </div>
+        <StatItem target={1200} label="Students Placed" suffix="+" />
+        <StatItem target={350} label="Active Companies" suffix="+" />
+        <StatItem target={95} label="Success Match Rate" suffix="%" />
       </div>
     </section>
   );
 };
 
 export default Stats;
+

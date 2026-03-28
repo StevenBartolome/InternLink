@@ -1,6 +1,7 @@
 // src/components/features/auth/Features.jsx
 import React, { useState } from 'react';
-import { Search, Building2, ClipboardCheck, TrendingUp, ShieldCheck, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Search, Building2, ClipboardCheck, TrendingUp, ShieldCheck, Users, ArrowRight } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
@@ -41,109 +42,163 @@ const Features = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [hoveredCard, setHoveredCard] = useState(null);
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const cardVariants = {
+    hidden: { y: 40, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: { duration: 0.5, ease: 'easeOut' }
+    },
+  };
+
   const styles = {
     section: {
-      padding: isMobile ? '3rem 1rem' : '5rem 10%',
+      padding: isMobile ? '4rem 1.5rem' : '6rem 10%',
       backgroundColor: theme.colors.bgPrimary,
+      position: 'relative',
     },
     header: {
       textAlign: 'center',
-      marginBottom: '3rem',
+      marginBottom: '4rem',
     },
     sectionLabel: {
       display: 'inline-block',
       backgroundColor: theme.colors.bgAccent,
       color: theme.colors.primary,
-      fontWeight: 700,
+      fontWeight: 800,
       fontSize: '0.8rem',
-      letterSpacing: '0.1em',
+      letterSpacing: '0.15em',
       textTransform: 'uppercase',
-      padding: '0.35rem 1rem',
+      padding: '0.5rem 1.25rem',
       borderRadius: '9999px',
-      marginBottom: '1rem',
+      marginBottom: '1.25rem',
+      boxShadow: '0 2px 10px rgba(30, 64, 175, 0.05)',
     },
     h2: {
-      fontSize: isMobile ? '2rem' : '2.5rem',
-      fontWeight: 800,
+      fontSize: isMobile ? '2.2rem' : '3.2rem',
+      fontWeight: 900,
       color: theme.colors.textMain,
-      margin: '0 0 1rem',
+      margin: '0 0 1.25rem',
+      letterSpacing: '-0.02em',
     },
     subtitle: {
       color: theme.colors.textMuted,
-      fontSize: '1.05rem',
-      maxWidth: '560px',
+      fontSize: '1.15rem',
+      maxWidth: '650px',
       margin: '0 auto',
       lineHeight: 1.6,
     },
     grid: {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-      gap: '1.5rem',
+      gap: '2rem',
       maxWidth: '1200px',
       margin: '0 auto',
     },
     card: (id) => ({
-      backgroundColor: hoveredCard === id ? theme.colors.bgAccent : theme.colors.bgSecondary,
-      border: `1px solid ${hoveredCard === id ? theme.colors.secondary : theme.colors.border}`,
-      borderRadius: '16px',
-      padding: '2rem',
-      transition: theme.transitions.default,
-      transform: hoveredCard === id ? 'translateY(-4px)' : 'none',
+      backgroundColor: theme.colors.white,
+      border: `1px solid ${hoveredCard === id ? theme.colors.primary : theme.colors.border}`,
+      borderRadius: '24px',
+      padding: '2.5rem',
+      transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+      position: 'relative',
+      overflow: 'hidden',
+      cursor: 'pointer',
       boxShadow: hoveredCard === id
-        ? '0 10px 25px -5px rgba(30, 64, 175, 0.15)'
-        : '0 1px 3px rgba(0,0,0,0.04)',
-      cursor: 'default',
+        ? '0 20px 40px -10px rgba(30, 64, 175, 0.15)'
+        : '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
     }),
     iconWrapper: (id) => ({
-      width: '52px',
-      height: '52px',
-      borderRadius: '12px',
+      width: '60px',
+      height: '60px',
+      borderRadius: '16px',
       backgroundColor: hoveredCard === id ? theme.colors.primary : theme.colors.bgAccent,
       color: hoveredCard === id ? theme.colors.white : theme.colors.primary,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: '1.25rem',
-      transition: theme.transitions.default,
+      marginBottom: '1.5rem',
+      transition: 'all 0.3s ease',
+      transform: hoveredCard === id ? 'rotate(-5deg) scale(1.1)' : 'none',
     }),
     cardTitle: {
-      fontSize: '1.1rem',
-      fontWeight: 700,
+      fontSize: '1.35rem',
+      fontWeight: 800,
       color: theme.colors.textMain,
-      marginBottom: '0.5rem',
+      marginBottom: '0.75rem',
     },
     cardDesc: {
-      fontSize: '0.95rem',
+      fontSize: '1rem',
       color: theme.colors.textMuted,
       lineHeight: 1.6,
+      marginBottom: '1.5rem',
     },
+    learnMore: (id) => ({
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      color: theme.colors.primary,
+      fontWeight: 700,
+      fontSize: '0.9rem',
+      opacity: hoveredCard === id ? 1 : 0,
+      transform: hoveredCard === id ? 'translateX(0)' : 'translateX(-10px)',
+      transition: 'all 0.3s ease',
+    })
   };
 
   return (
     <section style={styles.section} id="features">
-      <div style={styles.header}>
-        <span style={styles.sectionLabel}>Platform Features</span>
-        <h2 style={styles.h2}>Everything You Need to Succeed</h2>
+      <motion.div 
+        style={styles.header}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+      >
+        <span style={styles.sectionLabel}>Powerful Platform</span>
+        <h2 style={styles.h2}>Designed for Growth</h2>
         <p style={styles.subtitle}>
-          InternLink provides a complete suite of tools for students, employers, and schools to manage internships efficiently.
+          We provide a comprehensive ecosystem that simplifies every aspect of the internship lifecycle.
         </p>
-      </div>
-      <div style={styles.grid}>
+      </motion.div>
+
+      <motion.div 
+        style={styles.grid}
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
         {featureList.map((feature, idx) => (
-          <div
+          <motion.div
             key={idx}
             style={styles.card(idx)}
+            variants={cardVariants}
             onMouseEnter={() => setHoveredCard(idx)}
             onMouseLeave={() => setHoveredCard(null)}
+            whileHover={{ y: -8 }}
           >
             <div style={styles.iconWrapper(idx)}>{feature.icon}</div>
             <div style={styles.cardTitle}>{feature.title}</div>
             <p style={styles.cardDesc}>{feature.description}</p>
-          </div>
+            <div style={styles.learnMore(idx)}>
+              Learn more <ArrowRight size={16} />
+            </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </section>
   );
 };
 
 export default Features;
+
