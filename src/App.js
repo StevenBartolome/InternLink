@@ -56,6 +56,7 @@ import StudentEvaluationPage from './pages/coordinator/StudentEvaluationPage';
 import ReportsDashboardPage from './pages/coordinator/ReportsDashboardPage';
 import CoordinatorNotificationsPage from './pages/coordinator/NotificationsPage';
 import CoordinatorProfilePage from './pages/coordinator/ProfilePage';
+import CoordinatorStudentProfilePage from './pages/coordinator/StudentProfilePage';
 
 // Import Admin Pages
 import AdminLayout from './components/layout/admin/AdminLayout';
@@ -135,6 +136,7 @@ function App() {
           <Route path="/coordinator/reports" element={<ReportsDashboardPage />} />
           <Route path="/coordinator/notifications" element={<CoordinatorNotificationsPage />} />
           <Route path="/coordinator/profile" element={<CoordinatorProfilePage />} />
+          <Route path="/coordinator/students/:id" element={<CoordinatorStudentProfilePage />} />
         </Route>
 
         {/* Admin Routes */}

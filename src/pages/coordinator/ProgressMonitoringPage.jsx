@@ -1,6 +1,6 @@
-// src/pages/coordinator/ProgressMonitoringPage.jsx
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, CheckSquare, Clock, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Calendar, CheckSquare, Clock } from 'lucide-react';
 import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { mockProgressData } from '../../services/mocks/coordinatorMockData';
@@ -11,8 +11,8 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 const ProgressMonitoringPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [completionFilter, setCompletionFilter] = useState('All');
-  const [selectedStudent, setSelectedStudent] = useState(null);
   const [hoveredCard, setHoveredCard] = useState(null);
+  const navigate = useNavigate();
   
   const isMobile = useMediaQuery('(max-width: 768px)');
   const students = mockProgressData.students;
@@ -174,99 +174,6 @@ const ProgressMonitoringPage = () => {
       fontWeight: 600,
       fontSize: '0.75rem',
       cursor: 'pointer',
-    },
-    modalOverlay: {
-      ...commonStyles.modalOverlay,
-    },
-    modalContent: {
-      ...commonStyles.modalContent,
-      maxWidth: '800px',
-      maxHeight: '90vh',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: 0,
-      overflow: 'hidden',
-    },
-    modalHeader: {
-      padding: '1.5rem',
-      borderBottom: `1px solid ${theme.colors.border}`,
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      h3: {
-        fontSize: '1.25rem',
-        fontWeight: 700,
-        margin: 0,
-      }
-    },
-    modalClose: {
-      background: 'none',
-      border: 'none',
-      color: theme.colors.textMuted,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modalBody: {
-      padding: '1.5rem',
-      overflowY: 'auto',
-      flex: 1,
-    },
-    profileHeader: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem',
-      marginBottom: '2rem',
-    },
-    avatarLarge: {
-      width: '64px',
-      height: '64px',
-      borderRadius: '50%',
-      objectFit: 'cover',
-    },
-    section: {
-      marginBottom: '2rem',
-      h5: {
-        fontSize: '0.875rem',
-        fontWeight: 600,
-        color: theme.colors.textMuted,
-        marginBottom: '1rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-      }
-    },
-    tableContainer: {
-      width: '100%',
-      overflowX: 'auto',
-      borderRadius: '8px',
-      border: `1px solid ${theme.colors.border}`,
-    },
-    table: {
-      width: '100%',
-      borderCollapse: 'collapse',
-      th: {
-        textAlign: 'left',
-        padding: '12px 16px',
-        backgroundColor: '#f9fafb',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        fontSize: '0.75rem',
-        fontWeight: 600,
-        color: theme.colors.textMuted,
-        textTransform: 'uppercase',
-      },
-      td: {
-        padding: '12px 16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        fontSize: '0.875rem',
-        color: theme.colors.textMain,
-      }
-    },
-    modalFooter: {
-      padding: '1rem 1.5rem',
-      borderTop: `1px solid ${theme.colors.border}`,
-      display: 'flex',
-      justifyContent: 'flex-end',
     }
   };
 
@@ -306,7 +213,7 @@ const ProgressMonitoringPage = () => {
             style={styles.card(hoveredCard === student.id)} 
             onMouseEnter={() => setHoveredCard(student.id)}
             onMouseLeave={() => setHoveredCard(null)}
-            onClick={() => setSelectedStudent(student)}
+            onClick={() => navigate(`/coordinator/students/${student.id}?tab=progress`)}
           >
             <div style={styles.cardHeader}>
               <img src={student.avatar} alt={student.name} style={styles.avatar} />
@@ -319,7 +226,7 @@ const ProgressMonitoringPage = () => {
             <div style={styles.stats}>
               <div style={styles.statRow}>
                 <div style={styles.statLabel}>
-                  <Clock size={16} /> Hours Rendered
+                   <Clock size={16} /> Hours Rendered
                 </div>
                 <div style={styles.statValue}>{student.hoursRendered} / {student.hoursRequired}</div>
               </div>
@@ -329,14 +236,14 @@ const ProgressMonitoringPage = () => {
 
               <div style={styles.statRow}>
                 <div style={styles.statLabel}>
-                  <CheckSquare size={16} /> Tasks done
+                   <CheckSquare size={16} /> Tasks done
                 </div>
                 <div style={styles.statValue}>{student.taskCompletionRate}</div>
               </div>
 
               <div style={styles.statRow}>
                 <div style={styles.statLabel}>
-                  <Calendar size={16} /> Attendance Rate
+                   <Calendar size={16} /> Attendance Rate
                 </div>
                 <div style={styles.statValue}>{student.attendanceRate}</div>
               </div>
@@ -349,91 +256,6 @@ const ProgressMonitoringPage = () => {
           </div>
         ))}
       </div>
-
-      {/* Detail Modal */}
-      {selectedStudent && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedStudent(null)}>
-          <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={styles.modalHeader}>
-              <h3 style={styles.modalHeader.h3}>Internship Progress Details</h3>
-              <button style={styles.modalClose} onClick={() => setSelectedStudent(null)}>
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div style={styles.modalBody}>
-              <div style={styles.profileHeader}>
-                <img src={selectedStudent.avatar} alt={selectedStudent.name} style={styles.avatarLarge} />
-                <div style={{ flex: 1 }}>
-                  <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 4px 0' }}>{selectedStudent.name}</h4>
-                  <p style={{ color: theme.colors.textMuted, margin: 0 }}>{selectedStudent.company} • {selectedStudent.supervisor}</p>
-                </div>
-              </div>
-
-              <div style={styles.section}>
-                <h5>Attendance Logs</h5>
-                <div style={styles.tableContainer}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.table.th}>Date</th>
-                        <th style={styles.table.th}>Time In</th>
-                        <th style={styles.table.th}>Time Out</th>
-                        <th style={styles.table.th}>Hours</th>
-                        <th style={styles.table.th}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedStudent.attendanceLogs.map((log, index) => (
-                        <tr key={index}>
-                          <td style={styles.table.td}>{log.date}</td>
-                          <td style={styles.table.td}>{log.timeIn}</td>
-                          <td style={styles.table.td}>{log.timeOut}</td>
-                          <td style={styles.table.td}>{log.hours}h</td>
-                          <td style={styles.table.td}><StatusBadge status={log.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div style={styles.section}>
-                <h5>Task Management</h5>
-                <div style={styles.tableContainer}>
-                  <table style={styles.table}>
-                    <thead>
-                      <tr>
-                        <th style={styles.table.th}>Task Description</th>
-                        <th style={styles.table.th}>Due Date</th>
-                        <th style={styles.table.th}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedStudent.taskLogs.map((task, index) => (
-                        <tr key={index}>
-                          <td style={styles.table.td}>{task.task}</td>
-                          <td style={styles.table.td}>{task.dueDate}</td>
-                          <td style={styles.table.td}><StatusBadge status={task.status} /></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div style={styles.modalFooter}>
-              <button 
-                style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, color: theme.colors.textMain, border: `1px solid ${theme.colors.border}` }} 
-                onClick={() => setSelectedStudent(null)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

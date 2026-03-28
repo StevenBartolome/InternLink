@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Download, MoreVertical, 
   Award, FileText, CheckCircle, AlertCircle,
@@ -13,6 +13,7 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 const GradeManagementPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { showToast } = useOutletContext() || {};
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
 
@@ -160,7 +161,11 @@ const GradeManagementPage = () => {
           </thead>
           <tbody>
             {filteredStudents.map((student) => (
-              <tr key={student.id}>
+              <tr 
+                key={student.id}
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/coordinator/students/${student.id}`)}
+              >
                 <td style={styles.td}>
                   <div style={styles.studentInfo}>
                     <div style={styles.avatar}>{student.name.charAt(0)}</div>
@@ -194,7 +199,10 @@ const GradeManagementPage = () => {
                     <button 
                       style={styles.actionBtn} 
                       title="View Details"
-                      onClick={() => showToast && showToast(`Viewing full record of ${student.name}`, 'info')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/coordinator/students/${student.id}`);
+                      }}
                     >
                       <FileText size={18} />
                     </button>

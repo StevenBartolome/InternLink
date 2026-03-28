@@ -1,10 +1,14 @@
-// src/screens/Login/Login.jsx
+// src/pages/auth/Login/Login.jsx
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, Mail, EyeOff, LayoutDashboard, Info, ArrowRightCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  GraduationCap, ArrowLeft, Mail, EyeOff, 
+  LayoutDashboard, Info, ArrowRight, 
+  Github, Chrome, Linkedin 
+} from 'lucide-react';
 import Modal from '../../../components/common/Modal/Modal';
 import { theme } from '../../../styles/theme';
-import { commonStyles } from '../../../styles/commonStyles';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
 const Login = () => {
@@ -25,7 +29,6 @@ const Login = () => {
     }
   }, [userSession, navigate]);
 
-
   const handleSubmit = (e) => {
     e.preventDefault();
     const credentials = {
@@ -42,7 +45,7 @@ const Login = () => {
       setRedirectPath(credentials[email]);
       setIsModalOpen(true);
     } else {
-      setError('Invalid email or password. Use student, employer, supervisor, coordinator, or admin @gmail.com (pw: 123)');
+      setError('Invalid email or password. Use your role-based email (pw: 123)');
     }
   };
 
@@ -52,161 +55,163 @@ const Login = () => {
       height: '100vh',
       width: '100vw',
       overflow: 'hidden',
-      fontFamily: "'Inter', sans-serif",
+      backgroundColor: '#f8fafc',
     },
     brandSide: {
-      flex: 1,
-      backgroundColor: theme.colors.primary,
-      padding: isMobile ? '2rem' : '4rem',
+      flex: 1.2,
+      position: 'relative',
+      background: `linear-gradient(135deg, ${theme.colors.primary} 0%, #1e3a8a 100%)`,
+      padding: '4rem',
       display: isMobile ? 'none' : 'flex',
       flexDirection: 'column',
-      color: theme.colors.white,
       justifyContent: 'space-between',
+      color: '#fff',
+      overflow: 'hidden',
     },
-    brandHeader: {
+    floatingShape: {
+      position: 'absolute',
+      borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+      background: 'rgba(255, 255, 255, 0.05)',
+      filter: 'blur(40px)',
+      zIndex: 1,
+    },
+    logoContainer: {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
       fontSize: '1.5rem',
       fontWeight: 800,
+      fontFamily: "'Outfit', sans-serif",
+      zIndex: 10,
     },
-    brandLogo: {
-      backgroundColor: '#EAB308',
+    logoIcon: {
+      backgroundColor: '#fbbf24',
       color: theme.colors.primary,
-      width: '40px',
-      height: '40px',
-      borderRadius: '6px',
+      width: '42px',
+      height: '42px',
+      borderRadius: '12px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
     },
     brandContent: {
-      marginBottom: '6rem',
+      maxWidth: '480px',
+      zIndex: 10,
     },
     brandTitle: {
-      fontSize: '3rem',
-      lineHeight: 1.2,
-      marginBottom: '1.5rem',
+      fontSize: '3.5rem',
       fontWeight: 800,
+      lineHeight: 1.1,
+      marginBottom: '1.5rem',
       fontFamily: "'Outfit', sans-serif",
     },
-    textYellow: {
-      color: '#EAB308',
-    },
     brandP: {
-      fontSize: '1.05rem',
-      lineHeight: 1.6,
-      maxWidth: '450px',
-      opacity: 0.85,
+      fontSize: '1.1rem',
+      lineHeight: 1.7,
+      opacity: 0.8,
+      marginBottom: '2rem',
     },
     formSide: {
       flex: 1,
-      backgroundColor: theme.colors.white,
+      backgroundColor: '#fff',
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
-      overflowY: 'auto',
+      boxShadow: '-10px 0 30px rgba(0,0,0,0.02)',
+      zIndex: 20,
     },
-    backBar: {
-      padding: isMobile ? '1.5rem' : '2rem 4rem',
-    },
-    btnBackLink: (isHovered) => ({
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '0.6rem 1.2rem',
-      borderRadius: '6px',
-      border: `1px solid ${theme.colors.border}`,
-      background: isHovered ? theme.colors.bgSecondary : 'transparent',
-      color: theme.colors.textMuted,
-      fontWeight: 600,
-      fontSize: '0.9rem',
-      cursor: 'pointer',
-      transition: theme.transitions.default,
-    }),
     formContainer: {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
-      maxWidth: '450px',
+      maxWidth: '440px',
       width: '100%',
       margin: '0 auto',
-      padding: '2rem',
+      padding: isMobile ? '2rem' : '4rem 2rem',
     },
     formHeader: {
-      marginBottom: '2rem',
+      marginBottom: '2.5rem',
     },
-    formTitle: {
-      fontSize: '2rem',
+    title: {
+      fontSize: '2.25rem',
       fontWeight: 800,
-      color: theme.colors.textMain,
-      marginBottom: '0.5rem',
+      color: '#0f172a',
+      marginBottom: '0.75rem',
       fontFamily: "'Outfit', sans-serif",
     },
-    formSubtitle: {
-      color: theme.colors.textMuted,
-      fontSize: '0.95rem',
+    subtitle: {
+      color: '#64748b',
+      fontSize: '1rem',
+    },
+    socialContainer: {
+      display: 'flex',
+      gap: '12px',
+      marginBottom: '2rem',
+    },
+    socialBtn: {
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '0.75rem',
+      borderRadius: '12px',
+      border: '1px solid #e2e8f0',
+      backgroundColor: '#fff',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+    },
+    divider: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      color: '#cbd5e1',
+      fontSize: '0.85rem',
+      marginBottom: '2rem',
+    },
+    dividerLine: {
+      flex: 1,
+      height: '1px',
+      backgroundColor: '#e2e8f0',
     },
     formGroup: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '0.5rem',
       marginBottom: '1.5rem',
     },
     label: {
-      fontSize: '0.85rem',
+      display: 'block',
+      fontSize: '0.875rem',
       fontWeight: 600,
-      color: theme.colors.textMain,
+      color: '#334155',
+      marginBottom: '0.5rem',
     },
     inputWrapper: {
       position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
     },
     input: {
       width: '100%',
-      padding: '0.75rem 2.8rem 0.75rem 1rem',
-      border: `1px solid ${theme.colors.border}`,
-      borderRadius: '8px',
-      backgroundColor: '#F8FAFC',
-      fontSize: '0.95rem',
-      color: theme.colors.textMain,
-      transition: theme.transitions.default,
+      padding: '0.875rem 1rem 0.875rem 2.75rem',
+      borderRadius: '12px',
+      border: '1px solid #e2e8f0',
+      fontSize: '1rem',
+      backgroundColor: '#f8fafc',
+      transition: 'all 0.2s ease',
+      outline: 'none',
     },
     inputIcon: {
       position: 'absolute',
-      right: '1rem',
-      color: '#94A3B8',
-      pointerEvents: 'none',
+      left: '1rem',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      color: '#94a3b8',
     },
-    formOptions: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      fontSize: '0.85rem',
-      margin: '0.5rem 0 2rem 0',
-    },
-    checkboxLabel: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      color: theme.colors.textMuted,
-      cursor: 'pointer',
-    },
-    forgotLink: (isHovered) => ({
-      color: theme.colors.primary,
-      fontWeight: 600,
-      cursor: 'pointer',
-      textDecoration: isHovered ? 'underline' : 'none',
-    }),
-    btnLogin: (isHovered) => ({
+    btnSubmit: (isHovered) => ({
       width: '100%',
-      padding: '0.875rem',
-      backgroundColor: '#EAB308',
-      color: '#000',
+      padding: '1rem',
+      backgroundColor: theme.colors.primary,
+      color: '#fff',
       border: 'none',
-      borderRadius: '8px',
+      borderRadius: '12px',
       fontWeight: 700,
       fontSize: '1rem',
       cursor: 'pointer',
@@ -214,42 +219,36 @@ const Login = () => {
       alignItems: 'center',
       justifyContent: 'center',
       gap: '10px',
-      boxShadow: isHovered ? theme.shadows.md : theme.shadows.sm,
-      transform: isHovered ? 'translateY(-1px)' : 'none',
+      boxShadow: isHovered ? '0 10px 15px -3px rgba(30, 58, 138, 0.3)' : 'none',
+      transform: isHovered ? 'translateY(-2px)' : 'none',
       transition: 'all 0.2s ease',
     }),
-    authSwitch: {
-      textAlign: 'center',
+    authFooter: {
       marginTop: '2rem',
-      fontSize: '0.9rem',
-      color: theme.colors.textMuted,
+      textAlign: 'center',
+      fontSize: '0.925rem',
+      color: '#64748b',
     },
-    switchLink: {
+    link: {
       color: theme.colors.primary,
-      fontWeight: 600,
+      fontWeight: 700,
+      textDecoration: 'none',
       cursor: 'pointer',
-    },
-    infoBanner: {
-      marginTop: '3rem',
-      backgroundColor: '#EFF6FF',
-      border: `1px solid #DBEAFE`,
-      borderRadius: '12px',
-      padding: '1.25rem',
-      display: 'flex',
-      gap: '12px',
-      color: '#1E3A8A',
-    },
-    infoTitle: {
-      fontSize: '0.9rem',
-      fontWeight: 800,
-      margin: '0 0 4px 0',
-    },
-    infoText: {
-      fontSize: '0.8rem',
-      lineHeight: 1.5,
-      margin: 0,
-      opacity: 0.9,
     }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, x: 20 },
+    visible: { 
+      opacity: 1, 
+      x: 0,
+      transition: { duration: 0.6, staggerChildren: 0.1 }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
   return (
@@ -261,141 +260,192 @@ const Login = () => {
           navigate(redirectPath);
         }} 
         title="Login Successful" 
-        message="Welcome back to InternLink! Redirecting you to your dashboard mock shortly." 
+        message="Welcome back to InternLink! You're being redirected to your dashboard." 
       />
 
-      {/* Left Brand Side */}
+      {/* Brand Side */}
       <div style={styles.brandSide}>
-        <div style={styles.brandHeader}>
-          <div style={styles.brandLogo}>
-            <GraduationCap size={24} />
+        <motion.div 
+          animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
+          transition={{ duration: 20, repeat: Infinity }}
+          style={{ ...styles.floatingShape, width: '400px', height: '400px', top: '-10%', left: '-10%' }} 
+        />
+        <motion.div 
+          animate={{ scale: [1, 1.3, 1], rotate: [0, -90, 0] }}
+          transition={{ duration: 25, repeat: Infinity }}
+          style={{ ...styles.floatingShape, width: '300px', height: '300px', bottom: '10%', right: '-5%' }} 
+        />
+
+        <div style={styles.logoContainer}>
+          <div style={styles.logoIcon}>
+            <GraduationCap size={26} />
           </div>
-          <span>InternLink</span>
+          <span style={{ color: '#fff' }}>InternLink</span>
         </div>
-        
-        <div style={styles.brandContent}>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          style={styles.brandContent}
+        >
           <h1 style={styles.brandTitle}>
-            Building your <br />
-            <span style={styles.textYellow}>professional career</span> <br />
-            together.
+            Step into your <br />
+            <span style={{ color: '#fbbf24' }}>Future Career</span> <br />
+            Today.
           </h1>
           <p style={styles.brandP}>
-            Access your profile, track applications, and manage your 
-            internships securely through our unified portal.
+            Connect with top employers, manage your applications, 
+            and kickstart your professional journey with precision.
           </p>
-        </div>
-        
-        <div style={{ opacity: 0.7, fontSize: '0.85rem' }}>
-          &copy; {new Date().getFullYear()} InternLink. Build v1.0.4
+          
+          <div style={{ display: 'flex', gap: '30px', marginTop: '3rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>10k+</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Interns</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>500+</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Companies</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>98%</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Match Rate</div>
+            </div>
+          </div>
+        </motion.div>
+
+        <div style={{ opacity: 0.5, fontSize: '0.85rem', zIndex: 10 }}>
+          &copy; {new Date().getFullYear()} InternLink. Designed for Excellence.
         </div>
       </div>
 
-      {/* Right Form Side */}
-      <div style={styles.formSide}>
-        <div style={styles.backBar}>
+      {/* Form Side */}
+      <motion.div 
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+        style={styles.formSide}
+      >
+        <div style={{ padding: '2rem 4rem' }}>
           <button 
-            style={styles.btnBackLink(hoveredBtn === 'back')} 
-            onMouseEnter={() => setHoveredBtn('back')}
-            onMouseLeave={() => setHoveredBtn(null)}
             onClick={() => navigate('/')}
+            style={{ 
+              display: 'flex', alignItems: 'center', gap: '8px', 
+              background: 'none', border: 'none', color: '#64748b', 
+              fontWeight: 600, cursor: 'pointer', transition: '0.2s' 
+            }}
           >
-            <ArrowLeft size={18} /> Back to Home
+            <ArrowLeft size={18} /> Back to website
           </button>
         </div>
 
         <div style={styles.formContainer}>
           <div style={styles.formHeader}>
-            <h2 style={styles.formTitle}>Welcome Back</h2>
-            <p style={styles.formSubtitle}>Sign in to access your account</p>
+            <motion.h2 variants={itemVariants} style={styles.title}>Welcome Back</motion.h2>
+            <motion.p variants={itemVariants} style={styles.subtitle}>Enter your credentials to access your portal</motion.p>
           </div>
 
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              style={{ 
+                padding: '1rem', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', 
+                borderRadius: '12px', color: '#dc2626', fontSize: '0.875rem', 
+                marginBottom: '1.5rem', display: 'flex', gap: '10px' 
+              }}
+            >
+              <Info size={18} />
+              <span>{error}</span>
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit}>
-            {error && (
-              <div style={{ 
-                color: '#ef4444', 
-                fontSize: '0.85rem', 
-                marginBottom: '1.5rem', 
-                backgroundColor: '#fef2f2', 
-                padding: '0.75rem 1rem', 
-                borderRadius: '8px', 
-                border: '1px solid #fca5a5',
-                display: 'flex',
-                gap: '8px'
-              }}>
-                <Info size={16} style={{ flexShrink: 0 }} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="email">Email or Username</label>
+            <motion.div variants={itemVariants} style={styles.formGroup}>
+              <label style={styles.label}>Email Address</label>
               <div style={styles.inputWrapper}>
-                <input 
-                  style={styles.input}
-                  type="email" 
-                  id="email" 
-                  placeholder="name@example.com" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                  required 
-                />
                 <Mail size={18} style={styles.inputIcon} />
-              </div>
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label} htmlFor="password">Password</label>
-              <div style={styles.inputWrapper}>
                 <input 
+                  type="email" 
+                  placeholder="name@company.com" 
                   style={styles.input}
-                  type="password" 
-                  id="password" 
-                  placeholder="••••••••••••" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  required
                 />
-                <EyeOff size={18} style={styles.inputIcon} />
               </div>
-            </div>
+            </motion.div>
 
-            <div style={styles.formOptions}>
-              <label style={styles.checkboxLabel}>
-                <input type="checkbox" style={{ cursor: 'pointer' }} /> Keep me logged in
-              </label>
-              <span 
-                style={styles.forgotLink(hoveredBtn === 'forgot')}
-                onMouseEnter={() => setHoveredBtn('forgot')}
-                onMouseLeave={() => setHoveredBtn(null)}
-                onClick={() => navigate('/forgot-password')}
-              >
-                Forgot password?
-              </span>
-            </div>
+            <motion.div variants={itemVariants} style={{ ...styles.formGroup, marginBottom: '2rem' }}>
+              <label style={styles.label}>Password</label>
+              <div style={styles.inputWrapper}>
+                <EyeOff size={18} style={styles.inputIcon} />
+                <input 
+                  type="password" 
+                  placeholder="••••••••••••" 
+                  style={styles.input}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  required
+                />
+              </div>
+              <div style={{ textAlign: 'right', marginTop: '8px' }}>
+                <span 
+                  onClick={() => navigate('/forgot-password')}
+                  style={{ fontSize: '0.85rem', color: theme.colors.primary, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Forgot password?
+                </span>
+              </div>
+            </motion.div>
 
-            <button 
+            <motion.button 
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               type="submit" 
-              style={styles.btnLogin(hoveredBtn === 'login')}
+              style={styles.btnSubmit(hoveredBtn === 'login')}
               onMouseEnter={() => setHoveredBtn('login')}
               onMouseLeave={() => setHoveredBtn(null)}
             >
-              Log In <ArrowRightCircle size={20} />
-            </button>
+              Sign In <ArrowRight size={20} />
+            </motion.button>
           </form>
 
-          <p style={styles.authSwitch}>
-            Don't have an account? <span style={styles.switchLink} onClick={() => navigate('/register')}>Register here</span>
-          </p>
+          <motion.div variants={itemVariants} style={{ ...styles.divider, marginTop: '2.5rem' }}>
+            <div style={styles.dividerLine} />
+            <span>or sign in with</span>
+            <div style={styles.dividerLine} />
+          </motion.div>
 
-          <div style={styles.infoBanner}>
-            <LayoutDashboard size={24} style={{ flexShrink: 0 }} />
-            <div>
-              <h4 style={styles.infoTitle}>Unified Role Login</h4>
-              <p style={styles.infoText}>The system automatically detects your role (Student, Employer, etc.) and directs you to the correct dashboard.</p>
-            </div>
-          </div>
+          <motion.div variants={itemVariants} style={{ ...styles.socialContainer, marginBottom: '0' }}>
+            <button style={styles.socialBtn}><Chrome size={20} style={{ marginRight: '10px' }} /> Google</button>
+            <button style={styles.socialBtn}><Linkedin size={20} style={{ color: '#0077b5', marginRight: '10px' }} /> LinkedIn</button>
+          </motion.div>
+
+          <motion.div variants={itemVariants} style={styles.authFooter}>
+            Don't have an account? <span style={styles.link} onClick={() => navigate('/register')}>Sign up for free</span>
+          </motion.div>
+          
+          <motion.div 
+            variants={itemVariants}
+            style={{ 
+              marginTop: '2.5rem', padding: '1rem', backgroundColor: '#f1f5f9', 
+              borderRadius: '12px', display: 'flex', gap: '12px', color: '#475569' 
+            }}
+          >
+            <LayoutDashboard size={20} style={{ flexShrink: 0 }} />
+            <p style={{ fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
+              <strong>Pro Tip:</strong> Use your assigned Gmail to automatically redirect to your specific role's workspace.
+            </p>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

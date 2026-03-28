@@ -22,6 +22,7 @@ const Sidebar = () => {
     { name: 'Grades & Evaluations', path: '/coordinator/grades', icon: FileText },
     { name: 'Reports', path: '/coordinator/reports', icon: BarChart2 },
     { name: 'Notifications', path: '/coordinator/notifications', icon: Bell },
+    { name: 'My Profile', path: '/coordinator/profile', icon: User },
   ];
 
   const styles = {

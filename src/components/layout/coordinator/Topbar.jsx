@@ -66,7 +66,7 @@ const Topbar = () => {
           <div style={{ color: theme.colors.textMuted, cursor: 'pointer' }}>
             <Bell size={20} />
           </div>
-          <div style={styles.profile}>
+          <div style={styles.profile} onClick={() => navigate('/coordinator/profile')}>
             <img src={coordinatorProfile.avatar} alt="Coordinator" style={styles.avatar} />
             <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{coordinatorProfile.name}</span>
           </div>

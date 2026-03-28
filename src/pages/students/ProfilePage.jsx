@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   User, Mail, Phone, MapPin, 
   Calendar, GraduationCap, Edit,
@@ -11,6 +12,7 @@ import { studentProfile as initialProfile } from '../../services/mocks/mockData'
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ProfilePage = () => {
+  const { showToast } = useOutletContext() || {};
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState(initialProfile);
@@ -393,7 +395,7 @@ const ProfilePage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: `2px dashed ${theme.colors.border}`, borderRadius: '12px', justifyContent: 'center' }}>
             <button 
               style={{ background: 'none', border: 'none', color: theme.colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.9rem' }}
-              onClick={() => alert('Viewing system resume sample...')}
+              onClick={() => showToast && showToast('Viewing system resume sample...', 'info')}
             >
               <Eye size={18} /> View Resume Sample
             </button>
