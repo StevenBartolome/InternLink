@@ -1,6 +1,6 @@
 // src/screens/Login/Login.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { GraduationCap, ArrowLeft, Mail, EyeOff, LayoutDashboard, Info, ArrowRightCircle } from 'lucide-react';
 import Modal from '../../../components/common/Modal/Modal';
 import { theme } from '../../../styles/theme';
@@ -17,6 +17,14 @@ const Login = () => {
   const [error, setError] = useState('');
   const [redirectPath, setRedirectPath] = useState('');
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const userSession = localStorage.getItem('internlink_session');
+
+  useEffect(() => {
+    if (userSession) {
+      navigate(userSession);
+    }
+  }, [userSession, navigate]);
+
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -30,6 +38,7 @@ const Login = () => {
 
     if (credentials[email] && password === '123') {
       setError('');
+      localStorage.setItem('internlink_session', credentials[email]);
       setRedirectPath(credentials[email]);
       setIsModalOpen(true);
     } else {
@@ -358,6 +367,7 @@ const Login = () => {
                 style={styles.forgotLink(hoveredBtn === 'forgot')}
                 onMouseEnter={() => setHoveredBtn('forgot')}
                 onMouseLeave={() => setHoveredBtn(null)}
+                onClick={() => navigate('/forgot-password')}
               >
                 Forgot password?
               </span>

@@ -1,5 +1,5 @@
 // src/pages/auth/LandingPage/LandingPage.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../../components/layout/Navbar/Navbar';
 import Hero from '../../../components/features/auth/Hero';
@@ -12,6 +12,13 @@ import Footer from '../../../components/layout/Footer/Footer';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const userSession = localStorage.getItem('internlink_session');
+
+  useEffect(() => {
+    if (userSession) {
+      navigate(userSession);
+    }
+  }, [userSession, navigate]);
 
   const styles = {
     landingPage: {

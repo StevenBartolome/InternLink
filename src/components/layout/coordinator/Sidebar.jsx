@@ -104,12 +104,18 @@ const Sidebar = () => {
         ))}
       </nav>
       <div style={styles.footer}>
-        <NavLink to="/login" style={styles.navLink(false)}>
+        <div 
+          onClick={() => {
+            localStorage.removeItem('internlink_session');
+            window.location.href = '/login';
+          }} 
+          style={{ ...styles.navLink(false), cursor: 'pointer' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <LogOut size={20} />
             <span>Sign Out</span>
           </div>
-        </NavLink>
+        </div>
       </div>
     </aside>
   );

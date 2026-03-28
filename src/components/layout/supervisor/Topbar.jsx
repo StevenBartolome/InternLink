@@ -14,6 +14,7 @@ const Topbar = ({ toggleSidebar, title }) => {
 
   const handleLogout = () => {
     setIsModalOpen(false);
+    localStorage.removeItem('internlink_session');
     navigate('/login');
   };
 
@@ -133,50 +134,52 @@ const Topbar = ({ toggleSidebar, title }) => {
   };
 
   return (
-    <header style={styles.header}>
-      <div style={styles.left}>
-        <button style={styles.menuBtn} onClick={toggleSidebar}>
-          <Menu size={24} />
-        </button>
-        <h1 style={styles.title}>{title}</h1>
-      </div>
+    <>
+      <header style={styles.header}>
+        <div style={styles.left}>
+          <button style={styles.menuBtn} onClick={toggleSidebar}>
+            <Menu size={24} />
+          </button>
+          <h1 style={styles.title}>{title}</h1>
+        </div>
 
-      <div style={styles.right}>
-        <button 
-          style={styles.iconBtn} 
-          onClick={() => navigate('/supervisor/notifications')}
-        >
-          <Bell size={20} />
-          {unreadCount > 0 && <span style={styles.badge} />}
-        </button>
-        
-        {!isMobile && <div style={styles.divider} />}
-        
-        {!isMobile && (
-          <div 
-            style={styles.profile} 
-            onClick={() => navigate('/supervisor/profile')}
+        <div style={styles.right}>
+          <button 
+            style={styles.iconBtn} 
+            onClick={() => navigate('/supervisor/notifications')}
           >
-            <img 
-              src={supervisorData.avatar} 
-              alt={supervisorData.name} 
-              style={styles.avatar} 
-            />
-            <div style={styles.userInfo}>
-              <div style={styles.userName}>{supervisorData.name}</div>
-              <div style={styles.userRole}>{supervisorData.role}</div>
+            <Bell size={20} />
+            {unreadCount > 0 && <span style={styles.badge} />}
+          </button>
+          
+          {!isMobile && <div style={styles.divider} />}
+          
+          {!isMobile && (
+            <div 
+              style={styles.profile} 
+              onClick={() => navigate('/supervisor/profile')}
+            >
+              <img 
+                src={supervisorData.avatar} 
+                alt={supervisorData.name} 
+                style={styles.avatar} 
+              />
+              <div style={styles.userInfo}>
+                <div style={styles.userName}>{supervisorData.name}</div>
+                <div style={styles.userRole}>{supervisorData.role}</div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <button 
-          style={styles.logoutBtn} 
-          onClick={() => setIsModalOpen(true)}
-          title="Logout"
-        >
-          <LogOut size={20} />
-        </button>
-      </div>
+          <button 
+            style={styles.logoutBtn} 
+            onClick={() => setIsModalOpen(true)}
+            title="Logout"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
+      </header>
 
       <Modal 
         isOpen={isModalOpen} 
@@ -187,7 +190,7 @@ const Topbar = ({ toggleSidebar, title }) => {
         message="Are you sure you want to sign out of InternLink?" 
         type="warning" 
       />
-    </header>
+    </>
   );
 };
 

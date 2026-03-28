@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/auth/LandingPage/LandingPage';
 import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
+import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
 import MainLayout from './components/layout/student/MainLayout/MainLayout';
 
 // Import Student Pages
@@ -78,6 +79,7 @@ function App() {
         {/* Core Auth & Landing Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
 
         {/* Protected/Authenticated Dashboard Layout */}

@@ -60,6 +60,7 @@ const Topbar = () => {
 
   const handleLogout = () => {
     setIsModalOpen(false);
+    localStorage.removeItem('internlink_session');
     navigate('/login');
   };
 

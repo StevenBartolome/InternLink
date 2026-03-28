@@ -1,9 +1,20 @@
-import React from 'react';
-import { Bell, Search, User, Grid } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bell, Search, User, Grid, LogOut } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { coordinatorProfile } from '../../../services/mocks/coordinatorMockData';
+import { useNavigate } from 'react-router-dom';
+import Modal from '../../common/Modal/Modal';
 
 const Topbar = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    setIsModalOpen(false);
+    localStorage.removeItem('internlink_session');
+    navigate('/login');
+  };
+
   const styles = {
     header: {
       height: '70px',
@@ -45,21 +56,51 @@ const Topbar = () => {
   };
 
   return (
-    <header style={styles.header}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
-        <Grid size={20} />
-        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{coordinatorProfile.school}</span>
-      </div>
-      <div style={styles.userSection}>
-        <div style={{ color: theme.colors.textMuted, cursor: 'pointer' }}>
-          <Bell size={20} />
+    <>
+      <header style={styles.header}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
+          <Grid size={20} />
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{coordinatorProfile.school}</span>
         </div>
-        <div style={styles.profile}>
-          <img src={coordinatorProfile.avatar} alt="Coordinator" style={styles.avatar} />
-          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{coordinatorProfile.name}</span>
+        <div style={styles.userSection}>
+          <div style={{ color: theme.colors.textMuted, cursor: 'pointer' }}>
+            <Bell size={20} />
+          </div>
+          <div style={styles.profile}>
+            <img src={coordinatorProfile.avatar} alt="Coordinator" style={styles.avatar} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{coordinatorProfile.name}</span>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: theme.colors.danger, 
+              cursor: 'pointer',
+              padding: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '10px',
+              transition: 'all 0.2s',
+            }}
+            title="Logout"
+          >
+            <LogOut size={20} />
+          </button>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        isConfirm={true}
+        onConfirm={handleLogout}
+        title="Confirm Logout" 
+        message="Are you sure you want to sign out of InternLink?" 
+        type="warning" 
+      />
+    </>
   );
 };
 
