@@ -45,9 +45,7 @@ const Sidebar = () => {
         { name: 'Assign Supervisor', path: '/employer/assign-supervisor' }
       ]
     },
-    { name: 'Approvals', path: '/employer/approvals', icon: <FileCheck size={20} /> },
     { name: 'Intern Progress', path: '/employer/progress', icon: <CheckSquare size={20} /> },
-    { name: 'Notifications', path: '/employer/notifications', icon: <Bell size={20} /> },
   ] : [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Browse Internships', path: '/internships', icon: <Briefcase size={20} /> },

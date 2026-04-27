@@ -1,18 +1,20 @@
 import React from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { 
   Building2, MapPin, Clock, 
   Briefcase, Send, ChevronLeft,
   Calendar, ShieldCheck, Globe,
   CheckCircle, Star, MessageSquare
 } from 'lucide-react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipDetailPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const isEmployer = location.pathname.startsWith('/employer');
   
   // Mock listing if data not found
   const listing = {
@@ -105,12 +107,14 @@ const InternshipDetailPage = () => {
         </div>
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{listing.stipend}</div>
-          <button 
-            style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.white, color: theme.colors.primary, padding: '14px 40px', fontSize: '1rem', fontWeight: 800 }}
-            onClick={() => navigate(`/apply/${listing.id}`)}
-          >
-            Apply Now
-          </button>
+          {!isEmployer && (
+            <button 
+              style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.white, color: theme.colors.primary, padding: '14px 40px', fontSize: '1rem', fontWeight: 800 }}
+              onClick={() => navigate(`/apply/${listing.id}`)}
+            >
+              Apply Now
+            </button>
+          )}
         </div>
       </div>
 

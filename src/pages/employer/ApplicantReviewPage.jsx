@@ -1,7 +1,7 @@
 // src/pages/employer/ApplicantReviewPage.jsx
 import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { X, Mail, BookOpen, Award, FileText, ChevronRight, User } from 'lucide-react';
+import { X, Mail, BookOpen, Award, FileText, ChevronRight, User, Check, AlertCircle } from 'lucide-react';
 import { internshipListings, applicants } from '../../services/mocks/employerMockData';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
@@ -16,10 +16,34 @@ const ApplicantReviewPage = () => {
   );
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [hoveredRow, setHoveredRow] = useState(null);
+  const [allApplicants, setAllApplicants] = useState(applicants);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [rejectReason, setRejectReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
-  const filteredApplicants = applicants.filter(
-    app => app.listingId === selectedListingId
+  const filteredApplicants = allApplicants.filter(
+    app => app.listingId === selectedListingId && (statusFilter === 'All' || app.status === statusFilter)
   );
+
+  const handleApprove = (id) => {
+    setAllApplicants(prev => prev.map(app => 
+      app.id === id ? { ...app, status: 'Approved' } : app
+    ));
+    if (selectedApplicant?.id === id) {
+      setSelectedApplicant(prev => ({ ...prev, status: 'Approved' }));
+    }
+  };
+
+  const handleReject = (id) => {
+    setAllApplicants(prev => prev.map(app => 
+      app.id === id ? { ...app, status: 'Rejected', remarks: rejectReason } : app
+    ));
+    if (selectedApplicant?.id === id) {
+      setSelectedApplicant(prev => ({ ...prev, status: 'Rejected', remarks: rejectReason }));
+    }
+    setIsRejecting(false);
+    setRejectReason('');
+  };
 
   const handleSelectApplicant = (app) => {
     setSelectedApplicant(app);
@@ -227,6 +251,18 @@ const ApplicantReviewPage = () => {
               </option>
             ))}
           </select>
+
+          <label style={{ fontWeight: 600, fontSize: '14px', color: theme.colors.textMuted, marginLeft: '12px' }}>Status:</label>
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{ ...styles.select, minWidth: '140px' }}
+          >
+            <option value="All">All Applicants</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+          </select>
         </div>
       </div>
 
@@ -338,6 +374,61 @@ const ApplicantReviewPage = () => {
                   <FileText size={18} /> View Resume / Portfolio
                 </a>
               </div>
+
+              {selectedApplicant.status === 'Rejected' && selectedApplicant.remarks && (
+                <div style={styles.section}>
+                  <div style={{ ...styles.sectionHeader, color: theme.colors.danger }}><AlertCircle size={14} /> REJECTION REASON</div>
+                  <div style={{ ...styles.letterBox, borderColor: '#fee2e2', backgroundColor: '#fef2f2', color: '#b91c1c' }}>
+                    {selectedApplicant.remarks}
+                  </div>
+                </div>
+              )}
+
+              {selectedApplicant.status === 'Pending' && (
+                <div style={{ ...styles.section, marginTop: '20px', borderTop: `1px solid ${theme.colors.border}`, paddingTop: '24px' }}>
+                  {isRejecting ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: theme.colors.danger }}>REJECTION REMARKS</label>
+                      <textarea 
+                        style={{ ...styles.letterBox, minHeight: '100px', outline: 'none', border: `1.5px solid ${theme.colors.danger}` }}
+                        placeholder="Please provide a reason for rejection..."
+                        value={rejectReason}
+                        onChange={(e) => setRejectReason(e.target.value)}
+                      />
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button 
+                          onClick={() => handleReject(selectedApplicant.id)}
+                          style={{ ...commonStyles.dashboardBtn, flex: 1, backgroundColor: theme.colors.danger, color: '#fff', border: 'none' }}
+                          disabled={!rejectReason.trim()}
+                        >
+                          Confirm Reject
+                        </button>
+                        <button 
+                          onClick={() => { setIsRejecting(false); setRejectReason(''); }}
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button 
+                        onClick={() => handleApprove(selectedApplicant.id)}
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: '#10b981', borderColor: '#10b981' }}
+                      >
+                        <Check size={18} /> Approve
+                      </button>
+                      <button 
+                        onClick={() => setIsRejecting(true)}
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger, borderColor: theme.colors.danger }}
+                      >
+                        <X size={18} /> Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

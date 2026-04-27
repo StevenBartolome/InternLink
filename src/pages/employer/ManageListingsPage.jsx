@@ -1,7 +1,7 @@
 // src/pages/employer/ManageListingsPage.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Power, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Power, Eye } from 'lucide-react';
 import { internshipListings } from '../../services/mocks/employerMockData';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
@@ -184,23 +184,23 @@ const ManageListingsPage = () => {
                         style={styles.btnIcon(
                           `${listing.id}-toggle`, 
                           listing.status === 'Active' ? 'danger' : 'success',
-                          listing.status === 'Pending Approval'
+                          false
                         )} 
                         title={listing.status === 'Active' ? 'Deactivate' : 'Activate'}
                         onMouseEnter={() => setHoveredBtn(`${listing.id}-toggle`)}
                         onMouseLeave={() => setHoveredBtn(null)}
                         onClick={() => toggleStatus(listing.id)}
-                        disabled={listing.status === 'Pending Approval'}
                       >
                         <Power size={16} />
                       </button>
                       <button 
-                        style={styles.btnIcon(`${listing.id}-repost`)} 
-                        title="Repost"
-                        onMouseEnter={() => setHoveredBtn(`${listing.id}-repost`)}
+                        style={styles.btnIcon(`${listing.id}-view`)} 
+                        title="View"
+                        onMouseEnter={() => setHoveredBtn(`${listing.id}-view`)}
                         onMouseLeave={() => setHoveredBtn(null)}
+                        onClick={() => navigate(`/employer/internships/${listing.id}`)}
                       >
-                        <RefreshCw size={16} />
+                        <Eye size={16} />
                       </button>
                     </div>
                   </td>

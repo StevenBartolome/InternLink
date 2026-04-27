@@ -260,7 +260,7 @@ const InternProgressTrackerPage = () => {
                     <div>
                       <h5 style={styles.sectionTitle}><History size={16} /> Performance Logs</h5>
                       <div style={styles.logList}>
-                        {intern.weeklyLogs.map((log, index) => (
+                        {intern.weeklyLogs?.map((log, index) => (
                           <div key={index} style={styles.logCard}>
                             <div style={styles.logHeader}>
                               <span style={{ fontWeight: 800, fontSize: '14px' }}>Week {log.week}</span>

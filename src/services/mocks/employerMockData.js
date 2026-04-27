@@ -66,7 +66,7 @@ export const internshipListings = [
     duration: "3 months",
     slotsAvailable: 2,
     datePosted: "2026-03-10",
-    status: "Pending Approval",
+    status: "Inactive",
     description: "Design user interfaces for mobile and web apps.",
     responsibilities: [
       "Create wireframes and prototypes.",
@@ -280,6 +280,7 @@ export const activeInterns = [
     hoursCompleted: 40,
     totalHours: 240,
     tasks: [{ id: 1, title: "Sort resumes", status: "In Progress" }],
+    weeklyLogs: [],
     supervisor: "Not Assigned"
   }
 ];

@@ -131,6 +131,7 @@ function App() {
           <Route path="/employer/assign-supervisor" element={<AssignSupervisorPage />} />
           <Route path="/employer/supervisors" element={<ManageSupervisorsPage />} />
           <Route path="/employer/notifications" element={<EmployerNotificationsPage />} />
+          <Route path="/employer/internships/:id" element={<InternshipDetailPage />} />
         </Route>
 
         {/* Supervisor Routes */}
