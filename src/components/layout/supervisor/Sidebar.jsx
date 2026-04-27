@@ -7,7 +7,8 @@ import {
   CalendarCheck, 
   CheckSquare, 
   FileEdit, 
-  GraduationCap 
+  GraduationCap,
+  AlertTriangle
 } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
@@ -15,13 +16,14 @@ import { useMediaQuery } from '../../../hooks/useMediaQuery';
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
 
-  const navItems = [
-    { path: '/supervisor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/supervisor/interns', icon: Users, label: 'My Interns' },
-    { path: '/supervisor/attendance', icon: CalendarCheck, label: 'Attendance' },
-    { path: '/supervisor/tasks', icon: CheckSquare, label: 'Tasks' },
-    { path: '/supervisor/evaluation', icon: FileEdit, label: 'Evaluation' },
-  ];
+    const navItems = [
+      { path: '/supervisor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { path: '/supervisor/interns', icon: Users, label: 'My Interns' },
+      { path: '/supervisor/attendance', icon: CalendarCheck, label: 'Attendance' },
+      { path: '/supervisor/tasks', icon: CheckSquare, label: 'Tasks' },
+      { path: '/supervisor/evaluation', icon: FileEdit, label: 'Evaluation' },
+      { path: '/supervisor/incidents', icon: AlertTriangle, label: 'Report Incident' },
+    ];
 
   const styles = {
     overlay: {

@@ -82,7 +82,8 @@ const UserManagementPage = () => {
         Employer: { bg: '#DEF7EC', text: '#03543F' },
         Coordinator: { bg: '#FEF3C7', text: '#92400E' },
         Supervisor: { bg: '#F3F4F6', text: '#374151' },
-        Admin: { bg: '#EBF1FF', text: '#1E40AF' }
+        Admin: { bg: '#EBF1FF', text: '#1E40AF' },
+        Dean: { bg: '#F3E8FF', text: '#6B21A8' }
       };
       const color = colors[role] || colors.Admin;
       return { ...commonStyles.dashboardBadge, backgroundColor: color.bg, color: color.text };
@@ -130,7 +131,7 @@ const UserManagementPage = () => {
                 <label style={{ fontSize: '0.85rem', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Role</label>
                 <select style={styles.modalInput} value={newUser.role}
                   onChange={e => setNewUser(p => ({ ...p, role: e.target.value }))}>
-                  {['Student', 'Employer', 'Coordinator', 'Supervisor'].map(r => (
+                  {['Student', 'Employer', 'Coordinator', 'Supervisor', 'Dean'].map(r => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
@@ -173,7 +174,7 @@ const UserManagementPage = () => {
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
         >
-          {['All', 'Student', 'Employer', 'Coordinator', 'Supervisor', 'Admin'].map(r => (
+          {['All', 'Student', 'Employer', 'Coordinator', 'Supervisor', 'Dean', 'Admin'].map(r => (
             <option key={r} value={r}>{r}</option>
           ))}
         </select>

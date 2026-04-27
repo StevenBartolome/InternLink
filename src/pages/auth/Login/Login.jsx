@@ -36,7 +36,9 @@ const Login = () => {
       'employer@gmail.com': '/employer/dashboard',
       'supervisor@gmail.com': '/supervisor/dashboard',
       'coordinator@gmail.com': '/coordinator/dashboard',
-      'admin@gmail.com': '/admin/dashboard'
+      'admin@gmail.com': '/admin/dashboard',
+      'dean@gmail.com': '/dean/dashboard',
+      'chair@gmail.com': '/chair/dashboard'
     };
 
     if (credentials[email] && password === '123') {

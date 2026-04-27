@@ -172,7 +172,7 @@ const InternDetailPage = () => {
       textTransform: 'uppercase',
     },
     actionBtn: (isPrimary) => ({
-      ... (isPrimary ? commonStyles.buttonPrimary : commonStyles.buttonSecondary),
+      ...(isPrimary ? commonStyles.buttonPrimary : commonStyles.buttonSecondary),
       padding: '12px 24px',
       borderRadius: '14px',
       fontSize: '14px',
@@ -255,6 +255,23 @@ const InternDetailPage = () => {
               </div>
               <div style={styles.profileStatus}>
                 <StatusBadge status={intern.todayStatus} />
+                <button 
+                  style={{
+                    background: 'none',
+                    border: '1px solid #ef4444',
+                    color: '#ef4444',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    marginTop: '8px',
+                    width: '100%',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => navigate('/supervisor/incidents')}
+                >
+                  Report Issue
+                </button>
               </div>
             </div>
             

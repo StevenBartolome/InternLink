@@ -42,6 +42,7 @@ import TaskManagementPage from './pages/supervisor/TaskManagementPage';
 import EvaluationPage from './pages/supervisor/EvaluationPage';
 import SupervisorNotificationsPage from './pages/supervisor/NotificationsPage';
 import SupervisorProfilePage from './pages/supervisor/ProfilePage';
+import IncidentReportingPage from './pages/supervisor/IncidentReportingPage';
 
 // Import Coordinator Pages
 import CoordinatorLayout from './components/layout/coordinator/CoordinatorLayout';
@@ -71,6 +72,25 @@ import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 import NotificationsCenterPage from './pages/admin/NotificationsCenterPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
+
+// Import Dean Pages
+import DeanLayout from './components/layout/dean/DeanLayout';
+import DeanDashboardPage from './pages/dean/DashboardPage';
+import DeanProgramOversightPage from './pages/dean/ProgramOversightPage';
+import DeanPartnershipReportsPage from './pages/dean/PartnershipReportsPage';
+import DeanNotificationsPage from './pages/dean/NotificationsPage';
+import DeanProfilePage from './pages/dean/ProfilePage';
+import ChairManagementPage from './pages/dean/ChairManagementPage';
+
+// Import Chair Pages
+import ChairLayout from './components/layout/chair/ChairLayout';
+import ChairDashboardPage from './pages/chair/DashboardPage';
+import ChairCohortMonitoringPage from './pages/chair/CohortMonitoringPage';
+import ChairCoordinatorOversightPage from './pages/chair/CoordinatorOversightPage';
+import ChairCoordinatorManagementPage from './pages/chair/CoordinatorManagementPage';
+import ChairGradeFinalizationPage from './pages/chair/GradeFinalizationPage';
+import ChairNotificationsPage from './pages/chair/NotificationsPage';
+import ChairProfilePage from './pages/chair/ProfilePage';
 
 
 function App() {
@@ -121,6 +141,7 @@ function App() {
           <Route path="/supervisor/evaluation" element={<EvaluationPage />} />
           <Route path="/supervisor/notifications" element={<SupervisorNotificationsPage />} />
           <Route path="/supervisor/profile" element={<SupervisorProfilePage />} />
+          <Route path="/supervisor/incidents" element={<IncidentReportingPage />} />
         </Route>
 
         {/* Coordinator Routes */}
@@ -153,6 +174,27 @@ function App() {
           <Route path="/admin/settings" element={<SystemSettingsPage />} />
           <Route path="/admin/notifications" element={<NotificationsCenterPage />} />
           <Route path="/admin/profile" element={<AdminProfilePage />} />
+        </Route>
+
+        {/* Dean Routes */}
+        <Route element={<DeanLayout />}>
+          <Route path="/dean/dashboard" element={<DeanDashboardPage />} />
+          <Route path="/dean/programs" element={<DeanProgramOversightPage />} />
+          <Route path="/dean/chairs" element={<ChairManagementPage />} />
+          <Route path="/dean/partnerships" element={<DeanPartnershipReportsPage />} />
+          <Route path="/dean/notifications" element={<DeanNotificationsPage />} />
+          <Route path="/dean/profile" element={<DeanProfilePage />} />
+        </Route>
+
+        {/* Chair Routes */}
+        <Route element={<ChairLayout />}>
+          <Route path="/chair/dashboard" element={<ChairDashboardPage />} />
+          <Route path="/chair/cohort" element={<ChairCohortMonitoringPage />} />
+          <Route path="/chair/coordinators-manage" element={<ChairCoordinatorManagementPage />} />
+          <Route path="/chair/coordinators" element={<ChairCoordinatorOversightPage />} />
+          <Route path="/chair/grades" element={<ChairGradeFinalizationPage />} />
+          <Route path="/chair/notifications" element={<ChairNotificationsPage />} />
+          <Route path="/chair/profile" element={<ChairProfilePage />} />
         </Route>
 
       </Routes>
