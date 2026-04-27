@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import Toast from '../../common/Toast';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 
@@ -11,6 +12,11 @@ const SupervisorLayout = () => {
   const location = useLocation();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [pageTitle, setPageTitle] = useState('Dashboard');
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -56,8 +62,15 @@ const SupervisorLayout = () => {
       <div style={styles.main}>
         <Topbar toggleSidebar={toggleSidebar} title={pageTitle} />
         <main style={styles.content}>
-          <Outlet />
+          <Outlet context={{ showToast }} />
         </main>
+        {toast && (
+          <Toast 
+            message={toast.message} 
+            type={toast.type} 
+            onClose={() => setToast(null)} 
+          />
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 // src/pages/supervisor/EvaluationPage.jsx
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Star, FileSignature, CheckCircle2, User, ChevronRight } from 'lucide-react';
 import { internsData } from '../../services/mocks/supervisorMockData';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
@@ -8,6 +9,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const EvaluationPage = () => {
+  const { showToast } = useOutletContext();
   const isMobile = useMediaQuery('(max-width: 992px)');
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);
   const [scores, setScores] = useState({
@@ -53,7 +55,7 @@ const EvaluationPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmitted(true);
-    alert('Evaluation submitted successfully for ' + selectedIntern.name);
+    showToast('Evaluation submitted successfully for ' + selectedIntern.name);
   };
 
   const criteriaList = [

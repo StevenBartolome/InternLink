@@ -1,6 +1,7 @@
 // src/pages/supervisor/AttendanceLogPage.jsx
 import React, { useState } from 'react';
-import { Clock, Calendar, Check, AlertCircle, Save } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Clock, Calendar, Check, AlertCircle, Save, Edit2, X } from 'lucide-react';
 import { internsData } from '../../services/mocks/supervisorMockData';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
@@ -8,31 +9,75 @@ import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const AttendanceLogPage = () => {
+  const { showToast } = useOutletContext();
   const isMobile = useMediaQuery('(max-width: 992px)');
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);
   const [isTimedIn, setIsTimedIn] = useState(false);
   const [todayLog, setTodayLog] = useState({ timeIn: '---', timeOut: '---', totalHours: 0 });
   const [manualLog, setManualLog] = useState({ date: '', timeIn: '', timeOut: '' });
+  const [attendanceLogs, setAttendanceLogs] = useState(internsData[0].attendanceLogs);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editData, setEditData] = useState({});
 
   const selectedIntern = internsData.find(i => i.id === parseInt(selectedInternId));
+
+  const handleInternChange = (id) => {
+    const internId = parseInt(id);
+    setSelectedInternId(internId);
+    const intern = internsData.find(i => i.id === internId);
+    setAttendanceLogs(intern.attendanceLogs);
+    setEditingIndex(null);
+  };
 
   const handleTimeToggle = () => {
     const now = new Date();
     const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = now.toISOString().split('T')[0];
     
     if (!isTimedIn) {
       setTodayLog({ ...todayLog, timeIn: timeStr });
       setIsTimedIn(true);
+      showToast(`Timed in at ${timeStr}`);
     } else {
-      setTodayLog({ ...todayLog, timeOut: timeStr, totalHours: 8 }); // Mock 8 hours
+      const newLog = { 
+        date: dateStr, 
+        timeIn: todayLog.timeIn, 
+        timeOut: timeStr, 
+        totalHours: 8, 
+        status: "Present" 
+      };
+      setAttendanceLogs([newLog, ...attendanceLogs]);
+      setTodayLog({ ...todayLog, timeOut: timeStr, totalHours: 8 });
       setIsTimedIn(false);
+      showToast(`Timed out at ${timeStr}. Attendance logged.`);
     }
   };
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
-    alert(`Manual log saved for ${selectedIntern.name} on ${manualLog.date}`);
+    const newLog = { 
+      date: manualLog.date, 
+      timeIn: manualLog.timeIn, 
+      timeOut: manualLog.timeOut, 
+      totalHours: 8, 
+      status: "Present" 
+    };
+    setAttendanceLogs([newLog, ...attendanceLogs]);
+    showToast(`Manual log saved for ${selectedIntern.name} on ${manualLog.date}`);
     setManualLog({ date: '', timeIn: '', timeOut: '' });
+  };
+
+  const startEdit = (idx, log) => {
+    setEditingIndex(idx);
+    setEditData({ ...log });
+  };
+
+  const saveEdit = () => {
+    const updated = [...attendanceLogs];
+    updated[editingIndex] = { ...editData };
+    setAttendanceLogs(updated);
+    setEditingIndex(null);
+    showToast("Attendance record updated successfully");
   };
 
   const styles = {
@@ -211,7 +256,7 @@ const AttendanceLogPage = () => {
           <label style={styles.label}>Select Intern:</label>
           <select 
             value={selectedInternId} 
-            onChange={(e) => setSelectedInternId(e.target.value)}
+            onChange={(e) => handleInternChange(e.target.value)}
             style={styles.select}
           >
             {internsData.map(intern => (
@@ -318,13 +363,68 @@ const AttendanceLogPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedIntern.attendanceLogs.map((log, idx) => (
+                  {attendanceLogs.map((log, idx) => (
                     <tr key={idx}>
-                      <td style={styles.td}>{new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                      <td style={styles.td}>{log.timeIn}</td>
-                      <td style={styles.td}>{log.timeOut}</td>
-                      <td style={{ ...styles.td, fontWeight: 700 }}>{log.totalHours > 0 ? `${log.totalHours}h` : '---'}</td>
-                      <td style={styles.td}><StatusBadge status={log.status} /></td>
+                      <td style={styles.td}>
+                        {editingIndex === idx ? (
+                          <input 
+                            type="date" 
+                            value={editData.date} 
+                            onChange={(e) => setEditData({ ...editData, date: e.target.value })}
+                            style={{ ...styles.input, padding: '4px 8px' }}
+                          />
+                        ) : (
+                          new Date(log.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                        )}
+                      </td>
+                      <td style={styles.td}>
+                        {editingIndex === idx ? (
+                          <input 
+                            type="text" 
+                            value={editData.timeIn} 
+                            onChange={(e) => setEditData({ ...editData, timeIn: e.target.value })}
+                            style={{ ...styles.input, padding: '4px 8px', width: '80px' }}
+                          />
+                        ) : log.timeIn}
+                      </td>
+                      <td style={styles.td}>
+                        {editingIndex === idx ? (
+                          <input 
+                            type="text" 
+                            value={editData.timeOut} 
+                            onChange={(e) => setEditData({ ...editData, timeOut: e.target.value })}
+                            style={{ ...styles.input, padding: '4px 8px', width: '80px' }}
+                          />
+                        ) : log.timeOut}
+                      </td>
+                      <td style={{ ...styles.td, fontWeight: 700 }}>
+                        {editingIndex === idx ? (
+                          <input 
+                            type="number" 
+                            value={editData.totalHours} 
+                            onChange={(e) => setEditData({ ...editData, totalHours: e.target.value })}
+                            style={{ ...styles.input, padding: '4px 8px', width: '50px' }}
+                          />
+                        ) : (log.totalHours > 0 ? `${log.totalHours}h` : '---')}
+                      </td>
+                      <td style={styles.td}>
+                        {editingIndex === idx ? (
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={saveEdit} style={{ border: 'none', background: 'none', color: theme.colors.success, cursor: 'pointer' }}><Check size={18} /></button>
+                            <button onClick={() => setEditingIndex(null)} style={{ border: 'none', background: 'none', color: theme.colors.danger, cursor: 'pointer' }}><X size={18} /></button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <StatusBadge status={log.status} />
+                            <button 
+                              onClick={() => startEdit(idx, log)}
+                              style={{ border: 'none', background: 'none', color: theme.colors.primary, cursor: 'pointer', marginLeft: '12px' }}
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

@@ -196,7 +196,7 @@ const MyInternsPage = () => {
               
               <div style={styles.progressSection}>
                 <div style={styles.sectionLabel}>Rendered Hours Progress</div>
-                <ProgressBar rendered={intern.renderedHours} required={intern.requiredHours} />
+                <ProgressBar completed={intern.renderedHours} total={intern.requiredHours} showLabel={true} />
                 
                 <div style={styles.hoursMetrics}>
                   <div style={styles.metric}>

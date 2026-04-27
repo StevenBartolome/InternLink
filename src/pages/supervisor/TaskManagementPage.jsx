@@ -1,6 +1,7 @@
 // src/pages/supervisor/TaskManagementPage.jsx
 import React, { useState } from 'react';
-import { Plus, Trash2, CheckCircle2, Search, Filter, Calendar, ClipboardList } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { Plus, Trash2, Search, Filter, Calendar, ClipboardList, Check } from 'lucide-react';
 import { internsData } from '../../services/mocks/supervisorMockData';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import { theme } from '../../styles/theme';
@@ -8,6 +9,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const TaskManagementPage = () => {
+  const { showToast } = useOutletContext();
   const isMobile = useMediaQuery('(max-width: 992px)');
   const [selectedInternId, setSelectedInternId] = useState(internsData[0].id);
   const [activeTab, setActiveTab] = useState('All');
@@ -38,19 +40,19 @@ const TaskManagementPage = () => {
 
     setTasks([...tasks, taskToAdd]);
     setNewTask({ name: '', description: '', dueDate: '' });
-    alert('Task assigned successfully!');
+    showToast('Task assigned successfully!');
   };
 
-  const handleStatusChange = (taskId, newStatus) => {
+  const handleMarkAsDone = (taskId) => {
     setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
+      task.id === taskId ? { ...task, status: 'Done' } : task
     ));
+    showToast('Task marked as completed');
   };
 
   const handleDeleteTask = (taskId) => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      setTasks(tasks.filter(task => task.id !== taskId));
-    }
+    setTasks(tasks.filter(task => task.id !== taskId));
+    showToast('Task deleted successfully');
   };
 
   const filteredTasks = tasks.filter(task => {
@@ -211,15 +213,6 @@ const TaskManagementPage = () => {
       alignItems: 'center',
       gap: '12px',
     },
-    statusSelect: {
-      padding: '8px 12px',
-      borderRadius: '10px',
-      border: `1px solid ${theme.colors.border}`,
-      fontSize: '13px',
-      fontWeight: 600,
-      backgroundColor: theme.colors.white,
-      cursor: 'pointer',
-    },
     deleteBtn: {
       padding: '8px',
       borderRadius: '10px',
@@ -241,7 +234,6 @@ const TaskManagementPage = () => {
 
   return (
     <div style={styles.container}>
-      {/* Top Selector Card */}
       <div style={styles.card}>
         <div style={styles.selectorRow}>
           <label style={styles.label}>Assigned Intern:</label>
@@ -258,7 +250,6 @@ const TaskManagementPage = () => {
       </div>
 
       <div style={styles.grid}>
-        {/* Left: Add Task */}
         <div>
           <div style={styles.card}>
             <h3 style={styles.sectionTitle}><Plus size={20} /> Assign New Task</h3>
@@ -299,7 +290,6 @@ const TaskManagementPage = () => {
           </div>
         </div>
 
-        {/* Right: Task List */}
         <div>
           <div style={styles.card}>
             <div style={styles.tabsBar}>
@@ -332,15 +322,16 @@ const TaskManagementPage = () => {
                     </div>
 
                     <div style={styles.taskActions}>
-                      <select 
-                        value={task.status} 
-                        onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                        style={styles.statusSelect}
-                      >
-                        <option value="Not Started">Not Started</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Done">Done</option>
-                      </select>
+                      {task.status !== 'Done' ? (
+                        <button 
+                          onClick={() => handleMarkAsDone(task.id)}
+                          style={{ ...commonStyles.buttonPrimary, padding: '8px 12px', fontSize: '12px', backgroundColor: theme.colors.success, borderColor: theme.colors.success, display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          <Check size={14} /> Mark as Done
+                        </button>
+                      ) : (
+                        <StatusBadge status="Done" />
+                      )}
 
                       <button 
                         style={styles.deleteBtn}
