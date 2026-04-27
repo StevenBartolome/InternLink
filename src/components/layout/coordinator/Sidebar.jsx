@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  Users, FileCheck, FileText, BarChart2, 
+import {
+  Users, FileCheck, FileText, BarChart2,
   Bell, User, LogOut, GraduationCap, ChevronRight,
   ClipboardCheck, Search, Database
 } from 'lucide-react';
@@ -89,9 +89,9 @@ const Sidebar = () => {
       </div>
       <nav style={styles.nav}>
         {navItems.map((item) => (
-          <NavLink 
-            key={item.path} 
-            to={item.path} 
+          <NavLink
+            key={item.path}
+            to={item.path}
             style={({ isActive }) => styles.navLink(isActive)}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -101,6 +101,20 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
+      <div style={styles.footer}>
+        <div
+          onClick={() => {
+            localStorage.removeItem('internlink_session');
+            window.location.href = '/login';
+          }}
+          style={{ ...styles.navLink(false), cursor: 'pointer' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <LogOut size={20} />
+            <span>Sign Out</span>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 };

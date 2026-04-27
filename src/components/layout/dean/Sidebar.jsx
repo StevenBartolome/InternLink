@@ -1,9 +1,11 @@
+// src/components/layout/dean/Sidebar.jsx
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   ChevronRight, LayoutDashboard, UserPlus, BarChart2, Building, Bell, User, LogOut
 } from 'lucide-react';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { theme } from '../../../styles/theme';
 
 const Sidebar = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
@@ -14,15 +16,13 @@ const Sidebar = () => {
     { name: 'Program Oversight', path: '/dean/programs', icon: BarChart2 },
     { name: 'Manage Chairs', path: '/dean/chairs', icon: UserPlus },
     { name: 'Partnership Reports', path: '/dean/partnerships', icon: Building },
-    { name: 'Notifications', path: '/dean/notifications', icon: Bell },
-    { name: 'Profile', path: '/dean/profile', icon: User },
   ];
 
   const styles = {
     sidebar: {
       width: '270px',
       height: '100vh',
-      backgroundColor: '#2e1065', // Dark purple for Dean
+      backgroundColor: theme.colors.primary, // Blue for Dean
       color: '#fff',
       position: 'fixed',
       left: 0,
@@ -97,20 +97,6 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
-      <div style={styles.footer}>
-        <div 
-          onClick={() => {
-            localStorage.removeItem('internlink_session');
-            window.location.href = '/login';
-          }} 
-          style={{ ...styles.navLink(false), cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

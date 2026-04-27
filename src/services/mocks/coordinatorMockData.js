@@ -7,6 +7,29 @@ export const coordinatorProfile = {
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maria"
 };
 
+export const deanProfile = {
+  name: "Dr. Alan Turing",
+  school: "National University Baliwag",
+  college: "College of Engineering and Technology",
+  role: "Dean",
+  email: "dean@nu-baliwag.edu.ph",
+  phone: "+63 912 345 6789",
+  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alan",
+  bio: "Dedicated to fostering innovation and excellence in engineering education. With over 20 years of academic experience.",
+  stats: {
+    totalPrograms: 6,
+    activePartnerships: 182,
+    facultyCount: 45
+  }
+};
+
+export const deanNotifications = [
+  { id: 1, type: 'Partnership', message: 'MoA with "Acme Tech" is awaiting your final signature.', time: '2 hours ago', unread: true },
+  { id: 2, type: 'Program', message: 'BSIT placement rate reached an all-time high of 92%.', time: '5 hours ago', unread: true },
+  { id: 3, type: 'System', message: 'Monthly performance reports for March 2026 are ready.', time: '1 day ago', unread: false },
+  { id: 4, type: 'Escalation', message: 'Urgent: MoA with "Global Tech" expiring in 12 days.', time: '2 days ago', unread: false },
+];
+
 export const mockStudents = [
   {
     id: "2023-00001",

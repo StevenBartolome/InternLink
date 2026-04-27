@@ -68,7 +68,10 @@ const Topbar = () => {
           <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>School of Engineering and Technology</span>
         </div>
         <div style={styles.userSection}>
-          <div style={{ color: theme.colors.textMuted, cursor: 'pointer' }}>
+          <div 
+            style={{ color: theme.colors.textMuted, cursor: 'pointer' }}
+            onClick={() => navigate('/dean/notifications')}
+          >
             <Bell size={20} />
           </div>
           <div style={styles.profile} onClick={() => navigate('/dean/profile')}>

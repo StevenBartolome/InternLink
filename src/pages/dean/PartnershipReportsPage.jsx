@@ -1,8 +1,10 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Download, Building } from 'lucide-react';
 import { theme } from '../../styles/theme';
 
 const PartnershipReportsPage = () => {
+  const { showToast } = useOutletContext() || {};
   const styles = {
     container: { padding: '20px' },
     header: { marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
@@ -52,7 +54,10 @@ const PartnershipReportsPage = () => {
           <h1 style={styles.title}>Partnership Reports</h1>
           <p style={styles.subtitle}>Overview of active MoAs and MoUs with industry partners.</p>
         </div>
-        <button style={styles.btn}>
+        <button 
+          style={styles.btn}
+          onClick={() => showToast && showToast('Exporting Partnership Analysis Report PDF...', 'info')}
+        >
           <Download size={18} /> Export PDF
         </button>
       </div>
