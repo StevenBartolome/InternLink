@@ -1,4 +1,5 @@
 import React from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { 
   Award, FileText, CheckCircle, 
   MessageSquare, User, Building2,
@@ -10,6 +11,16 @@ import { commonStyles } from '../../styles/commonStyles';
 import { gradesEvaluations, progressState } from '../../services/mocks/mockData';
 
 const GradesEvaluationsPage = () => {
+  const { showToast } = useOutletContext() || {};
+
+  const handleExport = () => {
+    if (showToast) {
+      showToast('Preparing OJT Report...', 'info');
+      setTimeout(() => {
+        showToast('OJT Report exported successfully!', 'success');
+      }, 2000);
+    }
+  };
   const styles = {
     container: {
       display: 'flex',
@@ -46,7 +57,10 @@ const GradesEvaluationsPage = () => {
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Grades & Evaluations</h1>
-        <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
+        <button 
+          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+          onClick={handleExport}
+        >
           <Download size={18} /> Export OJT Report
         </button>
       </header>

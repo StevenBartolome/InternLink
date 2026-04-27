@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
   User, Mail, Phone, MapPin, 
@@ -19,6 +19,21 @@ const ProfilePage = () => {
   const [tempProfile, setTempProfile] = useState(initialProfile);
   const [skillInput, setSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && showToast) {
+      showToast(`Uploading ${file.name}...`, 'info');
+      setTimeout(() => {
+        showToast('Resume uploaded successfully!', 'success');
+      }, 1500);
+    }
+  };
 
   const toggleEdit = () => {
     setTempProfile({...profile});
@@ -370,9 +385,19 @@ const ProfilePage = () => {
           <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={18} color={theme.colors.primary} /> Resume & Documents
           </h3>
-          <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem' }}>
+          <button 
+            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem' }}
+            onClick={handleUploadClick}
+          >
             <Upload size={16} /> Upload New
           </button>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx"
+          />
         </div>
         
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>

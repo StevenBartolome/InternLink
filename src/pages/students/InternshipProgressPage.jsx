@@ -127,12 +127,6 @@ const InternshipProgressPage = () => {
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Internship Progress</h1>
-        <button 
-          onClick={() => setShowLogForm(true)}
-          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
-        >
-          <Plus size={18} /> Log Weekly Hours
-        </button>
       </header>
 
       <div style={styles.progressHero}>
@@ -165,6 +159,30 @@ const InternshipProgressPage = () => {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '0.95rem', fontWeight: 600 }}>{task.title}</div>
                     <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{task.status}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.card}>
+            <div style={{ padding: '20px', borderBottom: `1px solid ${theme.colors.border}`, display: 'flex', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>Task History</h3>
+              <Clock size={18} color={theme.colors.textMuted} />
+            </div>
+            <div style={{ padding: '20px' }}>
+              {[
+                { id: 101, title: "Initial Project Onboarding", date: "Mar 11, 2026", duration: "4h" },
+                { id: 102, title: "Environment Configuration & Repo Access", date: "Mar 12, 2026", duration: "6h" },
+                { id: 103, title: "UI Component Library Review", date: "Mar 15, 2026", duration: "8h" }
+              ].map(historyTask => (
+                <div key={historyTask.id} style={{ ...styles.taskItem, backgroundColor: '#fcfcfc', border: `1px solid ${theme.colors.bgSecondary}` }}>
+                  <div style={{ color: theme.colors.success }}>
+                    <CheckCircle size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{historyTask.title}</div>
+                    <div style={{ fontSize: '0.7rem', color: theme.colors.textMuted }}>Completed on {historyTask.date} • {historyTask.duration} logged</div>
                   </div>
                 </div>
               ))}

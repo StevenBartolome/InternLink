@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Send, FileText, ChevronLeft, 
   AlertCircle, CheckCircle, Upload,
@@ -13,6 +13,19 @@ const ApplicationFormPage = () => {
   const { id } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setUploadedFile(file.name);
+    }
+  };
 
   // Mock data for the specific internship
   const listing = {
@@ -130,11 +143,18 @@ const ApplicationFormPage = () => {
 
         <div style={styles.formGroup}>
           <label style={styles.label}>Additional Documents (Optional)</label>
-          <div style={styles.uploadArea}>
-            <Upload size={32} color={theme.colors.textMuted} style={{ marginBottom: '12px' }} />
-            <div style={{ fontWeight: 600 }}>Click to upload or drag and drop</div>
-            <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>PDF, DOCX up to 5MB</div>
+          <div style={styles.uploadArea} onClick={handleUploadClick}>
+            <Upload size={32} color={uploadedFile ? theme.colors.success : theme.colors.textMuted} style={{ marginBottom: '12px' }} />
+            <div style={{ fontWeight: 600 }}>{uploadedFile ? `Selected: ${uploadedFile}` : 'Click to upload or drag and drop'}</div>
+            <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>{uploadedFile ? 'Click to change file' : 'PDF, DOCX up to 5MB'}</div>
           </div>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            style={{ display: 'none' }} 
+            onChange={handleFileChange}
+            accept=".pdf,.doc,.docx"
+          />
         </div>
 
         <div style={{ backgroundColor: theme.colors.bgAccent, padding: '20px', borderRadius: '12px', display: 'flex', gap: '12px', marginBottom: '32px' }}>
