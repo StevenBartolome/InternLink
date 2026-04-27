@@ -18,6 +18,7 @@ export const mockStudents = [
     supervisor: "Engr. Roberto Reyes",
     hoursRendered: 350,
     hoursRequired: 480,
+    grade: null,
     skills: ["React", "Node.js", "SQL"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan"
   },
@@ -29,8 +30,9 @@ export const mockStudents = [
     status: "Placed",
     company: "Global Innovations Inc.",
     supervisor: "Ms. Sarah Gomez",
-    hoursRendered: 400,
+    hoursRendered: 0,
     hoursRequired: 480,
+    grade: null,
     skills: ["Python", "Machine Learning", "Data Analysis"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Liza"
   },
@@ -43,7 +45,8 @@ export const mockStudents = [
     company: null,
     supervisor: null,
     hoursRendered: 0,
-    hoursRequired: 300,
+    hoursRequired: 480,
+    grade: null,
     skills: ["Marketing", "Sales", "Customer Relations"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Daniel"
   },
@@ -57,6 +60,7 @@ export const mockStudents = [
     supervisor: "Mr. Alex Cruz",
     hoursRendered: 480,
     hoursRequired: 480,
+    grade: 98,
     skills: ["UI/UX", "Figma", "HTML/CSS"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kathryn"
   },
@@ -70,6 +74,7 @@ export const mockStudents = [
     supervisor: "Mr. David Lim",
     hoursRendered: 200,
     hoursRequired: 480,
+    grade: null,
     skills: ["Java", "Spring Boot", "MySQL"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Enrique"
   },
@@ -82,7 +87,8 @@ export const mockStudents = [
     company: "Ayala Corporation",
     supervisor: "Ms. Elena Ruiz",
     hoursRendered: 150,
-    hoursRequired: 300,
+    hoursRequired: 480,
+    grade: null,
     skills: ["Finance", "Accounting", "Excel"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Nadine"
   },
@@ -96,6 +102,7 @@ export const mockStudents = [
     supervisor: null,
     hoursRendered: 0,
     hoursRequired: 480,
+    grade: null,
     skills: ["PHP", "Laravel", "Javascript"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=James"
   },
@@ -109,34 +116,9 @@ export const mockStudents = [
     supervisor: "Mr. Rico Blanco",
     hoursRendered: 480,
     hoursRequired: 480,
+    grade: 92,
     skills: ["C++", "C#", "Unity"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Joshua"
-  },
-  {
-    id: "2023-00009",
-    name: "Julia Barretto",
-    course: "BSBA",
-    yearLevel: "4th Year",
-    status: "Placed",
-    company: "BDO Unibank",
-    supervisor: "Ms. Grace Poe",
-    hoursRendered: 280,
-    hoursRequired: 300,
-    skills: ["HR Management", "Recruitment", "Office Apps"],
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Julia"
-  },
-  {
-    id: "2023-00010",
-    name: "Alden Richards",
-    course: "BSIT",
-    yearLevel: "4th Year",
-    status: "Placed",
-    company: "MegaWorld",
-    supervisor: "Mr. Richard Yap",
-    hoursRendered: 100,
-    hoursRequired: 480,
-    skills: ["Java", "Android", "Git"],
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alden"
   },
   {
     id: "2023-00011",
@@ -148,6 +130,7 @@ export const mockStudents = [
     supervisor: null,
     hoursRendered: 0,
     hoursRequired: 480,
+    grade: null,
     skills: ["Data Science", "R", "SQL"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maine"
   },
@@ -159,8 +142,9 @@ export const mockStudents = [
     status: "Completed",
     company: "Jollibee Foods Corp",
     supervisor: "Mr. Tony Tan",
-    hoursRendered: 300,
-    hoursRequired: 300,
+    hoursRendered: 480,
+    hoursRequired: 480,
+    grade: 90,
     skills: ["Logistics", "Operations", "Supply Chain"],
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Coco"
   }
@@ -217,7 +201,7 @@ export const mockEmployerListings = [
     position: "HR Specialist Intern",
     department: "Human Resources",
     slots: 4,
-    duration: "300 Hours",
+    duration: "480 Hours",
     status: "Approved",
     dateSubmitted: "2026-03-08",
     remarks: "Approved."
@@ -228,7 +212,7 @@ export const mockEmployerListings = [
     position: "Financial Analyst Intern",
     department: "Finance",
     slots: 6,
-    duration: "300 Hours",
+    duration: "480 Hours",
     status: "Flagged",
     dateSubmitted: "2026-03-12",
     remarks: "Missing company certification document."
@@ -277,6 +261,57 @@ export const mockApplications = [
     coverLetter: "Placholder cover letter content for testing.",
     skills: mockStudents[i % mockStudents.length].skills
   }))
+];
+
+export const mockStudentPlacements = [
+  {
+    id: "PL001",
+    studentName: "Juan Dela Cruz",
+    studentId: "2023-00001",
+    companyName: "Acme Tech Solutions",
+    position: "Frontend Developer Intern",
+    location: "Quezon City, Metro Manila",
+    duration: "480 Hours",
+    status: "Pending",
+    dateAccepted: "2026-03-18",
+    remarks: ""
+  },
+  {
+    id: "PL002",
+    studentName: "Liza Soberano",
+    studentId: "2023-00002",
+    companyName: "Global Innovations Inc.",
+    position: "Data Analyst Intern",
+    location: "Makati City, Metro Manila",
+    duration: "480 Hours",
+    status: "Pending",
+    dateAccepted: "2026-03-19",
+    remarks: ""
+  },
+  {
+    id: "PL003",
+    studentName: "Enrique Gil",
+    studentId: "2023-00005",
+    companyName: "CyberSoft PH",
+    position: "QA Engineer Intern",
+    location: "BGC, Taguig City",
+    duration: "480 Hours",
+    status: "Approved",
+    dateAccepted: "2026-03-15",
+    remarks: "Approved for OJT credit."
+  },
+  {
+    id: "PL004",
+    studentName: "Nadine Lustre",
+    studentId: "2023-00006",
+    companyName: "Ayala Corporation",
+    position: "HR Specialist Intern",
+    location: "Makati City, Metro Manila",
+    duration: "480 Hours",
+    status: "Pending",
+    dateAccepted: "2026-03-20",
+    remarks: ""
+  }
 ];
 
 export const mockProgressData = {

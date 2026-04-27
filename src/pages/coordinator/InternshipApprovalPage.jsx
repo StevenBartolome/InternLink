@@ -1,29 +1,46 @@
+// src/pages/coordinator/InternshipApprovalPage.jsx
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
-  CheckSquare, XCircle, Search, 
-  MapPin, Clock, Building2, 
-  ExternalLink, ChevronRight, FileCheck,
-  MoreVertical, Filter
+  CheckSquare, XCircle, MapPin, Clock, Building2, 
+  ExternalLink, FileCheck, User, Briefcase, GraduationCap
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { mockEmployerListings } from '../../services/mocks/coordinatorMockData';
+import { mockStudentPlacements } from '../../services/mocks/coordinatorMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipApprovalPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { showToast } = useOutletContext() || {};
   const [filter, setFilter] = useState('Pending');
-  const [listings, setListings] = useState(mockEmployerListings);
+  const [placements, setPlacements] = useState(mockStudentPlacements);
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const handleAction = (id, newStatus) => {
-    setListings(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
-    showToast && showToast(`Internship listing set to ${newStatus}`, newStatus === 'Approved' ? 'success' : 'info');
+    if (newStatus === 'Rejected' && !rejectingId) {
+      setRejectingId(id);
+      return;
+    }
+
+    if (newStatus === 'Rejected' && rejectingId) {
+      if (!rejectionReason.trim()) {
+        showToast && showToast('Please provide a reason for rejection', 'error');
+        return;
+      }
+      setPlacements(prev => prev.map(p => p.id === id ? { ...p, status: 'Rejected', remarks: rejectionReason } : p));
+      setRejectingId(null);
+      setRejectionReason('');
+      showToast && showToast('Placement rejected', 'info');
+    } else {
+      setPlacements(prev => prev.map(p => p.id === id ? { ...p, status: newStatus } : p));
+      showToast && showToast(`Internship placement ${newStatus}`, 'success');
+    }
   };
 
-  const filteredListings = listings.filter(listing => 
-    filter === 'All' || listing.status === filter
+  const filteredPlacements = placements.filter(p => 
+    filter === 'All' || p.status === filter
   );
 
   const styles = {
@@ -66,42 +83,56 @@ const InternshipApprovalPage = () => {
     }),
     grid: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(400px, 1fr))',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(400px, 1fr))',
       gap: '20px',
     },
-    listingCard: {
+    card: {
       ...commonStyles.dashboardCard,
       display: 'flex',
       flexDirection: 'column',
       gap: '16px',
+      maxWidth: isMobile ? '100%' : '500px',
+      border: `1px solid ${theme.colors.border}`,
     },
-    companyBar: {
+    studentBar: {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
     },
-    companyLogo: {
-      width: '40px',
-      height: '40px',
-      borderRadius: '10px',
+    avatar: {
+      width: '44px',
+      height: '44px',
+      borderRadius: '12px',
       backgroundColor: theme.colors.bgAccent,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       color: theme.colors.primary,
-      fontWeight: 800,
+    },
+    infoRow: {
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: '10px',
+      fontSize: '0.9rem',
+      color: theme.colors.textMain,
+    },
+    infoIcon: {
+      color: theme.colors.primary,
+      marginTop: '2px',
     },
     actions: {
       display: 'flex',
       gap: '12px',
       marginTop: '8px',
+      borderTop: `1px solid ${theme.colors.border}`,
+      paddingTop: '16px',
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Internship Approvals</h1>
+        <h1 style={styles.title}>Student OJT Approvals</h1>
         <div style={styles.filterBar}>
           {['Pending', 'Approved', 'Rejected', 'All'].map(s => (
             <button 
@@ -116,65 +147,104 @@ const InternshipApprovalPage = () => {
       </div>
 
       <div style={styles.grid}>
-        {filteredListings.map(listing => (
-          <div key={listing.id} style={styles.listingCard}>
+        {filteredPlacements.map(p => (
+          <div key={p.id} style={styles.card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={styles.companyBar}>
-                <div style={styles.companyLogo}>{listing.companyName.charAt(0)}</div>
+              <div style={styles.studentBar}>
+                <div style={styles.avatar}>
+                  <GraduationCap size={24} />
+                </div>
                 <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{listing.position}</h3>
-                  <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>{listing.companyName}</span>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0 }}>{p.studentName}</h3>
+                  <span style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>ID: {p.studentId}</span>
                 </div>
               </div>
               <span style={{ 
                 ...commonStyles.dashboardBadge,
-                ...(listing.status === 'Approved' ? commonStyles.badgeSuccess : 
-                   listing.status === 'Pending' ? commonStyles.badgeWarning : commonStyles.badgeDanger)
+                ...(p.status === 'Approved' ? commonStyles.badgeSuccess : 
+                   p.status === 'Pending' ? commonStyles.badgeWarning : commonStyles.badgeDanger)
               }}>
-                {listing.status}
+                {p.status}
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted }}>
-                <MapPin size={16} />
-                <span>{listing.location}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '4px 0' }}>
+              <div style={styles.infoRow}>
+                <Building2 size={18} style={styles.infoIcon} />
+                <div>
+                  <div style={{ fontWeight: 700 }}>{p.companyName}</div>
+                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>{p.position}</div>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: theme.colors.textMuted }}>
-                <Clock size={16} />
-                <span>{listing.type}</span>
+              <div style={styles.infoRow}>
+                <MapPin size={18} style={styles.infoIcon} />
+                <span>{p.location}</span>
+              </div>
+              <div style={styles.infoRow}>
+                <Clock size={18} style={styles.infoIcon} />
+                <span>Duration: <strong>{p.duration}</strong></span>
               </div>
             </div>
 
-            <p style={{ fontSize: '0.9rem', color: theme.colors.textMain, margin: '8px 0', lineClamp: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-              {listing.description || 'No description provided for this internship listing.'}
-            </p>
+            {p.status === 'Rejected' && p.remarks && (
+              <div style={{ padding: '12px', backgroundColor: '#FEF2F2', borderRadius: '8px', borderLeft: `4px solid ${theme.colors.danger}` }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.danger, display: 'block', marginBottom: '4px' }}>Rejection Reason:</span>
+                <p style={{ fontSize: '0.85rem', color: '#991B1B', margin: 0 }}>{p.remarks}</p>
+              </div>
+            )}
 
             <div style={styles.actions}>
-              {listing.status === 'Pending' ? (
-                <>
-                  <button 
-                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.success }}
-                    onClick={() => handleAction(listing.id, 'Approved')}
-                  >
-                    <FileCheck size={18} />
-                    Approve
-                  </button>
-                  <button 
-                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger }}
-                    onClick={() => handleAction(listing.id, 'Rejected')}
-                  >
-                    <XCircle size={18} />
-                    Reject
-                  </button>
-                </>
+              {p.status === 'Pending' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                  {rejectingId === p.id ? (
+                    <>
+                      <textarea 
+                        placeholder="Provide rejection reason..." 
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        style={{ ...commonStyles.dashboardInput, minHeight: '80px', fontSize: '0.85rem' }}
+                      />
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        <button 
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.danger }}
+                          onClick={() => handleAction(p.id, 'Rejected')}
+                        >
+                          Confirm Reject
+                        </button>
+                        <button 
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
+                          onClick={() => { setRejectingId(null); setRejectionReason(''); }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button 
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: theme.colors.success }}
+                        onClick={() => handleAction(p.id, 'Approved')}
+                      >
+                        <FileCheck size={18} />
+                        Grant Approval
+                      </button>
+                      <button 
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: theme.colors.danger }}
+                        onClick={() => setRejectingId(p.id)}
+                      >
+                        <XCircle size={18} />
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <button 
                   style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }}
-                  onClick={() => showToast && showToast(`Opening details for ${listing.companyName}...`, 'info')}
+                  onClick={() => showToast && showToast(`Viewing placement details for ${p.studentName}...`, 'info')}
                 >
                   <ExternalLink size={18} />
-                  View Listing Details
+                  View Details
                 </button>
               )}
             </div>

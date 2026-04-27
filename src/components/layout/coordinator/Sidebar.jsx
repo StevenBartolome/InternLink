@@ -21,8 +21,6 @@ const Sidebar = () => {
     { name: 'Monitoring & Logs', path: '/coordinator/monitoring', icon: ClipboardCheck },
     { name: 'Grades & Evaluations', path: '/coordinator/grades', icon: FileText },
     { name: 'Reports', path: '/coordinator/reports', icon: BarChart2 },
-    { name: 'Notifications', path: '/coordinator/notifications', icon: Bell },
-    { name: 'My Profile', path: '/coordinator/profile', icon: User },
   ];
 
   const styles = {
@@ -100,24 +98,9 @@ const Sidebar = () => {
               <item.icon size={20} />
               <span>{item.name}</span>
             </div>
-            <ChevronRight size={14} style={{ opacity: 0.5 }} />
           </NavLink>
         ))}
       </nav>
-      <div style={styles.footer}>
-        <div 
-          onClick={() => {
-            localStorage.removeItem('internlink_session');
-            window.location.href = '/login';
-          }} 
-          style={{ ...styles.navLink(false), cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

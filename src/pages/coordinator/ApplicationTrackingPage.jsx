@@ -60,7 +60,7 @@ const ApplicationTrackingPage = () => {
     }),
     cardGrid: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))',
       gap: '20px',
     },
     appCard: {
@@ -68,6 +68,7 @@ const ApplicationTrackingPage = () => {
       display: 'flex',
       flexDirection: 'column',
       gap: '16px',
+      maxWidth: isMobile ? '100%' : '400px',
     },
     cardHeader: {
       display: 'flex',

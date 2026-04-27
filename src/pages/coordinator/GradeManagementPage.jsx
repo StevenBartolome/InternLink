@@ -177,7 +177,7 @@ const GradeManagementPage = () => {
                 </td>
                 <td style={styles.td}>{student.course}</td>
                 <td style={styles.td}>{student.company || 'Not Placed'}</td>
-                <td style={styles.td}>{student.renderedHours || 0} / {student.requiredHours || 400}</td>
+                <td style={styles.td}>{student.hoursRendered || 0} / {student.hoursRequired || 400}</td>
                 <td style={styles.td}>
                   {student.grade ? (
                     <span style={styles.gradeBadge(student.grade)}>{student.grade}%</span>
