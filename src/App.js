@@ -5,6 +5,7 @@ import LandingPage from './pages/auth/LandingPage/LandingPage';
 import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
+import InviteAcceptForm from './components/registration/InviteAcceptForm';
 import MainLayout from './components/layout/student/MainLayout/MainLayout';
 
 // Import Student Pages
@@ -102,6 +103,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/register/invite" element={<InviteAcceptForm />} />
 
         {/* Protected/Authenticated Dashboard Layout */}
         <Route element={<MainLayout />}>
