@@ -5,11 +5,13 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import Toast from '../../components/common/Toast';
+import Modal from '../../components/common/Modal/Modal';
 
 const CoordinatorManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, coordinatorId: null });
   const [newUser, setNewUser] = useState({ name: '', email: '' });
   
   const [coordinators, setCoordinators] = useState([
@@ -34,6 +36,25 @@ const CoordinatorManagementPage = () => {
     showToast(`Coordinator "${newUser.name}" invited successfully.`, 'success');
   };
 
+  const handleEdit = (id) => {
+    showToast(`Edit functionality mock for Coordinator ID ${id}`, 'info');
+  };
+
+  const handleDeactivate = (id) => {
+    setConfirmModal({ isOpen: true, coordinatorId: id });
+  };
+
+  const confirmDeactivate = () => {
+    setCoordinators(prev => prev.map(c => {
+      if (c.id === confirmModal.coordinatorId) {
+        return { ...c, status: c.status === 'Active' ? 'Inactive' : 'Active' };
+      }
+      return c;
+    }));
+    showToast('Coordinator status updated.', 'success');
+    setConfirmModal({ isOpen: false, coordinatorId: null });
+  };
+
   const styles = {
     container: { padding: '24px' },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' },
@@ -44,8 +65,8 @@ const CoordinatorManagementPage = () => {
     td: { padding: '16px 12px', borderBottom: `1px solid ${theme.colors.border}`, fontSize: '0.9rem' },
     badge: (status) => ({
       padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 600,
-      backgroundColor: status === 'Active' ? '#DEF7EC' : '#FEF3C7',
-      color: status === 'Active' ? '#03543F' : '#92400E',
+      backgroundColor: status === 'Active' ? '#DEF7EC' : status === 'Inactive' ? '#FEE2E2' : '#FEF3C7',
+      color: status === 'Active' ? '#03543F' : status === 'Inactive' ? '#991B1B' : '#92400E',
     }),
     overlay: {
       position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)',
@@ -68,6 +89,16 @@ const CoordinatorManagementPage = () => {
   return (
     <div style={styles.container}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <Modal 
+        isOpen={confirmModal.isOpen} 
+        onClose={() => setConfirmModal({ isOpen: false, coordinatorId: null })} 
+        isConfirm={true}
+        onConfirm={confirmDeactivate}
+        title="Confirm Status Change" 
+        message="Are you sure you want to change the status of this coordinator?" 
+        type="warning" 
+      />
 
       {showAddModal && (
         <div style={styles.overlay} onClick={() => setShowAddModal(false)}>
@@ -132,8 +163,8 @@ const CoordinatorManagementPage = () => {
                 </td>
                 <td style={styles.td}>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ padding: '6px', background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer' }}><Edit size={16} /></button>
-                    <button style={{ padding: '6px', background: 'none', border: 'none', color: theme.colors.danger, cursor: 'pointer' }}><ShieldAlert size={16} /></button>
+                    <button onClick={() => handleEdit(coord.id)} style={{ padding: '6px', background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer' }}><Edit size={16} /></button>
+                    <button onClick={() => handleDeactivate(coord.id)} style={{ padding: '6px', background: 'none', border: 'none', color: theme.colors.danger, cursor: 'pointer' }}><ShieldAlert size={16} /></button>
                   </div>
                 </td>
               </tr>

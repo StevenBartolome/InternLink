@@ -5,6 +5,7 @@ import {
   LogOut, ChevronRight, LayoutDashboard, Database, UserPlus
 } from 'lucide-react';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { theme } from '../../../styles/theme';
 
 const Sidebar = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
@@ -12,20 +13,18 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/chair/dashboard', icon: LayoutDashboard },
-    { name: 'Cohort Monitoring', path: '/chair/cohort', icon: Database },
+    { name: 'OJT Monitoring', path: '/chair/cohort', icon: Database },
     { name: 'Manage Coordinators', path: '/chair/coordinators-manage', icon: UserPlus },
     { name: 'Coordinator Oversight', path: '/chair/coordinators', icon: Users },
     { name: 'Grade Finalization', path: '/chair/grades', icon: CheckSquare },
-    { name: 'Notifications', path: '/chair/notifications', icon: Bell },
-    { name: 'Profile', path: '/chair/profile', icon: User },
   ];
 
   const styles = {
     sidebar: {
       width: '270px',
       height: '100vh',
-      backgroundColor: '#0f172a', // Slate 900
-      color: '#fff',
+      backgroundColor: theme.colors.primary,
+      color: theme.colors.white,
       position: 'fixed',
       left: 0,
       top: 0,
@@ -95,24 +94,9 @@ const Sidebar = () => {
               <item.icon size={20} />
               <span>{item.name}</span>
             </div>
-            <ChevronRight size={14} style={{ opacity: 0.5 }} />
           </NavLink>
         ))}
       </nav>
-      <div style={styles.footer}>
-        <div 
-          onClick={() => {
-            localStorage.removeItem('internlink_session');
-            window.location.href = '/login';
-          }} 
-          style={{ ...styles.navLink(false), cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };
