@@ -10,10 +10,13 @@ import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { mockEmployerListings } from '../../services/mocks/coordinatorMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import Toast from '../../components/common/Toast';
 
 const ApplicationTrackingPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
-  const { showToast } = useOutletContext() || {};
+  const context = useOutletContext();
+  const [localToast, setLocalToast] = useState(null);
+  const showToast = context?.showToast || ((message, type = 'info') => setLocalToast({ message, type }));
   const [activeTab, setActiveTab] = useState('all');
 
   // Simulated applications derived from mockEmployerListings for tracking
@@ -107,6 +110,7 @@ const ApplicationTrackingPage = () => {
 
   return (
     <div style={styles.container}>
+      {localToast && <Toast message={localToast.message} type={localToast.type} onClose={() => setLocalToast(null)} />}
       <header style={styles.header}>
         <h1 style={styles.title}>Application Tracking</h1>
         <span style={{ fontSize: '0.875rem', color: theme.colors.textMuted }}>Total: {mockApplications.length}</span>
@@ -154,7 +158,7 @@ const ApplicationTrackingPage = () => {
             <div style={styles.actions}>
               <button 
                 style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }}
-                onClick={() => showToast ? showToast(`Opening resume for ${app.student}...`, 'info') : alert(`Opening resume for ${app.student}...`)}
+                onClick={() => showToast(`Opening resume for ${app.student}...`, 'info')}
               >
                 <FileText size={16} />
                 View File
@@ -162,7 +166,7 @@ const ApplicationTrackingPage = () => {
               <button 
                 style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
                 title="Open Company Portal"
-                onClick={() => showToast ? showToast(`Redirecting to ${app.company} portal...`, 'info') : alert(`Redirecting to ${app.company} portal...`)}
+                onClick={() => showToast(`Redirecting to ${app.company} portal...`, 'info')}
               >
                 <ExternalLink size={16} />
               </button>

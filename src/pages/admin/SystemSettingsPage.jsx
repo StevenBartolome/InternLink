@@ -7,6 +7,7 @@ import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { systemSettings } from '../../services/mocks/adminMockData';
 import Toast from '../../components/common/Toast';
+import Modal from '../../components/common/Modal/Modal';
 
 const SystemSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -14,6 +15,7 @@ const SystemSettingsPage = () => {
   const [semesterStatus, setSemesterStatus] = useState('Active');
   const [toast, setToast] = useState(null);
   const [isBacking, setIsBacking] = useState(false);
+  const [resetModal, setResetModal] = useState({ isOpen: false, text: '' });
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
@@ -31,9 +33,15 @@ const SystemSettingsPage = () => {
   };
 
   const handleHardReset = () => {
-    const confirmed = window.confirm('Are you sure you want to perform a hard reset? This cannot be undone.');
-    if (confirmed) {
+    setResetModal({ isOpen: true, text: '' });
+  };
+
+  const confirmHardReset = () => {
+    if (resetModal.text === 'RESET') {
       showToast('Hard reset executed. App state has been cleared.', 'warning');
+      setResetModal({ isOpen: false, text: '' });
+    } else {
+      showToast('Please type "RESET" exactly to confirm.', 'error');
     }
   };
 
@@ -90,6 +98,37 @@ const SystemSettingsPage = () => {
   return (
     <div style={styles.container}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {resetModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, backdropFilter: 'blur(4px)' }} onClick={() => setResetModal({ isOpen: false, text: '' })}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', padding: '32px', width: '400px', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.2rem', fontWeight: 800, color: theme.colors.danger }}>Confirm Hard Reset</h3>
+            <p style={{ margin: '0 0 24px 0', fontSize: '0.9rem', color: theme.colors.textMuted }}>
+              Are you sure you want to perform a hard reset? This cannot be undone. Type <strong>RESET</strong> in the textbox below to confirm.
+            </p>
+            <input 
+              style={{ ...styles.input, marginBottom: '24px' }} 
+              placeholder="Type RESET"
+              value={resetModal.text}
+              onChange={e => setResetModal({ ...resetModal, text: e.target.value })}
+            />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button 
+                style={{ padding: '10px', borderRadius: '8px', border: `1px solid ${theme.colors.border}`, flex: 1, cursor: 'pointer', backgroundColor: '#fff', fontWeight: 600 }}
+                onClick={() => setResetModal({ isOpen: false, text: '' })}
+              >
+                Cancel
+              </button>
+              <button 
+                style={{ padding: '10px', borderRadius: '8px', border: 'none', backgroundColor: theme.colors.danger, color: '#fff', flex: 1, cursor: 'pointer', fontWeight: 600 }}
+                onClick={confirmHardReset}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>System Configuration</h1>

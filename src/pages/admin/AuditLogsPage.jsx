@@ -11,18 +11,21 @@ import Toast from '../../components/common/Toast';
 
 const AuditLogsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('All');
+  const [filterType, setFilterType] = useState('All Types');
+  const [filterAction, setFilterAction] = useState('All Actions');
   const [toast, setToast] = useState(null);
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
-  const allTypes = ['All', ...new Set(auditLogs.map(l => l.type))];
+  const allTypes = ['All Types', ...new Set(auditLogs.map(l => l.type))];
+  const allActions = ['All Actions', ...new Set(auditLogs.map(l => l.action))];
 
   const filteredLogs = auditLogs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
       log.action.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'All' || log.type === filterType;
-    return matchesSearch && matchesType;
+    const matchesType = filterType === 'All Types' || log.type === filterType;
+    const matchesAction = filterAction === 'All Actions' || log.action === filterAction;
+    return matchesSearch && matchesType && matchesAction;
   });
 
   const handleExportCSV = () => {
@@ -39,15 +42,6 @@ const AuditLogsPage = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast(`Exported ${filteredLogs.length} log entries to CSV.`, 'success');
-  };
-
-  const handleFilterToggle = () => {
-    // Cycle through types
-    const currentIndex = allTypes.indexOf(filterType);
-    const nextIndex = (currentIndex + 1) % allTypes.length;
-    const next = allTypes[nextIndex];
-    setFilterType(next);
-    showToast(`Filter set to: ${next}`, 'info');
   };
 
   const handleDateFilter = () => {
@@ -89,9 +83,9 @@ const AuditLogsPage = () => {
       <header style={styles.header}>
         <div>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>Security Audit Logs</h1>
-          {filterType !== 'All' && (
+          {(filterType !== 'All Types' || filterAction !== 'All Actions') && (
             <span style={{ fontSize: '0.8rem', color: theme.colors.primary, fontWeight: 600 }}>
-              Showing: {filterType} ({filteredLogs.length} entries)
+              Showing filtered results ({filteredLogs.length} entries)
             </span>
           )}
         </div>
@@ -113,13 +107,24 @@ const AuditLogsPage = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            title={`Filter by type (current: ${filterType})`}
-            style={{ ...commonStyles.dashboardBtn, backgroundColor: filterType !== 'All' ? theme.colors.bgAccent : theme.colors.bgSecondary, padding: '8px', color: filterType !== 'All' ? theme.colors.primary : theme.colors.textMain }}
-            onClick={handleFilterToggle}
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, border: `1px solid ${theme.colors.border}`, padding: '8px 12px', fontSize: '0.85rem', cursor: 'pointer' }}
           >
-            <Filter size={18} />
-          </button>
+            {allTypes.map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          <select
+            value={filterAction}
+            onChange={(e) => setFilterAction(e.target.value)}
+            style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, border: `1px solid ${theme.colors.border}`, padding: '8px 12px', fontSize: '0.85rem', maxWidth: '200px', cursor: 'pointer' }}
+          >
+            {allActions.map(action => (
+              <option key={action} value={action}>{action}</option>
+            ))}
+          </select>
           <button
             title="Filter by date range"
             style={{ ...commonStyles.dashboardBtn, backgroundColor: theme.colors.bgSecondary, padding: '8px' }}

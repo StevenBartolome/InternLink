@@ -16,7 +16,7 @@ const Sidebar = () => {
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', path: '/admin/users', icon: Users },
     { name: 'Account Verification', path: '/admin/verification', icon: FileCheck },
-    { name: 'Internship Oversight', path: '/admin/oversight', icon: Briefcase },
+    // { name: 'Internship Oversight', path: '/admin/oversight', icon: Briefcase },
     { name: 'Matching Engine', path: '/admin/matching', icon: Settings },
     { name: 'System Reports', path: '/admin/reports', icon: BarChart2 },
     { name: 'Audit Logs', path: '/admin/audit', icon: ShieldAlert },
@@ -70,11 +70,7 @@ const Sidebar = () => {
       fontSize: '0.875rem',
       fontWeight: 500,
       transition: 'all 0.2s ease',
-    }),
-    footer: {
-      padding: '24px',
-      borderTop: '1px solid rgba(255,255,255,0.1)',
-    }
+    })
   };
 
   return (
@@ -95,18 +91,6 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
-      <div style={styles.footer}>
-        <div 
-          onClick={() => {
-            localStorage.removeItem('internlink_session');
-            window.location.href = '/login';
-          }} 
-          style={{ ...styles.navLink(false), cursor: 'pointer' }}
-        >
-          <LogOut size={20} />
-          <span>Exit Admin</span>
-        </div>
-      </div>
     </aside>
   );
 };
