@@ -1,7 +1,7 @@
 // src/pages/dean/ChairManagementPage.jsx
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { 
+import {
   Users, Search,
   UserPlus, ShieldAlert, Edit, X, Save, Check, Mail, Building
 } from 'lucide-react';
@@ -15,13 +15,13 @@ const ChairManagementPage = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedChair, setSelectedChair] = useState(null);
-  
+
   const [newUser, setNewUser] = useState({ name: '', email: '', program: 'BS Information Technology' });
-  
+
   const [chairs, setChairs] = useState([
-    { id: 1, name: 'Dr. Sarah Wilson', email: 'sarah.wilson@school.edu', program: 'BS Information Technology', status: 'Active', dateJoined: '2023-09-01' },
-    { id: 2, name: 'Dr. Michael Chen', email: 'michael.chen@school.edu', program: 'BS Computer Science', status: 'Active', dateJoined: '2023-09-05' },
-    { id: 3, name: 'Dr. John Doe', email: 'john.doe@school.edu', program: 'BS Civil Engineering', status: 'Pending', dateJoined: '2024-01-15' },
+    { id: 1, name: 'Prof. Erick Campano', email: 'sarah.wilson@school.edu', program: 'BS Information Technology', status: 'Active', dateJoined: '2023-09-01' },
+    { id: 2, name: 'Prof. Jake Moral', email: 'michael.chen@school.edu', program: 'BS Computer Engineering', status: 'Active', dateJoined: '2023-09-05' },
+    { id: 3, name: 'Engr. Manny', email: 'john.doe@school.edu', program: 'BS Civil Engineering', status: 'Pending', dateJoined: '2024-01-15' },
   ]);
 
   const handleAddChair = (e) => {
@@ -115,11 +115,11 @@ const ChairManagementPage = () => {
                 <label style={{ fontSize: '0.9rem', fontWeight: 800, color: theme.colors.textMain, display: 'block', marginBottom: '10px' }}>Full Name</label>
                 <div style={{ position: 'relative' }}>
                   <Users size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: theme.colors.primary }} />
-                  <input 
-                    style={styles.modalInput} 
-                    placeholder="e.g. Dr. Jane Doe" 
+                  <input
+                    style={styles.modalInput}
+                    placeholder="e.g. Dr. Jane Doe"
                     value={newUser.name}
-                    onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))} 
+                    onChange={e => setNewUser(p => ({ ...p, name: e.target.value }))}
                     required
                   />
                 </div>
@@ -128,12 +128,12 @@ const ChairManagementPage = () => {
                 <label style={{ fontSize: '0.9rem', fontWeight: 800, color: theme.colors.textMain, display: 'block', marginBottom: '10px' }}>Institutional Email</label>
                 <div style={{ position: 'relative' }}>
                   <Mail size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: theme.colors.primary }} />
-                  <input 
-                    style={styles.modalInput} 
+                  <input
+                    style={styles.modalInput}
                     type="email"
-                    placeholder="e.g. jane@school.edu" 
+                    placeholder="e.g. jane@school.edu"
                     value={newUser.email}
-                    onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))} 
+                    onChange={e => setNewUser(p => ({ ...p, email: e.target.value }))}
                     required
                   />
                 </div>
@@ -142,8 +142,8 @@ const ChairManagementPage = () => {
                 <label style={{ fontSize: '0.9rem', fontWeight: 800, color: theme.colors.textMain, display: 'block', marginBottom: '10px' }}>Academic Program</label>
                 <div style={{ position: 'relative' }}>
                   <Building size={20} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: theme.colors.primary }} />
-                  <select 
-                    style={styles.modalInput} 
+                  <select
+                    style={styles.modalInput}
                     value={newUser.program}
                     onChange={e => setNewUser(p => ({ ...p, program: e.target.value }))}
                   >
@@ -163,7 +163,7 @@ const ChairManagementPage = () => {
         </div>
       )}
 
-      <Modal 
+      <Modal
         isOpen={isConfirmModalOpen}
         onClose={() => setIsConfirmModalOpen(false)}
         isConfirm={true}
@@ -211,15 +211,15 @@ const ChairManagementPage = () => {
                   <td style={styles.td}>{chair.dateJoined}</td>
                   <td style={styles.td}>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button 
-                        style={styles.actionBtn(theme.colors.primary)} 
+                      <button
+                        style={styles.actionBtn(theme.colors.primary)}
                         title="Edit Chair"
                         onClick={() => handleAction(chair, 'edit')}
                       >
                         <Edit size={16} />
                       </button>
-                      <button 
-                        style={styles.actionBtn(theme.colors.danger)} 
+                      <button
+                        style={styles.actionBtn(theme.colors.danger)}
                         title="Deactivate Chair"
                         onClick={() => handleAction(chair, 'deactivate')}
                       >

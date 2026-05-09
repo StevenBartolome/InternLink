@@ -36,6 +36,13 @@ const DashboardPage = () => {
 
   return (
     <div style={styles.container}>
+      <style>
+        {`
+          @keyframes chartFill {
+            from { stroke-dasharray: 0, 100; stroke-dashoffset: 0; }
+          }
+        `}
+      </style>
       <div style={styles.header}>
         <h1 style={styles.title}>Program Dashboard</h1>
         <p style={styles.subtitle}>Overview of BS Information Technology cohort</p>
@@ -63,8 +70,61 @@ const DashboardPage = () => {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         <div style={styles.section}>
           <h2 style={styles.sectionTitle}>Placement Status</h2>
-          <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', borderRadius: '8px' }}>
-            <p style={{ color: theme.colors.textMuted }}>[ Doughnut Chart: Placed vs Unplaced vs Completed ]</p>
+          <div style={{ height: '250px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '40px' }}>
+            <div style={{ position: 'relative', width: '200px', height: '200px' }}>
+              <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                {/* Background Ring */}
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#f1f5f9"
+                  strokeWidth="3.5"
+                />
+                {/* Placed Segment */}
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth="3.5"
+                  strokeDasharray="93.3, 100"
+                  style={{ animation: 'chartFill 1s ease-out' }}
+                />
+                {/* Unplaced Segment */}
+                <path
+                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="3.5"
+                  strokeDasharray="6.7, 100"
+                  strokeDashoffset="-93.3"
+                  style={{ animation: 'chartFill 1s ease-out' }}
+                />
+              </svg>
+              <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span style={{ fontSize: '2rem', fontWeight: 800, color: theme.colors.textMain }}>93%</span>
+                <span style={{ fontSize: '0.9rem', color: theme.colors.textMuted, fontWeight: 600 }}>Placed</span>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#10b981' }}></div>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: theme.colors.textMain }}>Placed</div>
+                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>420 Students</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '16px', height: '16px', borderRadius: '4px', backgroundColor: '#f59e0b' }}></div>
+                <div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: theme.colors.textMain }}>Unplaced</div>
+                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>30 Students</div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div style={styles.section}>

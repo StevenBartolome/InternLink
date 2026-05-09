@@ -40,9 +40,9 @@ const ProgramOversightPage = () => {
   };
 
   const programs = [
-    { id: 1, name: 'BS Information Technology', chair: 'Dr. Alan Turing', enrolled: 450, placed: 420, avgGrade: '1.25', icon: <GraduationCap size={20} /> },
-    { id: 2, name: 'BS Computer Science', chair: 'Dr. Ada Lovelace', enrolled: 380, placed: 365, avgGrade: '1.50', icon: <Users size={20} /> },
-    { id: 3, name: 'BS Civil Engineering', chair: 'Engr. John Roebling', enrolled: 520, placed: 480, avgGrade: '1.75', icon: <CheckCircle2 size={20} /> },
+    { id: 1, name: 'BS Information Technology', chair: 'Prof. Erick Campano', enrolled: 450, placed: 420, avgGrade: '1.25', icon: <GraduationCap size={20} /> },
+    { id: 2, name: 'BS Computer Engineering', chair: 'Prof. Jake Moral', enrolled: 380, placed: 365, avgGrade: '1.50', icon: <Users size={20} /> },
+    { id: 3, name: 'BS Civil Engineering', chair: 'Engr. Manny', enrolled: 520, placed: 480, avgGrade: '1.75', icon: <CheckCircle2 size={20} /> },
   ];
 
   return (
@@ -65,7 +65,7 @@ const ProgramOversightPage = () => {
               <option>Summer Term</option>
             </select>
           </div>
-          <button 
+          <button
             style={{ ...styles.actionBtn, backgroundColor: theme.colors.primary, color: '#fff' }}
             onClick={() => showToast && showToast('Refreshing program data...', 'info')}
           >
@@ -108,7 +108,7 @@ const ProgramOversightPage = () => {
                     </span>
                   </td>
                   <td style={styles.td}>
-                    <button 
+                    <button
                       style={styles.actionBtn}
                       onClick={() => showToast && showToast(`Opening detailed analytics for ${prog.name}...`, 'info')}
                     >
