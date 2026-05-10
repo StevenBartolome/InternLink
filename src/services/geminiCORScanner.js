@@ -28,7 +28,10 @@ export async function scanCORWithGemini(pdfFile) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    
+    // Using gemini-2.5-flash as it is the available flash model for this API key
+    console.log('[COR Scanner] Initializing Gemini 2.5 Flash...');
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     // Convert PDF file to base64
     const base64Data = await fileToBase64(pdfFile);
