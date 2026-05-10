@@ -15,8 +15,8 @@ const ProfilePage = () => {
   const { showToast } = useOutletContext() || {};
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState(initialProfile);
-  const [tempProfile, setTempProfile] = useState(initialProfile);
+  const [profile, setProfile] = useState({ ...initialProfile, resumeFiles: [] });
+  const [tempProfile, setTempProfile] = useState({ ...initialProfile, resumeFiles: [] });
   const [skillInput, setSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
@@ -27,11 +27,22 @@ const ProfilePage = () => {
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file && showToast) {
-      showToast(`Uploading ${file.name}...`, 'info');
+    if (file) {
+      if (showToast) showToast(`Uploading ${file.name}...`, 'info');
       setTimeout(() => {
-        showToast('Resume uploaded successfully!', 'success');
-      }, 1500);
+        const fileUrl = URL.createObjectURL(file);
+        const newFile = {
+          id: Date.now(),
+          filename: file.name,
+          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+          url: fileUrl
+        };
+        setProfile(prev => ({
+          ...prev,
+          resumeFiles: [newFile, ...prev.resumeFiles]
+        }));
+        if (showToast) showToast('Resume uploaded successfully!', 'success');
+      }, 1000);
     }
   };
 
@@ -151,6 +162,8 @@ const ProfilePage = () => {
       ...commonStyles.dashboardCard,
       padding: '24px',
       gridColumn: isMobile ? 'span 1' : 'span 2',
+      maxWidth: '1000px',
+      width: '100%',
     }
   };
 
@@ -376,55 +389,70 @@ const ProfilePage = () => {
               )}
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Resume Section */}
-      <div style={styles.resumeSection}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileText size={18} color={theme.colors.primary} /> Resume & Documents
-          </h3>
-          <button 
-            style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem' }}
-            onClick={handleUploadClick}
-          >
-            <Upload size={16} /> Upload New
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            style={{ display: 'none' }} 
-            onChange={handleFileChange}
-            accept=".pdf,.doc,.docx"
-          />
-        </div>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
-          {profile.resumeFiles.map(file => (
-            <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: `1px solid ${theme.colors.bgSecondary}`, borderRadius: '12px' }}>
-              <div style={{ backgroundColor: '#EEF2FF', padding: '10px', borderRadius: '8px', color: '#4F46E5' }}>
-                <FileText size={24} />
+          <div style={styles.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} color={theme.colors.primary} /> Resume & Documents
+              </h3>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, fontSize: '0.85rem' }}
+                  onClick={() => showToast && showToast('Opening Resume Builder...', 'info')}
+                >
+                  <Plus size={16} /> Create
+                </button>
+                <button 
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem' }}
+                  onClick={handleUploadClick}
+                >
+                  <Upload size={16} /> Upload
+                </button>
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{file.filename}</div>
-                <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>Uploaded {file.date}</div>
-              </div>
-              <button style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer', padding: '4px' }}>
-                <Eye size={18} />
-              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                style={{ display: 'none' }} 
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx"
+              />
             </div>
-          ))}
-          
-          {/* Sample View Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', border: `2px dashed ${theme.colors.border}`, borderRadius: '12px', justifyContent: 'center' }}>
-            <button 
-              style={{ background: 'none', border: 'none', color: theme.colors.textMuted, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.9rem' }}
-              onClick={() => showToast && showToast('Viewing system resume sample...', 'info')}
-            >
-              <Eye size={18} /> View Resume Sample
-            </button>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              {profile.resumeFiles.length === 0 ? (
+                <div style={{ width: '100%', padding: '32px', textAlign: 'center', color: theme.colors.textMuted, border: `2px dashed ${theme.colors.border}`, borderRadius: '12px' }}>
+                  <FileText size={32} style={{ opacity: 0.5, marginBottom: '12px' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>No resumes uploaded yet.</p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Upload a file or create a new resume to get started.</p>
+                </div>
+              ) : (
+                profile.resumeFiles.map(file => (
+                  <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 20px', border: `1px solid ${theme.colors.bgSecondary}`, borderRadius: '12px', width: 'fit-content' }}>
+                    <div style={{ backgroundColor: '#EEF2FF', padding: '10px', borderRadius: '8px', color: '#4F46E5' }}>
+                      <FileText size={24} />
+                    </div>
+                    <div style={{ paddingRight: '24px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{file.filename}</div>
+                      <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>Uploaded {file.date}</div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        if (file.url) {
+                          window.open(file.url, '_blank');
+                        } else {
+                          showToast && showToast('Viewing system resume sample...', 'info');
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer', padding: '4px' }}
+                      title="View Resume"
+                    >
+                      <Eye size={18} />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
+
         </div>
       </div>
     </div>
