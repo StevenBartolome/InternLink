@@ -9,12 +9,14 @@ import { studentProfile } from '../../../services/mocks/mockData';
 import { companyProfile } from '../../../services/mocks/employerMockData';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { useAuth } from '../../../context/AuthContext';
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState({});
   const location = useLocation();
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { logout } = useAuth();
 
   const toggleSubmenu = (name) => {
     setOpenSubmenus(prev => ({ ...prev, [name]: !prev[name] }));
@@ -22,39 +24,13 @@ const Sidebar = () => {
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  const isAdmin = location.pathname.startsWith('/admin');
-  const isEmployer = !isAdmin && location.pathname.startsWith('/employer');
-
-  const navItems = isAdmin ? [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
-    { name: 'Account Verification', path: '/admin/verification', icon: <FileCheck size={20} /> },
-    { name: 'Internship Oversight', path: '/admin/oversight', icon: <Briefcase size={20} /> },
-    { name: 'System Reports', path: '/admin/reports', icon: <BarChart2 size={18} /> },
-    { name: 'Audit Logs', path: '/admin/audit', icon: <FileCheck size={20} /> }
-  ] : isEmployer ? [
-    { name: 'Dashboard', path: '/employer/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Manage Listings', path: '/employer/listings', icon: <Briefcase size={20} /> },
-    { name: 'Post Internship', path: '/employer/post', icon: <PlusSquare size={20} /> },
-    { name: 'Applicant Review', path: '/employer/applicants', icon: <Users size={20} /> },
-    { 
-      name: 'Supervisors', 
-      icon: <Users size={20} />, 
-      subItems: [
-        { name: 'Manage Supervisors', path: '/employer/supervisors' },
-        { name: 'Assign Supervisor', path: '/employer/assign-supervisor' }
-      ]
-    },
-    { name: 'Intern Progress', path: '/employer/progress', icon: <CheckSquare size={20} /> },
-  ] : [
+  const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Browse Internships', path: '/internships', icon: <Briefcase size={20} /> },
-    { name: 'My Applications', path: '/applications', icon: <FileCheck size={20} /> },
-    { name: 'Internship Progress', path: '/progress', icon: <CheckSquare size={20} /> },
-    { name: 'Grades & Evaluations', path: '/grades', icon: <Award size={20} /> },
+    { name: 'My Profile', path: '/profile', icon: <User size={20} /> },
+    { name: 'Notifications', path: '/notifications', icon: <Bell size={20} /> },
   ];
 
-  const brandName = isAdmin ? 'InternLink Admin' : isEmployer ? companyProfile.name : 'InternLink';
+  const brandName = 'InternLink';
 
   const styles = {
     sidebar: {
@@ -205,6 +181,33 @@ const Sidebar = () => {
             );
           })}
         </nav>
+
+        <div style={{ padding: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+          <button 
+            onClick={() => {
+              logout();
+              window.location.href = '/login';
+            }}
+            style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              width: '100%', 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer',
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              transition: theme.transitions.default,
+            }}
+          >
+            <LogOut size={20} />
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </>
   );

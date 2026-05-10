@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Bell, LogOut, GraduationCap, Briefcase, User } from 'lucide-react';
-import { userNotifications, studentProfile } from '../../../services/mocks/mockData';
-import { notifications as employerNotifications, companyProfile } from '../../../services/mocks/employerMockData';
+import { studentNotifications, studentProfile } from '../../../services/mocks/mockData';
 import { adminProfile } from '../../../services/mocks/adminMockData';
 import Modal from '../../common/Modal/Modal';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+
+import { useAuth } from '../../../context/AuthContext';
 
 const Topbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const { logout } = useAuth();
   
   const isEmployer = location.pathname.startsWith('/employer');
   const isAdmin = location.pathname.startsWith('/admin');
@@ -20,47 +22,28 @@ const Topbar = () => {
   const getTitle = (path) => {
     if (isAdmin) {
       if (path.startsWith('/admin/users')) return 'User Management';
-      if (path.startsWith('/admin/verification')) return 'Account Verification';
-      if (path.startsWith('/admin/oversight')) return 'Internship Oversight';
-      if (path.startsWith('/admin/matching')) return 'Matching Engine';
+      if (path.startsWith('/admin/internship-config')) return 'Internship Configuration';
       if (path.startsWith('/admin/reports')) return 'System Reports';
-      if (path.startsWith('/admin/audit')) return 'Audit Logs';
-      if (path.startsWith('/admin/settings')) return 'System Settings';
+      if (path.startsWith('/admin/notifications')) return 'Notification Center';
       if (path.startsWith('/admin/profile')) return 'Admin Profile';
       return 'Admin Dashboard';
     }
 
-    if (isEmployer) {
-      if (path.startsWith('/employer/listings')) return 'Manage Listings';
-      if (path.startsWith('/employer/post')) return 'Post Internship';
-      if (path.startsWith('/employer/applicants')) return 'Applicant Review';
-      if (path.startsWith('/employer/approvals')) return 'Application Approval';
-      if (path.startsWith('/employer/progress')) return 'Intern Progress';
-      if (path.startsWith('/employer/evaluations')) return 'Grade & Evaluate';
-      if (path.startsWith('/employer/notifications')) return 'Notifications';
-      if (path.startsWith('/employer/profile')) return 'Company Profile';
-      return 'Employer Dashboard';
-    }
-
-    if (path.startsWith('/internships/')) return 'Internship Details';
-    switch(path) {
-      case '/dashboard': return 'Student Dashboard';
-      case '/profile': return 'My Profile';
-      case '/internships': return 'Browse Internships';
-      case '/applications': return 'My Applications';
-      case '/progress': return 'Internship Progress';
-      case '/grades': return 'Grades & Evaluations';
-      case '/notifications': return 'Notifications';
-      default: return 'Overview';
-    }
+    if (path.startsWith('/profile')) return 'My Profile';
+    if (path.startsWith('/notifications')) return 'Notifications';
+    
+    // 3-Stage Stage Titles
+    if (path === '/dashboard') return 'Internship Overview';
+    
+    return 'Student Dashboard';
   };
 
-  const notifications = isAdmin ? [] : isEmployer ? employerNotifications : userNotifications;
+  const notifications = isAdmin ? [] : studentNotifications;
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   const handleLogout = () => {
     setIsModalOpen(false);
-    localStorage.removeItem('internlink_session');
+    logout();
     navigate('/login');
   };
 
@@ -68,10 +51,6 @@ const Topbar = () => {
     name: adminProfile.name,
     avatar: adminProfile.avatar,
     role: "Admin"
-  } : isEmployer ? {
-    name: companyProfile.name,
-    avatar: companyProfile.logo,
-    role: "Employer"
   } : {
     name: studentProfile.name,
     avatar: studentProfile.avatar,

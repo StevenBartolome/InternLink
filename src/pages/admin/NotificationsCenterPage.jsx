@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { Bell, Send, Info, Megaphone } from 'lucide-react';
-import { notificationsList, sentAnnouncements } from '../../services/mocks/adminMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import Toast from '../../components/common/Toast';
+import { announcements as initialAnnouncements } from '../../services/mocks/adminMockData';
 
 const NotificationsCenterPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
-  const [notifications, setNotifications] = useState(notificationsList);
-  const [announcements, setAnnouncements] = useState(sentAnnouncements);
+  const [notifications, setNotifications] = useState([]);
+  const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [toast, setToast] = useState(null);
 
   const [title, setTitle] = useState('');

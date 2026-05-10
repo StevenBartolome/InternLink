@@ -3,15 +3,17 @@ import { Bell, Search, User, LogOut } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { adminProfile } from '../../../services/mocks/adminMockData';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import Modal from '../../common/Modal/Modal';
 
 const Topbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const handleLogout = () => {
     setIsModalOpen(false);
-    localStorage.removeItem('internlink_session');
+    logout();
     navigate('/login');
   };
   const styles = {

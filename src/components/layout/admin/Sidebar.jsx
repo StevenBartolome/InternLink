@@ -15,12 +15,9 @@ const Sidebar = () => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', path: '/admin/users', icon: Users },
-    { name: 'Account Verification', path: '/admin/verification', icon: FileCheck },
-    // { name: 'Internship Oversight', path: '/admin/oversight', icon: Briefcase },
-    { name: 'Matching Engine', path: '/admin/matching', icon: Settings },
+    { name: 'Internship Config', path: '/admin/internship-config', icon: Settings },
     { name: 'System Reports', path: '/admin/reports', icon: BarChart2 },
-    { name: 'Audit Logs', path: '/admin/audit', icon: ShieldAlert },
-    { name: 'System Settings', path: '/admin/settings', icon: Settings },
+    { name: 'Notification Center', path: '/admin/notifications', icon: ShieldAlert },
   ];
 
   const styles = {

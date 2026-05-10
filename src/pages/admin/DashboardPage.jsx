@@ -1,7 +1,7 @@
 // src/pages/admin/DashboardPage.jsx
 import React, { useState } from 'react';
 import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText, Bell } from 'lucide-react';
-import { adminProfile, dashboardStats, auditLogs } from '../../services/mocks/adminMockData';
+import { adminProfile, dashboardStats, auditLogs, systemReports } from '../../services/mocks/adminMockData';
 import StatCard from '../../components/common/StatCard';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -10,7 +10,14 @@ import Toast from '../../components/common/Toast';
 import { useNavigate } from 'react-router-dom';
 
 const DashboardPage = () => {
-  const { totalUsers, pendingVerifications, activeInternships, systemAlerts, roleDistribution } = dashboardStats;
+  const { 
+    totalStudents, 
+    totalOjtHeads, 
+    studentsInPreInternship, 
+    studentsInDuringInternship, 
+    studentsInPostInternship,
+    studentsCompleted
+  } = dashboardStats;
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [hoveredAction, setHoveredAction] = useState(null);
   const [toast, setToast] = useState(null);
@@ -21,7 +28,7 @@ const DashboardPage = () => {
 
   const showToast = (message, type = 'info') => setToast({ message, type });
 
-  const handleVerifyAccounts = () => navigate('/admin/verifications');
+  const handleVerifyAccounts = () => navigate('/admin/users');
   const handleViewReports = () => navigate('/admin/reports');
   const handleBroadcast = () => navigate('/admin/notifications');
 
@@ -218,37 +225,36 @@ const DashboardPage = () => {
       <div style={styles.welcomeBanner}>
         <div>
           <h1 style={styles.welcomeBanner.h1}>Welcome back, {adminProfile.name}!</h1>
-          <p style={styles.welcomeBanner.p}>System: <strong>{adminProfile.systemName}</strong></p>
-          <p style={styles.welcomeBanner.welcomeSubtext}>Monitor and manage the OJT program from this central hub.</p>
+          <p style={styles.welcomeBanner.p}>System Status: <strong>Operational</strong></p>
+          <p style={styles.welcomeBanner.welcomeSubtext}>Central oversight for all OJT programs and 3-stage workflows.</p>
         </div>
       </div>
 
       {/* Grid Stats */}
       <div style={styles.statsGrid}>
         <StatCard 
-          title="Total Users" 
-          value={totalUsers} 
+          title="Total Students" 
+          value={totalStudents} 
           icon={Users} 
           color="primary" 
-          trend={{ type: 'up', value: '12%', label: 'this month' }} 
         />
         <StatCard 
-          title="Pending Verifications" 
-          value={pendingVerifications} 
-          icon={CheckCircle} 
+          title="Pre-Internship" 
+          value={studentsInPreInternship} 
+          icon={FileText} 
           color="warning" 
         />
         <StatCard 
-          title="Active Internships" 
-          value={activeInternships} 
+          title="During Internship" 
+          value={studentsInDuringInternship} 
           icon={Briefcase} 
           color="success" 
         />
         <StatCard 
-          title="System Alerts" 
-          value={systemAlerts} 
-          icon={AlertTriangle} 
-          color="danger" 
+          title="Post-Internship" 
+          value={studentsInPostInternship + studentsCompleted} 
+          icon={CheckCircle} 
+          color="info" 
         />
       </div>
 
@@ -288,26 +294,18 @@ const DashboardPage = () => {
         {/* Role Distribution */}
         <div style={styles.dashboardCard}>
           <div style={styles.cardHeader}>
-            <h3 style={styles.cardHeader.h3}>Role Distribution</h3>
+            <h3 style={styles.cardHeader.h3}>Course Breakdown</h3>
           </div>
           <div style={styles.cardContent}>
             <div style={styles.distributionList}>
-              <div style={styles.distributionItem}>
-                <div style={styles.itemLabel}><span style={styles.dot('student')}></span> Students</div>
-                <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{roleDistribution.students}</div>
-              </div>
-              <div style={styles.distributionItem}>
-                <div style={styles.itemLabel}><span style={styles.dot('employer')}></span> Employers</div>
-                <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{roleDistribution.employers}</div>
-              </div>
-              <div style={styles.distributionItem}>
-                <div style={styles.itemLabel}><span style={styles.dot('supervisor')}></span> Supervisors</div>
-                <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{roleDistribution.supervisors}</div>
-              </div>
-              <div style={styles.distributionItem}>
-                <div style={styles.itemLabel}><span style={styles.dot('coordinator')}></span> Coordinators</div>
-                <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{roleDistribution.coordinators}</div>
-              </div>
+              {systemReports.courseBreakdown.map(course => (
+                <div key={course.course} style={styles.distributionItem}>
+                  <div style={styles.itemLabel}>
+                    <span style={styles.dot(course.course)}></span> {course.course}
+                  </div>
+                  <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{course.enrolled}</div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

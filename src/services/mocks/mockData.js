@@ -1,223 +1,108 @@
-// src/data/mockData.js
+// src/services/mocks/mockData.js — Stage-based student internship data
 
 export const studentProfile = {
-  id: "STUD-2023-0042",
-  name: "Gabriela Dela Cruz",
-  course: "BS Information Technology Major in Web and Mobile Application",
-  yearLevel: "4th Year",
-  avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Juan&backgroundColor=b6e3f4",
-  email: "gabriela.delacruz@student.edu.ph",
-  contact: "+63 912 345 6789",
-  address: "123 Mabini St., Quezon City, Metro Manila",
-  skills: ["React.js", "Node.js", "JavaScript", "HTML/CSS", "UI Setup", "Git"],
-  certifications: [
-    { id: 1, title: "AWS Cloud Practitioner", issuer: "Amazon Web Services", date: "Jan 2025" },
-    { id: 2, title: "Meta Front-End Developer", issuer: "Coursera", date: "Nov 2024" }
-  ],
-  resumeFiles: [
-    { id: 1, filename: "Juan_DelaCruz_Resume_2026.pdf", date: "Mar 15, 2026" },
-    { id: 2, filename: "Juan_DelaCruz_Portfolio.pdf", date: "Mar 10, 2026" }
-  ],
-  portfolioLinks: [
-    { id: 1, url: "https://github.com/juandlc" },
-    { id: 2, url: "https://juandelacruz.dev" }
-  ]
+  id: '2023-00042',
+  name: 'Maria Gabriela Santos',
+  course: 'Bachelor of Science in Information Technology',
+  courseCode: 'BSIT',
+  yearLevel: '4th Year',
+  email: 'student@internlink.edu',
+  contact: '+63 912 345 6789',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria&backgroundColor=b6e3f4',
+  academicYear: '2025-2026',
+  semester: '2nd Semester',
+  ojtSubject: 'IT 401 - On-the-Job Training (486 hrs)',
 };
 
-export const internshipListings = [
-  {
-    id: 1,
-    company: "SGV & Co. (Ernst & Young)",
-    title: "Technology Risk Intern",
-    location: "Ayala Ave, Makati City",
-    duration: "3 months (300 hours)",
-    slots: 3,
-    industry: "IT Audit / Consulting",
-    description: "Assist in evaluating IT systems and financial data processing for various clients, identifying technology risks and compliance details.",
-    responsibilities: [
-      "Review IT configurations and security controls",
-      "Document system walkthroughs",
-      "Assist in vulnerability mapping and resolution reporting"
-    ],
-    requirements: [
-      "BS CS / IS / IT student",
-      "Understanding of networks & security concepts",
-      "Strong analytical mapping and communication skills"
-    ]
-  },
-  {
-    id: 2,
-    company: "Accenture Philippines",
-    title: "Software Engineering Intern",
-    location: "BGC, Taguig City",
-    duration: "4 months (400 hours)",
-    slots: 5,
-    industry: "Software Development",
-    description: "Work on enterprise-level applications using modern JavaScript frameworks and cloud infrastructures.",
-    responsibilities: [
-      "Develop UI components based on Figma wireframes",
-      "Create API endpoints using Node.js/Express",
-      "Participate in daily standups and Agile sprints"
-    ],
-    requirements: [
-      "Proficient in React or Angular",
-      "Basic Node.js & Database knowledge",
-      "Willingness to learn and code independently"
-    ]
-  },
-  {
-    id: 3,
-    company: "GCash (Mynt)",
-    title: "Mobile QA Engineering Intern",
-    location: "BGC, Taguig City",
-    duration: "3 months (300 hours)",
-    slots: 2,
-    industry: "Fintech / QA",
-    description: "Help test mobile wallet features for stability, security, and edge-case behaviors before production sets.",
-    responsibilities: [
-      "Run manual and automated regression test sets",
-      "Bug-report detailing and ticket tracking on Jira",
-      "Collaborate with mobile devs to reproduce issues"
-    ],
-    requirements: [
-      "Analytical mindset",
-      "Basic automation framework understanding (e.g., Appium)",
-      "High attention to detail"
-    ]
-  },
-  {
-    id: 4,
-    company: "Globe Telecom",
-    title: "Network Administration Intern",
-    location: "Mandaluyong City",
-    duration: "4 months (400 hours)",
-    slots: 4,
-    industry: "Telecommunications",
-    description: "Gain hands-on experience maintaining network routers, switches, and edge firewall setups.",
-    responsibilities: [
-      "Monitor network traffic logs",
-      "Assist with cabling setup and cable testing",
-      "Configure VLANs and route policies under supervision"
-    ],
-    requirements: [
-      "CCNA course takers preferred",
-      "Knowledge of TCP/IP, OSI Model",
-      "Good communication skills"
-    ]
-  },
-  {
-    id: 5,
-    company: "Shopee Philippines",
-    title: "UI/UX Design Intern",
-    location: "BGC, Taguig City",
-    duration: "3 months (300 hours)",
-    slots: 2,
-    industry: "E-commerce / Design",
-    description: "Support design efforts to improve customer retention and checkout conversion rates via visual iterations.",
-    responsibilities: [
-      "Conduct user research surveys",
-      "Create wireframes and interactive prototypes in Figma",
-      "Maintain component libraries for consistent styles"
-    ],
-    requirements: [
-      "Strong Figma/Adobe XD skills",
-      "Portfolio demonstrating web/mobile design",
-      "Knowledge of usability and accessibility guidelines"
-    ]
-  },
-  {
-    id: 6,
-    company: "Trend Micro",
-    title: "Cybersecurity Analyst Intern",
-    location: "Chino Roces, Makati",
-    duration: "5 months (500 hours)",
-    slots: 1,
-    industry: "Cybersecurity",
-    description: "Assist threat analysis teams looking for active malware patterns and sandbox analysis logs.",
-    responsibilities: [
-      "Analyze malicious packet flags",
-      "Document SIEM dashboards for active alerts",
-      "Contribute items to threat intelligence databases"
-    ],
-    requirements: [
-      "Basic malware knowledge or Python scripting",
-      "Familiarity with Wireshark & Linux",
-      "Strict confidentiality adherence"
-    ]
-  }
+export const studentInternship = {
+  id: 'int-001',
+  companyName: 'NexGen Software Solutions',
+  companyAddress: '21F Ayala Tower, BGC, Taguig City',
+  supervisorName: 'Engr. Alex Mercer',
+  supervisorEmail: 'alex.mercer@nexgen.com',
+  position: 'Full-Stack Developer Intern',
+  currentStage: 'DURING_INTERNSHIP', // PRE_INTERNSHIP | DURING_INTERNSHIP | POST_INTERNSHIP | COMPLETED
+  isDeployed: true,
+  renderedHours: 186,
+  requiredHours: 486,
+  startDate: '2026-03-10',
+  endDate: '2026-06-10',
+  finalGrade: null,
+  moaStatus: 'PROCESSED', // NOT_STARTED | IN_PROGRESS | PROCESSED
+  deploymentApproved: true,
+  stage2Validated: false,
+  stage3Submitted: false,
+};
+
+// Pre-Internship documents checklist
+export const preInternshipDocs = [
+  { id: 'd1', name: 'Medical Certificate', status: 'APPROVED', comment: '', required: true, fileUrl: null, submittedAt: '2026-03-01' },
+  { id: 'd2', name: 'Parental Consent Form', status: 'APPROVED', comment: '', required: true, fileUrl: null, submittedAt: '2026-03-01' },
+  { id: 'd3', name: 'Resume / Curriculum Vitae', status: 'APPROVED', comment: '', required: true, fileUrl: null, submittedAt: '2026-03-02' },
+  { id: 'd4', name: 'Endorsement Letter from School', status: 'PENDING', comment: '', required: true, fileUrl: null, submittedAt: '2026-03-03' },
+  { id: 'd5', name: 'Acceptance Letter / Company Confirmation', status: 'REJECTED', comment: 'Please resubmit with company letterhead and official signature.', required: true, fileUrl: null, submittedAt: '2026-03-04' },
+  { id: 'd6', name: 'Insurance / HMO Card', status: 'NOT_SUBMITTED', comment: '', required: true, fileUrl: null, submittedAt: null },
 ];
 
-export const applicationRecords = [
-  {
-    id: 1,
-    company: "GCash (Mynt)",
-    position: "Mobile QA Engineering Intern",
-    dateApplied: "2026-03-05",
-    status: "Approved",
-    coverLetter: "I have strong QA analytical skills and am very excited about FinTech stability improvements."
-  },
-  {
-    id: 2,
-    company: "Shopee Philippines",
-    position: "UI/UX Design Intern",
-    dateApplied: "2026-03-07",
-    status: "Pending",
-    coverLetter: "I've designed several mobile prototypes during my undergrad. Check my linked dev portfolio."
-  },
-  {
-    id: 3,
-    company: "Accenture Philippines",
-    position: "Software Engineering Intern",
-    dateApplied: "2026-03-10",
-    status: "Rejected",
-    coverLetter: "Full-stack developer focused on React & scaling Node architectures."
-  },
-  {
-    id: 4,
-    company: "SGV & Co.",
-    position: "Technology Risk Intern",
-    dateApplied: "2026-03-15",
-    status: "Pending",
-    coverLetter: "Interested in the security mapping of ERP systems and doing consulting risks."
-  }
+// Attendance / Daily logs
+export const attendanceLogs = [
+  { id: 'a1', date: '2026-05-09', timeIn: '08:00', timeOut: '17:00', hours: 9, activities: 'Developed REST API endpoints for user auth module. Fixed bug in JWT refresh logic.', status: 'PRESENT' },
+  { id: 'a2', date: '2026-05-08', timeIn: '08:15', timeOut: '17:15', hours: 9, activities: 'Integrated frontend login page with backend. Ran unit tests.', status: 'PRESENT' },
+  { id: 'a3', date: '2026-05-07', timeIn: '08:00', timeOut: '12:00', hours: 4, activities: 'Half day — attended school seminar in the morning.', status: 'HALF_DAY' },
+  { id: 'a4', date: '2026-05-06', timeIn: '08:00', timeOut: '17:00', hours: 9, activities: 'Setup CI/CD pipeline using GitHub Actions. Documentation updates.', status: 'PRESENT' },
+  { id: 'a5', date: '2026-05-05', timeIn: '-', timeOut: '-', hours: 0, activities: '', status: 'ABSENT' },
 ];
 
-export const userNotifications = [
-  { id: 1, type: "system", message: "Welcome to your OJT Dashboard! Update your profile to get started.", timestamp: "2 days ago", read: true },
-  { id: 2, type: "application", message: "Your application at Shopee Philippines has been RECEIVED.", timestamp: "1 day ago", read: false },
-  { id: 3, type: "application", message: "GCash (Mynt) has APPROVED your internship application! Check matching supervisor steps.", timestamp: "3 hours ago", read: false },
-  { id: 4, type: "system", message: "System Maintenance scheduled on Sunday 10:00 PM.", timestamp: "5 hours ago", read: true },
-  { id: 5, type: "application", message: "Accenture Philippines application was REJECTED.", timestamp: "1 day ago", read: true }
+// Weekly Activity Reports
+export const warSubmissions = [
+  { id: 'w1', weekNumber: 1, weekLabel: 'Week 1 (Mar 10–14)', summary: 'Set up development environment, cloned repos, attended onboarding.', skillsLearned: 'Git branching, project setup, company coding standards.', challenges: 'Adapting to large existing codebase.', status: 'APPROVED', comment: 'Great start! Keep it up.', submittedAt: '2026-03-14' },
+  { id: 'w2', weekNumber: 2, weekLabel: 'Week 2 (Mar 17–21)', summary: 'Started working on authentication module. Implemented JWT login flow.', skillsLearned: 'JWT authentication, Node.js middleware.', challenges: 'Token refresh logic was complex.', status: 'APPROVED', comment: 'Well documented progress.', submittedAt: '2026-03-21' },
+  { id: 'w3', weekNumber: 3, weekLabel: 'Week 3 (Mar 24–28)', summary: 'Built React login/register UI components.', skillsLearned: 'React hooks, form validation, axios integration.', challenges: 'Managing form state with multiple fields.', status: 'REJECTED', comment: 'WAR is too brief. Please provide more detail on technical challenges.', submittedAt: '2026-03-28' },
+  { id: 'w4', weekNumber: 4, weekLabel: 'Week 4 (Mar 31–Apr 4)', summary: 'Revised and resubmitted Week 3 WAR. Continued with dashboard development.', skillsLearned: 'Data visualization, Chart.js, responsive design.', challenges: 'Optimizing chart rendering performance.', status: 'PENDING', comment: '', submittedAt: '2026-04-04' },
 ];
+
+export const completionDocs = {
+  certificateOfCompletion: null,     // file URL when uploaded
+  supervisorEvaluation: null,        // file URL when uploaded
+  certificateStatus: 'NOT_SUBMITTED',
+  evaluationStatus: 'NOT_SUBMITTED',
+};
+
+export const portfolioItems = [
+  { id: 'p1', name: 'Compiled Daily Activity Logs', uploaded: false, fileUrl: null },
+  { id: 'p2', name: 'Weekly Activity Reports (All Weeks)', uploaded: false, fileUrl: null },
+  { id: 'p3', name: 'Certificate of Completion', uploaded: false, fileUrl: null },
+  { id: 'p4', name: 'Supervisor Evaluation Form', uploaded: false, fileUrl: null },
+  { id: 'p5', name: 'Updated Resume / CV', uploaded: false, fileUrl: null },
+  { id: 'p6', name: 'Final Narrative Report', uploaded: false, fileUrl: null },
+];
+
+export const studentNotifications = [
+  { id: 'n1', type: 'document', message: 'Your Acceptance Letter was REJECTED by your OJT Head. Please resubmit with company letterhead.', timestamp: '2 hours ago', read: false, stage: 'PRE_INTERNSHIP' },
+  { id: 'n2', type: 'war', message: 'Your Week 3 WAR was REJECTED. Reason: "Too brief — add more technical detail."', timestamp: '3 days ago', read: false, stage: 'DURING_INTERNSHIP' },
+  { id: 'n3', type: 'deployment', message: '🎉 You have been approved for deployment! Stage 2 (During Internship) is now unlocked.', timestamp: '1 week ago', read: true, stage: 'DURING_INTERNSHIP' },
+  { id: 'n4', type: 'system', message: '📋 Reminder: Your Week 4 WAR is due today (Friday). Please submit before end of day.', timestamp: '1 week ago', read: true, stage: 'DURING_INTERNSHIP' },
+  { id: 'n5', type: 'document', message: 'Your Medical Certificate and Parental Consent Form have been APPROVED.', timestamp: '2 weeks ago', read: true, stage: 'PRE_INTERNSHIP' },
+];
+
+// ── Backwards-compatibility exports for legacy pages ─────────────────────────
+export const userNotifications = studentNotifications;
 
 export const progressState = {
-  company: "NexGen Software Solutions",
-  supervisor: "Engr. Alex Mercer",
-  startDate: "Mar 10, 2026",
-  endDate: "Jun 10, 2026",
-  hoursCompleted: 150,
-  hoursTotal: 300,
-  tasks: [
-    { id: 1, title: "Develop responsive React-based dashboards", status: "Done" },
-    { id: 2, title: "Integrate RESTful Backend API endpoints", status: "Done" },
-    { id: 3, title: "Debug responsive design edge cases (mobile layout)", status: "In Progress" },
-    { id: 4, title: "Deploy build to testing environments", status: "Not Started" }
-  ],
-  weeklyLogs: [
-    { week: 1, hours: 40, activities: "Setup code repos, reviewed Figma mockup details.", supervisorSign: "Signed" },
-    { week: 2, hours: 40, activities: "Built basic Layouts grids and Routes controllers.", supervisorSign: "Signed" },
-    { week: 3, hours: 40, activities: "Implemented dynamic components connecting static endpoints.", supervisorSign: "Pending" }
-  ]
+  company: studentInternship.company,
+  supervisor: studentInternship.supervisorName,
+  startDate: studentInternship.startDate,
+  hoursCompleted: studentInternship.renderedHours,
+  hoursTotal: studentInternship.requiredHours,
+  tasks: [],
+  weeklyLogs: [],
 };
 
 export const gradesEvaluations = {
-  overallGrade: "1.25",
-  coordinatorRemarks: "Excellent response reporting and proactive participation in testing modules. Documentations are structured neatly.",
-  evaluations: [
-    { criteria: "Attendance & Punctuality", score: 95 },
-    { criteria: "Technical Proficiency", score: 92 },
-    { criteria: "Communication & Attitude", score: 96 },
-    { criteria: "Task Delivery Speed", score: 90 },
-    { criteria: "Initiative & Learning", score: 94 }
-  ]
+  overallGrade: studentInternship.finalGrade || 'Pending',
+  coordinatorRemarks: 'Awaiting final evaluation.',
+  evaluations: [],
 };
+
+export const applicationRecords = [];
+export const internshipListings = [];

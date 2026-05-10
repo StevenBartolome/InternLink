@@ -7,10 +7,11 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { userNotifications } from '../../services/mocks/mockData';
+import { studentNotifications } from '../../services/mocks/mockData';
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState(userNotifications);
+  const [notifications, setNotifications] = useState(studentNotifications.map(n => ({ ...n, read: n.read ?? false })));
+
 
   const markAsRead = (id) => {
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
