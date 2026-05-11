@@ -10,8 +10,13 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "framer-motion": "^12.38.0",
+    "http-proxy-middleware": "^4.0.0",
     "lucide-react": "^0.577.0",
+    "nodemailer": "^8.0.7",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.74.0",
@@ -21,7 +26,9 @@
     "zod": "^4.3.6"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "concurrently \"npm run client\" \"npm run server\"",
+    "client": "react-scripts start",
+    "server": "node server/index.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -43,5 +50,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }

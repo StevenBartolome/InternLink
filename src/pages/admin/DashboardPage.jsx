@@ -1,15 +1,16 @@
-// src/pages/admin/DashboardPage.jsx
 import React, { useState } from 'react';
 import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText, Bell } from 'lucide-react';
-import { adminProfile, dashboardStats, auditLogs, systemReports } from '../../services/mocks/adminMockData';
+import { dashboardStats, auditLogs, systemReports } from '../../services/mocks/adminMockData';
 import StatCard from '../../components/common/StatCard';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import Toast from '../../components/common/Toast';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const DashboardPage = () => {
+  const { user } = useAuth();
   const { 
     totalStudents, 
     totalOjtHeads, 
@@ -224,7 +225,7 @@ const DashboardPage = () => {
       {/* Welcome Card */}
       <div style={styles.welcomeBanner}>
         <div>
-          <h1 style={styles.welcomeBanner.h1}>Welcome back, {adminProfile.name}!</h1>
+          <h1 style={styles.welcomeBanner.h1}>Welcome back, {user?.first_name || 'Admin'}!</h1>
           <p style={styles.welcomeBanner.p}>System Status: <strong>Operational</strong></p>
           <p style={styles.welcomeBanner.welcomeSubtext}>Central oversight for all OJT programs and 3-stage workflows.</p>
         </div>

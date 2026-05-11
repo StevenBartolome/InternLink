@@ -1,12 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Menu, X, LayoutDashboard, User, Briefcase, FileCheck, 
-  CheckSquare, Award, Bell, LogOut, GraduationCap, PlusSquare, Users, ChevronDown, ChevronUp,
-  BarChart2
+  Menu, X, LayoutDashboard, User, Bell, LogOut, GraduationCap, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { studentProfile } from '../../../services/mocks/mockData';
-import { companyProfile } from '../../../services/mocks/employerMockData';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useAuth } from '../../../context/AuthContext';
@@ -14,7 +10,6 @@ import { useAuth } from '../../../context/AuthContext';
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [openSubmenus, setOpenSubmenus] = useState({});
-  const location = useLocation();
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const { logout } = useAuth();
 
@@ -75,7 +70,6 @@ const Sidebar = () => {
       gap: '12px',
       padding: '12px 16px',
       borderRadius: '8px',
-      color: 'rgba(255, 255, 255, 0.8)',
       textDecoration: 'none',
       fontSize: '0.875rem',
       fontWeight: 500,

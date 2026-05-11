@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentProfile } from '../../services/mocks/mockData';
+// import { studentProfile } from '../../services/mocks/mockData';
 
 const SkillsManagerPage = () => {
-  const [skills, setSkills] = useState(studentProfile.skills);
+  const [skills, setSkills] = useState([]); // Real skills will be loaded from profile
   const [newSkill, setNewSkill] = useState('');
 
   const addSkill = () => {

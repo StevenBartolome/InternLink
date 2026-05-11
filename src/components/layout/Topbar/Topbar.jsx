@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Bell, LogOut, GraduationCap, Briefcase, User } from 'lucide-react';
-import { studentNotifications, studentProfile } from '../../../services/mocks/mockData';
-import { adminProfile } from '../../../services/mocks/adminMockData';
+import { Bell, LogOut, User } from 'lucide-react';
+// import { studentNotifications, studentProfile } from '../../../services/mocks/mockData';
 import Modal from '../../common/Modal/Modal';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
@@ -14,7 +13,7 @@ const Topbar = () => {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 1024px)');
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   
   const isEmployer = location.pathname.startsWith('/employer');
   const isAdmin = location.pathname.startsWith('/admin');
@@ -38,7 +37,7 @@ const Topbar = () => {
     return 'Student Dashboard';
   };
 
-  const notifications = isAdmin ? [] : studentNotifications;
+  const notifications = []; // TODO: Implement real notifications
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
   const handleLogout = () => {
@@ -47,14 +46,14 @@ const Topbar = () => {
     navigate('/login');
   };
 
-  const profileData = isAdmin ? {
-    name: adminProfile.name,
-    avatar: adminProfile.avatar,
-    role: "Admin"
+  const profileData = user ? {
+    name: user.name || `${user.first_name} ${user.last_name}`,
+    avatar: user.avatar_url,
+    role: user.role === 'admin' ? 'Admin' : user.role === 'ojt_head' ? 'OJT Head' : 'Student'
   } : {
-    name: studentProfile.name,
-    avatar: studentProfile.avatar,
-    role: "Student"
+    name: 'Loading...',
+    avatar: null,
+    role: ''
   };
 
   const styles = {

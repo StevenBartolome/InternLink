@@ -1,10 +1,11 @@
 // src/components/student/stages/DuringInternship.jsx
 import React, { useState } from 'react';
-import { Calendar, Clock, CheckCircle, Upload, FileText, ChevronDown, ChevronUp, AlertCircle, XCircle, Plus, Send } from 'lucide-react';
+import { Clock, CheckCircle, Upload, ChevronDown, ChevronUp, XCircle, Plus, Send } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
-import { attendanceLogs, warSubmissions, studentInternship, completionDocs } from '../../../services/mocks/mockData';
+import { useAuth } from '../../../context/AuthContext';
+// import { attendanceLogs, warSubmissions, studentInternship, completionDocs } from '../../../services/mocks/mockData';
 
 const WAR_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
@@ -19,18 +20,19 @@ const ATT_STATUS = {
 };
 
 export default function DuringInternship({ onComplete }) {
+  const { user } = useAuth();
   const [toast, setToast] = useState(null);
-  const [logs, setLogs] = useState(attendanceLogs);
-  const [wars, setWars] = useState(warSubmissions);
+  const [logs, setLogs] = useState([]); // Real logs will be fetched from DB
+  const [wars, setWars] = useState([]); // Real reports will be fetched from DB
   const [newLog, setNewLog] = useState({ date: '', timeIn: '', timeOut: '', activities: '' });
   const [newWAR, setNewWAR] = useState({ summary: '', skillsLearned: '', challenges: '' });
   const [activeTab, setActiveTab] = useState('attendance');
   const [showWARForm, setShowWARForm] = useState(false);
   const [expandedWAR, setExpandedWAR] = useState(null);
-  const [compDocs, setCompDocs] = useState(completionDocs);
+  const [compDocs, setCompDocs] = useState({}); // Real docs will be fetched from DB
 
   const totalHours = logs.reduce((acc, l) => acc + (l.hours || 0), 0);
-  const requiredHours = studentInternship.requiredHours;
+  const requiredHours = user?.required_hours || 486;
   const hoursProgress = Math.min((totalHours / requiredHours) * 100, 100);
 
   const handleAddLog = (e) => {

@@ -1,25 +1,60 @@
 import React, { useState, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
-  User, Mail, Phone, MapPin, 
-  Calendar, GraduationCap, Edit,
+  Mail, Phone, MapPin, 
+  Calendar, Edit,
   ShieldCheck, ExternalLink, Github,
   FileText, Award, Star, Save, X, Plus, Trash2, Eye, Upload
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentProfile as initialProfile } from '../../services/mocks/mockData';
+import { useAuth } from '../../context/AuthContext';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const ProfilePage = () => {
+  const { user } = useAuth();
   const { showToast } = useOutletContext() || {};
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  
+  // Default structure for student profile, merged with real auth user
+  const initialData = {
+    name: user?.name || '',
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    email: user?.email || '',
+    course: user?.course || '',
+    contact: user?.contact_number || '',
+    studentId: user?.student_id || '',
+    address: 'Not provided', // Placeholder for data not yet in DB
+    avatar: `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=random`,
+    skills: ['Communication', 'Teamwork'],
+    certifications: [],
+    portfolioLinks: [],
+    resumeFiles: []
+  };
+
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({ ...initialProfile, resumeFiles: [] });
-  const [tempProfile, setTempProfile] = useState({ ...initialProfile, resumeFiles: [] });
+  const [profile, setProfile] = useState(initialData);
+  const [tempProfile, setTempProfile] = useState(initialData);
   const [skillInput, setSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Sync profile state when user data changes
+  React.useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        name: user.name,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        course: user.course,
+        contact: user.contact_number,
+        studentId: user.student_id
+      }));
+    }
+  }, [user]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();

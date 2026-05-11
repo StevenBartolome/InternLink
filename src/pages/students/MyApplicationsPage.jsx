@@ -7,14 +7,14 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { applicationRecords } from '../../services/mocks/mockData';
+// import { applicationRecords } from '../../services/mocks/mockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const MyApplicationsPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [filter, setFilter] = useState('All');
   const [selectedApp, setSelectedApp] = useState(null);
-  const [apps, setApps] = useState(applicationRecords);
+  const [apps, setApps] = useState([]); // Real applications will be loaded from DB
   const [isDeleting, setIsDeleting] = useState(false);
 
   const filteredApps = filter === 'All' 

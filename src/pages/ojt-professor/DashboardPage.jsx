@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import { Users, FileCheck, AlertCircle, FileText, ArrowRight, Activity, BarChart2 } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import StatCard from '../../components/layout/ojt-professor/StatCard';
-import { ojtHeadProfile, mockNotifications, mockStudents } from '../../services/mocks/ojtProfessorMockData';
+import { mockNotifications, mockStudents } from '../../services/mocks/ojtProfessorMockData';
 
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
+import { useAuth } from '../../context/AuthContext';
+
 const DashboardPage = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useOutletContext() || {};
   const isMobile = useMediaQuery('(max-width: 1024px)');
@@ -192,8 +195,8 @@ const DashboardPage = () => {
       {/* Welcome Card */}
       <div style={styles.welcomeBanner}>
         <div style={styles.welcomeText}>
-          <h2 style={styles.welcomeText.h2}>Welcome back, {ojtHeadProfile.name}!</h2>
-          <p style={styles.welcomeText.p}>{ojtHeadProfile.assignedCourse} OJT Head • {ojtHeadProfile.department}</p>
+          <h2 style={styles.welcomeText.h2}>Welcome back, {user?.first_name || 'Professor'}!</h2>
+          <p style={styles.welcomeText.p}>{user?.assigned_course || 'All'} OJT Head • {user?.department || 'Department'}</p>
         </div>
         <div style={styles.quickActions}>
           <button 

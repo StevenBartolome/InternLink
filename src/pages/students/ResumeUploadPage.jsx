@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentProfile } from '../../services/mocks/mockData';
+// import { studentProfile } from '../../services/mocks/mockData';
 
 const ResumeUploadPage = () => {
-  const [files, setFiles] = useState(studentProfile.resumeFiles);
+  const [files, setFiles] = useState([]); // Real files will be loaded from DB
   const [isUploading, setIsUploading] = useState(false);
 
   const deleteFile = (id) => {

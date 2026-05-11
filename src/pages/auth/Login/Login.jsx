@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GraduationCap, ArrowLeft, Mail, EyeOff, Eye, ArrowRight, Info, Users, Shield, BookOpen } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Mail, EyeOff, Eye, ArrowRight, Info, Users, Shield, BookOpen, ShieldAlert } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useAuth } from '../../../context/AuthContext';
@@ -14,21 +14,24 @@ const DEMO_ACCOUNTS = [
 ];
 
 const ROLE_REDIRECTS = {
-  student: '/dashboard',
-  'ojt-head': '/ojt-professor/dashboard',
+  student: '/welcome',
+  ojt_head: '/ojt-professor/dashboard',
   admin: '/admin/dashboard',
 };
-
 const Login = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 900px)');
-  const { login, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [setupData, setSetupData] = useState({ firstName: '', lastName: '', email: '', password: '' });
+  const [setupLoading, setSetupLoading] = useState(false);
+  const { login, user, seedAdmin, setupAdmin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) navigate(ROLE_REDIRECTS[user.role] || '/dashboard');
@@ -38,12 +41,41 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const result = await login(email, password);
-    setLoading(false);
-    if (!result.success) {
-      setError(result.error);
-    } else {
-      navigate(ROLE_REDIRECTS[result.user.role] || '/dashboard');
+
+    // Safety timeout: if login takes more than 10s, release the loading state
+    const timeout = setTimeout(() => {
+      if (loading) {
+        setLoading(false);
+        setError('Login is taking longer than expected. Please check your connection or try again.');
+      }
+    }, 10000);
+
+    try {
+      console.log('Login form submitted for:', email);
+      const result = await login(email, password);
+      clearTimeout(timeout);
+      
+      console.log('Login result:', result.success ? 'Success' : 'Failed', result.error || '');
+
+      if (!result.success) {
+        setLoading(false);
+        if (result.error.toLowerCase().includes('email not confirmed')) {
+          setError('Please check your inbox and verify your email before signing in.');
+        } else {
+          setError(result.error);
+        }
+      } else {
+        // Navigate based on role (Students go to welcome, others to dashboard)
+        const target = ROLE_REDIRECTS[result.user.role] || '/dashboard';
+        console.log('Navigating to:', target, 'Role:', result.user.role);
+        navigate(target);
+        // Note: we don't setLoading(false) here to prevent flicker before navigation
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      setLoading(false);
+      setError('An unexpected error occurred during sign in.');
+      console.error('Submit error:', err);
     }
   };
 
@@ -51,6 +83,35 @@ const Login = () => {
     setEmail(acc.email);
     setPassword(acc.pw);
     setError('');
+  };
+
+  const handleSeedAdmin = async () => {
+    setSeeding(true);
+    setError('');
+    const result = await seedAdmin();
+    setSeeding(false);
+    if (result.success) {
+      setEmail('admin@internlink.edu');
+      setPassword('adminpassword123');
+      setError('Admin account ready! Click Sign In.');
+    } else {
+      setError(result.error || result.message);
+    }
+  };
+
+  const handleSetupAdmin = async (e) => {
+    e.preventDefault();
+    setSetupLoading(true);
+    setError('');
+    const result = await setupAdmin(setupData);
+    setSetupLoading(false);
+    if (result.success) {
+      setError('Admin account created! You can now sign in.');
+      setSetupData({ firstName: '', lastName: '', email: '', password: '' });
+      setShowSetup(false);
+    } else {
+      setError(result.error || 'Failed to create admin');
+    }
   };
 
   const s = {
@@ -123,12 +184,20 @@ const Login = () => {
           {/* Demo quick-fill */}
           <motion.div variants={itemV} style={{ marginBottom: '1.75rem' }}>
             <p style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Demo Login</p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {DEMO_ACCOUNTS.map(acc => (
-                <button key={acc.email} style={s.demoBtn(acc.color)} onClick={() => fillDemo(acc)}>
+                <button key={acc.email} type="button" style={s.demoBtn(acc.color)} onClick={() => fillDemo(acc)}>
                   {acc.icon} {acc.label}
                 </button>
               ))}
+              <button 
+                type="button" 
+                style={{...s.demoBtn('#f59e0b'), border: seeding ? 'none' : `1px solid #f59e0b20` }} 
+                onClick={handleSeedAdmin}
+                disabled={seeding}
+              >
+                {seeding ? 'Seeding...' : <><ShieldAlert size={14} /> Seed Admin</>}
+              </button>
             </div>
           </motion.div>
 
@@ -171,18 +240,55 @@ const Login = () => {
             </motion.button>
           </form>
 
-          <motion.div variants={itemV} style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.925rem', color: '#64748b' }}>
-            New student?{' '}
-            <span onClick={() => navigate('/register')} style={{ color: theme.colors.primary, fontWeight: 700, cursor: 'pointer' }}>
-              Register with your COR
-            </span>
-          </motion.div>
-
           <motion.div variants={itemV} style={{ marginTop: '2rem', padding: '14px 16px', backgroundColor: '#f1f5f9', borderRadius: '12px', display: 'flex', gap: '12px', color: '#475569' }}>
             <Users size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
             <p style={{ fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
               <strong>One portal for all roles.</strong> The system automatically detects whether you are a Student, OJT Head, or Admin and redirects you to the correct dashboard.
             </p>
+          </motion.div>
+
+          {/* Admin Setup Section (User requested to add at bottom) */}
+          <motion.div variants={itemV} style={{ marginTop: '3rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
+            {!showSetup ? (
+              <button 
+                onClick={() => setShowSetup(true)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+              >
+                Create Admin Account (Temporary)
+              </button>
+            ) : (
+              <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Admin Account Setup</h3>
+                <form onSubmit={handleSetupAdmin}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                    <input 
+                      placeholder="First Name" style={{ ...s.input, paddingLeft: '12px' }} 
+                      value={setupData.firstName} onChange={e => setSetupData(p => ({ ...p, firstName: e.target.value }))} required 
+                    />
+                    <input 
+                      placeholder="Last Name" style={{ ...s.input, paddingLeft: '12px' }} 
+                      value={setupData.lastName} onChange={e => setSetupData(p => ({ ...p, lastName: e.target.value }))} required 
+                    />
+                  </div>
+                  <input 
+                    type="email" placeholder="Admin Email" style={{ ...s.input, paddingLeft: '12px', marginBottom: '10px' }} 
+                    value={setupData.email} onChange={e => setSetupData(p => ({ ...p, email: e.target.value }))} required 
+                  />
+                  <input 
+                    type="password" placeholder="Password" style={{ ...s.input, paddingLeft: '12px', marginBottom: '15px' }} 
+                    value={setupData.password} onChange={e => setSetupData(p => ({ ...p, password: e.target.value }))} required 
+                  />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button type="submit" disabled={setupLoading} style={{ ...s.btn, padding: '0.6rem', fontSize: '0.875rem' }}>
+                      {setupLoading ? 'Creating...' : 'Create Admin'}
+                    </button>
+                    <button type="button" onClick={() => setShowSetup(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
           </motion.div>
         </motion.div>
       </div>

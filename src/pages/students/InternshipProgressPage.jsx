@@ -1,19 +1,27 @@
 import React, { useState } from 'react';
 import { 
-  Clock, CheckCircle, AlertCircle, 
-  Calendar, MapPin, User,
-  FileText, Download, Play,
-  BarChart3, MoreVertical, Plus,
+  Clock, CheckCircle, 
+  Calendar, User,
+  Play,
+  BarChart3,
   XCircle, Save
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { progressState as initialProgressState } from '../../services/mocks/mockData';
+// import { progressState as initialProgressState } from '../../services/mocks/mockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 
 const InternshipProgressPage = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
-  const [progressState, setProgressState] = useState(initialProgressState);
+  const [progressState, setProgressState] = useState({
+    company: 'Not Deployed',
+    supervisor: 'None',
+    startDate: 'N/A',
+    hoursCompleted: 0,
+    hoursTotal: 486,
+    tasks: [],
+    weeklyLogs: []
+  });
   const [selectedLog, setSelectedLog] = useState(null);
   const [showLogForm, setShowLogForm] = useState(false);
   const [newLog, setNewLog] = useState({ hours: '', activities: '' });

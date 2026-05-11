@@ -1,17 +1,22 @@
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
-  Award, FileText, CheckCircle, 
-  MessageSquare, User, Building2,
-  TrendingUp, Download, Info,
-  Star, ShieldCheck
+  MessageSquare,
+  Download,
+  ShieldCheck
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { gradesEvaluations, progressState } from '../../services/mocks/mockData';
+// import { gradesEvaluations, progressState } from '../../services/mocks/mockData';
 
 const GradesEvaluationsPage = () => {
   const { showToast } = useOutletContext() || {};
+  const grades = {
+    overallGrade: 'N/A',
+    coordinatorRemarks: 'Final evaluation pending.',
+    evaluations: []
+  };
+  const currentProgress = { company: 'Not Available' };
 
   const handleExport = () => {
     if (showToast) {
@@ -67,7 +72,7 @@ const GradesEvaluationsPage = () => {
 
       <div style={styles.gradeHero}>
         <div style={{ width: '120px', height: '120px', borderRadius: '50%', backgroundColor: theme.colors.primary, color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(30, 64, 175, 0.2)' }}>
-          <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{gradesEvaluations.overallGrade}</div>
+          <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{grades.overallGrade}</div>
           <div style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8 }}>FINAL GRADE</div>
         </div>
         <div style={{ flex: 1 }}>
@@ -75,15 +80,15 @@ const GradesEvaluationsPage = () => {
             <ShieldCheck size={20} />
             <span style={{ fontWeight: 700, fontSize: '1rem' }}>Coordinator Verified</span>
           </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 12px 0' }}>{progressState.company}</h2>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 12px 0' }}>{currentProgress.company}</h2>
           <p style={{ margin: 0, color: theme.colors.textMuted, lineHeight: 1.6, maxWidth: '600px' }}>
-            "{gradesEvaluations.coordinatorRemarks}"
+            "{grades.coordinatorRemarks}"
           </p>
         </div>
       </div>
 
       <div style={styles.scoreGrid}>
-        {gradesEvaluations.evaluations.map((evalItem, i) => (
+        {grades.evaluations.map((evalItem, i) => (
           <div key={i} style={styles.criteriaCard}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{evalItem.criteria}</span>

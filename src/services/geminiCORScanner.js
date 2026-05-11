@@ -41,7 +41,8 @@ export async function scanCORWithGemini(pdfFile) {
 
 Extract:
 {
-  "studentName": "Full name of the student (First Middle Last)",
+  "firstName": "First name of the student",
+  "lastName": "Last name of the student",
   "studentId": "Student ID number",
   "course": "Full course name (e.g. Bachelor of Science in Information Technology)",
   "courseCode": "Short course code (e.g. BSIT, BSCS, BSIS)",
@@ -82,7 +83,8 @@ Be accurate — this is used for student verification.`;
     return {
       success: true,
       data: {
-        studentName: parsed.studentName || '',
+        firstName: parsed.firstName || '',
+        lastName: parsed.lastName || '',
         studentId: parsed.studentId || '',
         course: parsed.course || '',
         courseCode: parsed.courseCode || '',
@@ -126,7 +128,8 @@ function getMockScanResult(filename) {
         success: true,
         eligible: true,
         data: {
-          studentName: 'Maria Gabriela Santos',
+          firstName: 'Maria Gabriela',
+          lastName: 'Santos',
           studentId: '2023-00042',
           course: 'Bachelor of Science in Information Technology',
           courseCode: 'BSIT',

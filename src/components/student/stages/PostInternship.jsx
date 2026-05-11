@@ -4,13 +4,15 @@ import { Award, Upload, CheckCircle, Clock, FileText, Send, Star } from 'lucide-
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
-import { portfolioItems, studentInternship } from '../../../services/mocks/mockData';
+import { useAuth } from '../../../context/AuthContext';
+// import { portfolioItems, studentInternship } from '../../../services/mocks/mockData';
 
 export default function PostInternship() {
+  const { user } = useAuth();
   const [toast, setToast] = useState(null);
-  const [items, setItems] = useState(portfolioItems);
-  const [submitted, setSubmitted] = useState(studentInternship.stage3Submitted || false);
-  const finalGrade = studentInternship.finalGrade; // null until OJT Head encodes
+  const [items, setItems] = useState([]); // Real items will be fetched from DB
+  const [submitted, setSubmitted] = useState(user?.stage3_submitted || false);
+  const finalGrade = user?.final_grade; // null until OJT Head encodes
 
   const handleUpload = (itemId, file) => {
     if (!file) return;

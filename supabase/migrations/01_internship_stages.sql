@@ -1,10 +1,10 @@
 -- InternLink Full Schema Migration
 -- Aligned to the new 3-Stage Sequential OJT Management System
 
--- ══════════════════════════════════════════════════════
--- 1. Enums
--- ══════════════════════════════════════════════════════
+-- 1. Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- 2. Enums
 CREATE TYPE internship_stage AS ENUM (
   'PRE_INTERNSHIP', 'DURING_INTERNSHIP', 'POST_INTERNSHIP', 'COMPLETED'
 );
@@ -25,13 +25,11 @@ CREATE TYPE user_role AS ENUM (
   'admin', 'ojt_head', 'student'
 );
 
--- ══════════════════════════════════════════════════════
--- 2. User Profiles (extends Supabase auth.users)
--- ══════════════════════════════════════════════════════
-
-CREATE TABLE profiles (
+-- 3. Users table (Linked to Supabase Auth)
+CREATE TABLE users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  full_name VARCHAR(255) NOT NULL,
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
   role user_role NOT NULL DEFAULT 'student',
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   is_first_login BOOLEAN NOT NULL DEFAULT TRUE,
@@ -39,14 +37,11 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ══════════════════════════════════════════════════════
--- 3. Student Profiles (COR-extracted data)
--- ══════════════════════════════════════════════════════
-
+-- 4. Student Profiles (COR-extracted data)
 CREATE TABLE student_profiles (
-  id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-  student_id VARCHAR(50) UNIQUE NOT NULL,         -- e.g. 2023-00042
-  course VARCHAR(100) NOT NULL,                    -- e.g. BSIT
+  id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  student_id VARCHAR(50) UNIQUE NOT NULL,
+  course VARCHAR(100) NOT NULL,
   course_full_name TEXT,
   year_level VARCHAR(20),
   academic_year VARCHAR(20),
@@ -55,22 +50,16 @@ CREATE TABLE student_profiles (
   contact_number VARCHAR(30)
 );
 
--- ══════════════════════════════════════════════════════
--- 4. OJT Head Profiles
--- ══════════════════════════════════════════════════════
-
+-- 5. OJT Head Profiles
 CREATE TABLE ojt_head_profiles (
-  id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
-  assigned_course VARCHAR(100) NOT NULL,          -- e.g. BSIT
+  id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  assigned_course VARCHAR(100) NOT NULL,
   department VARCHAR(255),
   contact_number VARCHAR(30),
-  temp_password VARCHAR(255)                      -- cleared after first login
+  temp_password VARCHAR(255)
 );
 
--- ══════════════════════════════════════════════════════
--- 5. Internship Configuration (per course, set by Admin)
--- ══════════════════════════════════════════════════════
-
+-- 6. Internship Configuration
 CREATE TABLE internship_config (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   course VARCHAR(100) UNIQUE NOT NULL,
@@ -83,7 +72,6 @@ CREATE TABLE internship_config (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Required documents per course (configurable)
 CREATE TABLE required_documents_config (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   config_id UUID NOT NULL REFERENCES internship_config(id) ON DELETE CASCADE,
@@ -91,14 +79,11 @@ CREATE TABLE required_documents_config (
   sort_order INTEGER DEFAULT 0
 );
 
--- ══════════════════════════════════════════════════════
--- 6. Student Internships (core record)
--- ══════════════════════════════════════════════════════
-
+-- 7. Student Internships
 CREATE TABLE student_internships (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  ojt_head_id UUID REFERENCES profiles(id),       -- auto-assigned by course
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ojt_head_id UUID REFERENCES users(id),
   company_name VARCHAR(255),
   company_address TEXT,
   position VARCHAR(255),
@@ -120,10 +105,7 @@ CREATE TABLE student_internships (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ══════════════════════════════════════════════════════
--- 7. Pre-Internship Documents
--- ══════════════════════════════════════════════════════
-
+-- 8. Pre-Internship Documents
 CREATE TABLE pre_internship_documents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -133,13 +115,10 @@ CREATE TABLE pre_internship_documents (
   reviewer_comment TEXT,
   submitted_at TIMESTAMPTZ,
   reviewed_at TIMESTAMPTZ,
-  reviewed_by UUID REFERENCES profiles(id)
+  reviewed_by UUID REFERENCES users(id)
 );
 
--- ══════════════════════════════════════════════════════
--- 8. Daily Attendance Logs
--- ══════════════════════════════════════════════════════
-
+-- 9. Daily Attendance Logs
 CREATE TABLE daily_attendance_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -148,15 +127,12 @@ CREATE TABLE daily_attendance_logs (
   time_out TIME,
   hours_rendered NUMERIC(4,2),
   activities_description TEXT,
-  status VARCHAR(20) DEFAULT 'PRESENT',  -- PRESENT, ABSENT, HALF_DAY
+  status VARCHAR(20) DEFAULT 'PRESENT',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(internship_id, log_date)
 );
 
--- ══════════════════════════════════════════════════════
--- 9. Weekly Activity Reports (WARs)
--- ══════════════════════════════════════════════════════
-
+-- 10. Weekly Activity Reports (WARs)
 CREATE TABLE weekly_activity_reports (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -169,14 +145,11 @@ CREATE TABLE weekly_activity_reports (
   reviewer_comment TEXT,
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
   reviewed_at TIMESTAMPTZ,
-  reviewed_by UUID REFERENCES profiles(id),
+  reviewed_by UUID REFERENCES users(id),
   UNIQUE(internship_id, week_number)
 );
 
--- ══════════════════════════════════════════════════════
--- 10. During Internship Completion Documents
--- ══════════════════════════════════════════════════════
-
+-- 11. During Internship Completion Documents
 CREATE TABLE during_internship_documents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -187,10 +160,7 @@ CREATE TABLE during_internship_documents (
   uploaded_at TIMESTAMPTZ
 );
 
--- ══════════════════════════════════════════════════════
--- 11. Post-Internship Portfolio
--- ══════════════════════════════════════════════════════
-
+-- 12. Post-Internship Portfolio
 CREATE TABLE portfolio_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -200,17 +170,14 @@ CREATE TABLE portfolio_items (
   uploaded_at TIMESTAMPTZ
 );
 
--- ══════════════════════════════════════════════════════
--- 12. Company Visit Logs (OJT Head)
--- ══════════════════════════════════════════════════════
-
+-- 13. Company Visit Logs
 CREATE TABLE company_visits (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  ojt_head_id UUID NOT NULL REFERENCES profiles(id),
+  ojt_head_id UUID NOT NULL REFERENCES users(id),
   visit_date DATE NOT NULL,
   location TEXT NOT NULL,
   notes TEXT,
-  status VARCHAR(20) DEFAULT 'SCHEDULED',  -- SCHEDULED, COMPLETED
+  status VARCHAR(20) DEFAULT 'SCHEDULED',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -220,38 +187,29 @@ CREATE TABLE company_visit_students (
   internship_id UUID NOT NULL REFERENCES student_internships(id)
 );
 
--- ══════════════════════════════════════════════════════
--- 13. Notifications
--- ══════════════════════════════════════════════════════
-
+-- 14. Notifications
 CREATE TABLE notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  recipient_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  type VARCHAR(50) NOT NULL,  -- document, war, deployment, stage_unlock, system, reminder
+  recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
   message TEXT NOT NULL,
   is_read BOOLEAN NOT NULL DEFAULT FALSE,
   related_stage internship_stage,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ══════════════════════════════════════════════════════
--- 14. Announcements (Admin)
--- ══════════════════════════════════════════════════════
-
+-- 15. Announcements
 CREATE TABLE announcements (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title VARCHAR(255) NOT NULL,
   message TEXT NOT NULL,
-  target_role user_role,   -- null = all roles
-  target_course VARCHAR(100),  -- null = all courses
-  created_by UUID NOT NULL REFERENCES profiles(id),
+  target_role user_role,
+  target_course VARCHAR(100),
+  created_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ══════════════════════════════════════════════════════
--- 15. At-Risk Flags (auto-computed)
--- ══════════════════════════════════════════════════════
-
+-- 16. At-Risk Flags
 CREATE TABLE at_risk_flags (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -260,10 +218,7 @@ CREATE TABLE at_risk_flags (
   resolved_at TIMESTAMPTZ
 );
 
--- ══════════════════════════════════════════════════════
--- 16. Seed: Default internship config per course
--- ══════════════════════════════════════════════════════
-
+-- 17. Seed: Default internship config per course
 INSERT INTO internship_config (course, course_full_name, required_hours, ojt_subject_code)
 VALUES
   ('BSIT',  'Bachelor of Science in Information Technology', 486, 'IT 401'),

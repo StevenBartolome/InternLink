@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, UserPlus, CheckCircle } from 'lucide-react';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
+import CreateStudentModal from '../../components/ojt-professor/CreateStudentModal';
 import { mockStudents } from '../../services/mocks/ojtProfessorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -13,6 +14,8 @@ const StudentDirectoryPage = () => {
   const [courseFilter, setCourseFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [hoveredRow, setHoveredRow] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { showToast } = useOutletContext() || {};
@@ -30,11 +33,32 @@ const StudentDirectoryPage = () => {
     navigate(`/ojt-professor/students/${student.id}`);
   };
 
+  const handleSuccess = (message) => {
+    if (showToast) showToast(message, 'success');
+    else alert(message);
+    // Ideally we would refresh the list here from Supabase
+  };
+
   const styles = {
     page: {
       display: 'flex',
       flexDirection: 'column',
       gap: '1.5rem',
+    },
+    headerActions: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: '1rem',
+      flexWrap: 'wrap',
+    },
+    createBtn: {
+      ...commonStyles.dashboardBtnPrimary,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      padding: '0.625rem 1.25rem',
+      fontSize: '0.875rem',
     },
     filtersBar: {
       ...commonStyles.dashboardCard,
@@ -146,6 +170,13 @@ const StudentDirectoryPage = () => {
 
   return (
     <div style={styles.page}>
+      <div style={styles.headerActions}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: theme.colors.textMain, margin: 0 }}>Student Directory</h2>
+        <button style={styles.createBtn} onClick={() => setShowCreateModal(true)}>
+          <UserPlus size={18} /> Create Student Account
+        </button>
+      </div>
+
       {/* Filters Bar */}
       <div style={styles.filtersBar}>
         <div style={styles.searchWrapper}>
@@ -251,6 +282,12 @@ const StudentDirectoryPage = () => {
         </table>
       </div>
 
+      {showCreateModal && (
+        <CreateStudentModal 
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 };

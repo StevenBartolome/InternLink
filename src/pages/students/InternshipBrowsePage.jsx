@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { internshipListings } from '../../services/mocks/mockData';
+// import { internshipListings } from '../../services/mocks/mockData';
 import { Search, MapPin, Clock, Briefcase, Filter } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -15,17 +15,17 @@ export default function InternshipBrowsePage() {
     duration: ''
   });
   const [hoveredCard, setHoveredCard] = useState(null);
-
+  const listings = []; // Real listings will be fetched from DB
   const isDesktop = useMediaQuery('(min-width: 1025px)');
   const isMobile = useMediaQuery('(max-width: 640px)');
   const isTablet = useMediaQuery('(max-width: 1024px)');
 
-  // Extract unique filter options from mock data
-  const industries = [...new Set(internshipListings.map(item => item.industry))];
-  const locations = [...new Set(internshipListings.map(item => item.location.split(',')[1]?.trim() || item.location))];
+  // Extract unique filter options
+  const industries = [...new Set(listings.map(item => item.industry))];
+  const locations = [...new Set(listings.map(item => item.location.split(',')[1]?.trim() || item.location))];
 
   // Filtering Logic
-  const filteredListings = internshipListings.filter(job => {
+  const filteredListings = listings.filter(job => {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           job.company.toLowerCase().includes(searchQuery.toLowerCase());
     

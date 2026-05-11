@@ -4,7 +4,8 @@ import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, Aler
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
-import { preInternshipDocs, studentInternship } from '../../../services/mocks/mockData';
+import { useAuth } from '../../../context/AuthContext';
+// import { preInternshipDocs, studentInternship } from '../../../services/mocks/mockData';
 
 const STATUS_CONFIG = {
   APPROVED:      { label: 'Approved',      color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={14} /> },
@@ -17,17 +18,18 @@ const MOA_COLORS = { NOT_STARTED: '#94a3b8', IN_PROGRESS: '#d97706', PROCESSED: 
 const MOA_LABELS = { NOT_STARTED: 'Not Started', IN_PROGRESS: 'In Progress', PROCESSED: 'Processed' };
 
 export default function PreInternship({ onDeploy }) {
+  const { user } = useAuth();
   const [toast, setToast] = useState(null);
-  const [docs, setDocs] = useState(preInternshipDocs);
+  const [docs, setDocs] = useState([]); // Real docs will be fetched from DB
   const [expandedDoc, setExpandedDoc] = useState(null);
   const [companyForm, setCompanyForm] = useState({
-    companyName: studentInternship.companyName || '',
-    companyAddress: studentInternship.companyAddress || '',
-    position: studentInternship.position || '',
+    companyName: user?.company_name || '',
+    companyAddress: user?.company_address || '',
+    position: user?.position || '',
   });
-  const [companySaved, setCompanySaved] = useState(!!studentInternship.companyName);
-  const moaStatus = studentInternship.moaStatus;
-  const deploymentApproved = studentInternship.deploymentApproved;
+  const [companySaved, setCompanySaved] = useState(!!user?.company_name);
+  const moaStatus = user?.moa_status || 'NOT_STARTED';
+  const deploymentApproved = user?.is_deployed || false;
 
   const handleFileUpload = (docId, file) => {
     if (!file) return;

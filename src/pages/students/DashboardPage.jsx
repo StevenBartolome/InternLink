@@ -5,16 +5,22 @@ import { useMediaQuery } from '../../hooks/useMediaQuery';
 import PreInternship from '../../components/student/stages/PreInternship';
 import DuringInternship from '../../components/student/stages/DuringInternship';
 import PostInternship from '../../components/student/stages/PostInternship';
-import { studentProfile } from '../../services/mocks/mockData';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [isVisible, setIsVisible] = useState(false);
-  const [currentStage, setCurrentStage] = useState('PRE_INTERNSHIP'); // PRE_INTERNSHIP, DURING_INTERNSHIP, POST_INTERNSHIP
+  
+  // Use real stage from user profile, fallback to PRE_INTERNSHIP
+  const [currentStage, setCurrentStage] = useState(user?.current_stage || 'PRE_INTERNSHIP');
 
   useEffect(() => {
     setIsVisible(true);
-  }, []);
+    if (user?.current_stage) {
+      setCurrentStage(user.current_stage);
+    }
+  }, [user]);
 
   const handleDeploy = () => {
     setCurrentStage('DURING_INTERNSHIP');
@@ -101,7 +107,7 @@ export default function DashboardPage() {
     <div style={styles.container}>
       <div style={styles.welcomeBanner}>
         <div>
-          <h1 style={{ margin: '0 0 8px 0', fontSize: '24px' }}>Welcome back, {studentProfile.name.split(' ')[0]}!</h1>
+          <h1 style={{ margin: '0 0 8px 0', fontSize: '24px' }}>Welcome back, {user?.first_name}!</h1>
           <p style={{ margin: 0, opacity: 0.9 }}>Track and manage your internship journey through the 3 stages.</p>
         </div>
       </div>

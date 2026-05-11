@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  Bell, Mail, CheckCircle2, 
-  Clock, AlertCircle, Info,
-  MoreVertical, Check, Trash2,
+  Bell, Info,
   Briefcase, ShieldAlert
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { studentNotifications } from '../../services/mocks/mockData';
+// import { studentNotifications } from '../../services/mocks/mockData';
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState(studentNotifications.map(n => ({ ...n, read: n.read ?? false })));
+  const [notifications, setNotifications] = useState([]); // Real notifications will be loaded from DB
 
 
   const markAsRead = (id) => {

@@ -6,6 +6,7 @@ import LandingPage from './pages/auth/LandingPage/LandingPage';
 import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
+import Welcome from './pages/auth/Welcome/Welcome';
 import MainLayout from './components/layout/student/MainLayout/MainLayout';
 
 // ── Student Pages ────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ function App() {
           {/* ── Auth & Landing ── */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
 
