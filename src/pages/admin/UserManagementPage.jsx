@@ -22,7 +22,8 @@ export default function UserManagementPage() {
   const [heads, setHeads] = useState(ojtHeadsList);
   const [toast, setToast] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newHead, setNewHead] = useState({ name: '', email: '', tempPassword: '', assignedCourse: 'BSIT' });
+  const [loading, setLoading] = useState(false);
+  const [newHead, setNewHead] = useState({ firstName: '', lastName: '', email: '', assignedCourse: 'BSIT' });
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
@@ -38,16 +39,38 @@ export default function UserManagementPage() {
     showToast(`${name} has been ${next === 'Active' ? 'reactivated' : 'deactivated'}.`, next === 'Active' ? 'success' : 'warning');
   };
 
-  const handleAddOJTHead = () => {
-    if (!newHead.name.trim() || !newHead.email.trim() || !newHead.tempPassword.trim()) {
+  const handleAddOJTHead = async () => {
+    if (!newHead.firstName.trim() || !newHead.lastName.trim() || !newHead.email.trim()) {
       showToast('Please fill in all fields.', 'error');
       return;
     }
-    const id = `h${Date.now()}`;
-    setHeads(p => [{ id, name: newHead.name, email: newHead.email, assignedCourse: newHead.assignedCourse, status: 'Active', dateCreated: new Date().toISOString().split('T')[0], studentsCount: 0 }, ...p]);
-    setNewHead({ name: '', email: '', tempPassword: '', assignedCourse: 'BSIT' });
-    setShowAddModal(false);
-    showToast(`OJT Head "${newHead.name}" created. A temporary password has been sent to ${newHead.email}.`, 'success');
+    
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/create-ojt-head', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newHead)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create OJT Head');
+
+      showToast(`Invitation sent to ${newHead.email}!`, 'success');
+      setNewHead({ firstName: '', lastName: '', email: '', assignedCourse: 'BSIT' });
+      setShowAddModal(false);
+      // Refresh list
+      fetchUsers();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    // This is a placeholder for real data fetching we will implement next
+    // For now, let's just make the creation work
   };
 
   const filteredStudents = students.filter(s =>
@@ -89,16 +112,20 @@ export default function UserManagementPage() {
               ℹ️ The OJT Head will be prompted to change their temporary password on first login.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {[
-                { key: 'name', label: 'Full Name', placeholder: 'e.g. Dr. Maria Clara Santos' },
-                { key: 'email', label: 'Email Address', placeholder: 'e.g. mcsantos@school.edu' },
-                { key: 'tempPassword', label: 'Temporary Password', placeholder: 'Min. 6 characters', type: 'password' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>{f.label}</label>
-                  <input type={f.type || 'text'} style={s.input} placeholder={f.placeholder} value={newHead[f.key]} onChange={e => setNewHead(p => ({ ...p, [f.key]: e.target.value }))} />
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>First Name</label>
+                  <input style={s.input} placeholder="e.g. Maria Clara" value={newHead.firstName} onChange={e => setNewHead(p => ({ ...p, firstName: e.target.value }))} />
                 </div>
-              ))}
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Last Name</label>
+                  <input style={s.input} placeholder="e.g. Santos" value={newHead.lastName} onChange={e => setNewHead(p => ({ ...p, lastName: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Email Address</label>
+                <input type="email" style={s.input} placeholder="e.g. mcsantos@school.edu" value={newHead.email} onChange={e => setNewHead(p => ({ ...p, email: e.target.value }))} />
+              </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Assigned Course</label>
                 <select style={s.input} value={newHead.assignedCourse} onChange={e => setNewHead(p => ({ ...p, assignedCourse: e.target.value }))}>
@@ -107,9 +134,9 @@ export default function UserManagementPage() {
               </div>
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }} onClick={() => setShowAddModal(false)}>Cancel</button>
-              <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }} onClick={handleAddOJTHead}>
-                <UserPlus size={15} /> Create Account
+              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }} onClick={() => setShowAddModal(false)}>Cancel</button>
+              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }} onClick={handleAddOJTHead}>
+                <UserPlus size={15} /> {loading ? 'Sending...' : 'Send Invitation'}
               </button>
             </div>
           </div>

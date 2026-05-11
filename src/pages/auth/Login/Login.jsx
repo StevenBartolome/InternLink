@@ -2,16 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GraduationCap, ArrowLeft, Mail, EyeOff, Eye, ArrowRight, Info, Users, Shield, BookOpen, ShieldAlert } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Mail, EyeOff, Eye, ArrowRight, Info, Users } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
 import { useAuth } from '../../../context/AuthContext';
 
-const DEMO_ACCOUNTS = [
-  { label: 'Student Demo', email: 'student@internlink.edu', pw: '123456', icon: <GraduationCap size={14} />, color: '#2563eb' },
-  { label: 'OJT Head Demo', email: 'ojthead@internlink.edu', pw: '123456', icon: <BookOpen size={14} />, color: '#7c3aed' },
-  { label: 'Admin Demo', email: 'admin@internlink.edu', pw: '123456', icon: <Shield size={14} />, color: '#059669' },
-];
 
 const ROLE_REDIRECTS = {
   student: '/welcome',
@@ -22,11 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 900px)');
   const [loading, setLoading] = useState(false);
-  const [seeding, setSeeding] = useState(false);
-  const [showSetup, setShowSetup] = useState(false);
-  const [setupData, setSetupData] = useState({ firstName: '', lastName: '', email: '', password: '' });
-  const [setupLoading, setSetupLoading] = useState(false);
-  const { login, user, seedAdmin, setupAdmin } = useAuth();
+  const { login, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -79,40 +70,7 @@ const Login = () => {
     }
   };
 
-  const fillDemo = (acc) => {
-    setEmail(acc.email);
-    setPassword(acc.pw);
-    setError('');
-  };
 
-  const handleSeedAdmin = async () => {
-    setSeeding(true);
-    setError('');
-    const result = await seedAdmin();
-    setSeeding(false);
-    if (result.success) {
-      setEmail('admin@internlink.edu');
-      setPassword('adminpassword123');
-      setError('Admin account ready! Click Sign In.');
-    } else {
-      setError(result.error || result.message);
-    }
-  };
-
-  const handleSetupAdmin = async (e) => {
-    e.preventDefault();
-    setSetupLoading(true);
-    setError('');
-    const result = await setupAdmin(setupData);
-    setSetupLoading(false);
-    if (result.success) {
-      setError('Admin account created! You can now sign in.');
-      setSetupData({ firstName: '', lastName: '', email: '', password: '' });
-      setShowSetup(false);
-    } else {
-      setError(result.error || 'Failed to create admin');
-    }
-  };
 
   const s = {
     page: { display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', backgroundColor: '#f8fafc' },
@@ -181,26 +139,6 @@ const Login = () => {
             <p style={{ color: '#64748b', fontSize: '1rem', marginBottom: '1.75rem' }}>Sign in to your InternLink portal</p>
           </motion.div>
 
-          {/* Demo quick-fill */}
-          <motion.div variants={itemV} style={{ marginBottom: '1.75rem' }}>
-            <p style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Quick Demo Login</p>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-              {DEMO_ACCOUNTS.map(acc => (
-                <button key={acc.email} type="button" style={s.demoBtn(acc.color)} onClick={() => fillDemo(acc)}>
-                  {acc.icon} {acc.label}
-                </button>
-              ))}
-              <button 
-                type="button" 
-                style={{...s.demoBtn('#f59e0b'), border: seeding ? 'none' : `1px solid #f59e0b20` }} 
-                onClick={handleSeedAdmin}
-                disabled={seeding}
-              >
-                {seeding ? 'Seeding...' : <><ShieldAlert size={14} /> Seed Admin</>}
-              </button>
-            </div>
-          </motion.div>
-
           {error && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', color: '#dc2626', fontSize: '0.875rem', marginBottom: '1.25rem', display: 'flex', gap: '10px', alignItems: 'center' }}>
               <Info size={18} /> {error}
@@ -247,49 +185,6 @@ const Login = () => {
             </p>
           </motion.div>
 
-          {/* Admin Setup Section (User requested to add at bottom) */}
-          <motion.div variants={itemV} style={{ marginTop: '3rem', borderTop: '1px solid #e2e8f0', paddingTop: '1.5rem' }}>
-            {!showSetup ? (
-              <button 
-                onClick={() => setShowSetup(true)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
-              >
-                Create Admin Account (Temporary)
-              </button>
-            ) : (
-              <div style={{ backgroundColor: '#f8fafc', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Admin Account Setup</h3>
-                <form onSubmit={handleSetupAdmin}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                    <input 
-                      placeholder="First Name" style={{ ...s.input, paddingLeft: '12px' }} 
-                      value={setupData.firstName} onChange={e => setSetupData(p => ({ ...p, firstName: e.target.value }))} required 
-                    />
-                    <input 
-                      placeholder="Last Name" style={{ ...s.input, paddingLeft: '12px' }} 
-                      value={setupData.lastName} onChange={e => setSetupData(p => ({ ...p, lastName: e.target.value }))} required 
-                    />
-                  </div>
-                  <input 
-                    type="email" placeholder="Admin Email" style={{ ...s.input, paddingLeft: '12px', marginBottom: '10px' }} 
-                    value={setupData.email} onChange={e => setSetupData(p => ({ ...p, email: e.target.value }))} required 
-                  />
-                  <input 
-                    type="password" placeholder="Password" style={{ ...s.input, paddingLeft: '12px', marginBottom: '15px' }} 
-                    value={setupData.password} onChange={e => setSetupData(p => ({ ...p, password: e.target.value }))} required 
-                  />
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <button type="submit" disabled={setupLoading} style={{ ...s.btn, padding: '0.6rem', fontSize: '0.875rem' }}>
-                      {setupLoading ? 'Creating...' : 'Create Admin'}
-                    </button>
-                    <button type="button" onClick={() => setShowSetup(false)} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '0.875rem', cursor: 'pointer' }}>
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-          </motion.div>
         </motion.div>
       </div>
     </div>

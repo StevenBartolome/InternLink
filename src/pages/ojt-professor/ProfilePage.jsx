@@ -1,53 +1,96 @@
 import React, { useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
-  User, Mail, Phone, MapPin, 
+  Mail, Phone, MapPin, 
   Building, GraduationCap, Award, 
-  Key, Shield, LogOut, Camera, Save, X, Edit,
+  Key, Shield, Camera, Save, X, Edit,
   Users, CheckCircle2, AlertCircle, Briefcase
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { ojtHeadProfile as initialProfile } from '../../services/mocks/ojtProfessorMockData';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabaseClient';
 
 
 const ProfilePage = () => {
   const { showToast } = useOutletContext() || {};
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState(initialProfile);
-  const [tempProfile, setTempProfile] = useState(initialProfile);
+  const [formData, setFormData] = useState({
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    email: user?.email || '',
+    role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
+    department: user?.assigned_course || '',
+    phone: '',
+    office: '',
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [managedCount, setManagedCount] = useState(0);
 
-  // Mock stats for the coordinator
+  // Fetch real-time stats
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { count } = await supabase
+          .from('student_internships')
+          .select('*', { count: 'exact', head: true })
+          .eq('ojt_head_id', user.id);
+        
+        setManagedCount(count || 0);
+      } catch (err) {
+        console.error('Error fetching stats:', err);
+      }
+    };
+
+    if (user?.id) fetchStats();
+  }, [user]);
+
+  // Mock stats for the coordinator (mixed with real managed count)
   const stats = [
-    { label: 'Managed Students', value: '124', icon: Users, color: theme.colors.primary },
-    { label: 'Active Internships', value: '86', icon: Briefcase, color: theme.colors.success },
-    { label: 'Pending Approvals', value: '12', icon: AlertCircle, color: theme.colors.warning },
-    { label: 'Placements Done', value: '112', icon: CheckCircle2, color: theme.colors.info },
+    { label: 'Managed Students', value: managedCount, icon: Users, color: theme.colors.primary },
+    { label: 'Active Internships', value: Math.floor(managedCount * 0.7), icon: Briefcase, color: theme.colors.success },
+    { label: 'Pending Approvals', value: '0', icon: AlertCircle, color: theme.colors.warning },
+    { label: 'Placements Done', value: '0', icon: CheckCircle2, color: theme.colors.info },
   ];
 
   const toggleEdit = () => {
-    setTempProfile({ ...profile });
+    setFormData({
+      firstName: user?.first_name || '',
+      lastName: user?.last_name || '',
+      email: user?.email || '',
+      role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
+      department: user?.assigned_course || '',
+      phone: '',
+      office: '',
+    });
     setIsEditing(true);
   };
 
-  const cancelEdit = () => {
-    setIsEditing(false);
-  };
+  const cancelEdit = () => setIsEditing(false);
 
-  const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setProfile({ ...tempProfile });
-      setIsSaving(false);
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const { error } = await updateUser({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+      });
+
+      if (error) throw error;
+      
       setIsEditing(false);
       if (showToast) showToast('Profile updated successfully!', 'success');
-    }, 800);
+    } catch (err) {
+      if (showToast) showToast(err.message, 'error');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setTempProfile(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const styles = {
@@ -195,7 +238,7 @@ const ProfilePage = () => {
       {/* Hero Header */}
       <div style={styles.heroCard}>
         <div style={styles.avatarWrapper}>
-          <img src={profile.avatar} alt="Profile" style={styles.avatar} />
+          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt="Profile" style={styles.avatar} />
           <button 
             style={styles.cameraBtn}
             onClick={() => showToast && showToast('Image upload coming soon', 'info')}
@@ -207,25 +250,34 @@ const ProfilePage = () => {
         <div style={{ zIndex: 2, flex: 1 }}>
           {isEditing ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px' }}>
-              <input 
-                style={{ ...styles.input, fontSize: '1.5rem', fontWeight: 800, color: '#333', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                name="name"
-                value={tempProfile.name}
-                onChange={handleChange}
-                placeholder="Full Name"
-              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input 
+                  style={{ ...styles.input, fontSize: '1.5rem', fontWeight: 800, color: '#333', backgroundColor: 'rgba(255,255,255,0.9)' }}
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  placeholder="First Name"
+                />
+                <input 
+                  style={{ ...styles.input, fontSize: '1.5rem', fontWeight: 800, color: '#333', backgroundColor: 'rgba(255,255,255,0.9)' }}
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  placeholder="Last Name"
+                />
+              </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input 
                   style={{ ...styles.input, fontSize: '0.9rem', color: '#444', backgroundColor: 'rgba(255,255,255,0.9)' }}
                   name="role"
-                  value={tempProfile.role}
+                  value={formData.role}
                   onChange={handleChange}
                   placeholder="Role"
                 />
                 <input 
                   style={{ ...styles.input, fontSize: '0.9rem', color: '#444', backgroundColor: 'rgba(255,255,255,0.9)' }}
                   name="department"
-                  value={tempProfile.department}
+                  value={formData.department}
                   onChange={handleChange}
                   placeholder="Department"
                 />
@@ -234,16 +286,16 @@ const ProfilePage = () => {
           ) : (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                <h1 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{profile.name}</h1>
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Active Account</div>
+                <h1 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{user?.name}</h1>
+                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Verified OJT Head</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0.9 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <GraduationCap size={20} />
-                  <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{profile.role}</span>
+                  <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.role === 'ojt_head' ? 'Coordinator' : user?.role}</span>
                 </div>
                 <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#fff', opacity: 0.5 }}></div>
-                <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{profile.department}</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.assigned_course} Department</span>
               </div>
             </>
           )}
@@ -296,9 +348,9 @@ const ProfilePage = () => {
               <div style={{ flex: 1 }}>
                 <label style={styles.label}>Email Address</label>
                 {isEditing ? (
-                  <input style={styles.input} name="email" value={tempProfile.email} onChange={handleChange} />
+                  <input style={styles.input} name="email" value={formData.email} onChange={handleChange} disabled />
                 ) : (
-                  <div style={styles.value}>{profile.email}</div>
+                  <div style={styles.value}>{user?.email}</div>
                 )}
               </div>
             </div>
@@ -308,9 +360,9 @@ const ProfilePage = () => {
               <div style={{ flex: 1 }}>
                 <label style={styles.label}>Institution</label>
                 {isEditing ? (
-                  <input style={styles.input} name="school" value={tempProfile.school} onChange={handleChange} />
+                  <input style={styles.input} name="school" value={formData.school || 'National University Baliwag'} onChange={handleChange} />
                 ) : (
-                  <div style={styles.value}>{profile.school}</div>
+                  <div style={styles.value}>National University Baliwag</div>
                 )}
               </div>
             </div>
@@ -320,9 +372,9 @@ const ProfilePage = () => {
               <div style={{ flex: 1 }}>
                 <label style={styles.label}>Contact Number</label>
                 {isEditing ? (
-                  <input style={styles.input} name="phone" value={tempProfile.phone || '+63 912 345 6789'} onChange={handleChange} />
+                  <input style={styles.input} name="phone" value={formData.phone} onChange={handleChange} placeholder="+63 9xx xxx xxxx" />
                 ) : (
-                  <div style={styles.value}>{profile.phone || '+63 912 345 6789'}</div>
+                  <div style={styles.value}>{formData.phone || 'Not set'}</div>
                 )}
               </div>
             </div>
@@ -332,9 +384,9 @@ const ProfilePage = () => {
               <div style={{ flex: 1 }}>
                 <label style={styles.label}>Office Location</label>
                 {isEditing ? (
-                  <input style={styles.input} name="office" value={tempProfile.office || 'Academic Building, Room 204'} onChange={handleChange} />
+                  <input style={styles.input} name="office" value={formData.office} onChange={handleChange} placeholder="Room / Building" />
                 ) : (
-                  <div style={styles.value}>{profile.office || 'Academic Building, Room 204'}</div>
+                  <div style={styles.value}>{formData.office || 'Not set'}</div>
                 )}
               </div>
             </div>

@@ -9,20 +9,71 @@ import Toast from '../../components/common/Toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
+import { supabase } from '../../services/supabaseClient';
+
 const DashboardPage = () => {
   const { user } = useAuth();
-  const { 
-    totalStudents, 
-    totalOjtHeads, 
-    studentsInPreInternship, 
-    studentsInDuringInternship, 
-    studentsInPostInternship,
-    studentsCompleted
-  } = dashboardStats;
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    studentsInPreInternship: 0,
+    studentsInDuringInternship: 0,
+    studentsInPostInternship: 0,
+    studentsCompleted: 0
+  });
+  const [courseStats, setCourseStats] = useState([]);
+  const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [hoveredAction, setHoveredAction] = useState(null);
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        
+        // 1. Fetch Student Counts by Stage
+        const { data: internshipData, error: iError } = await supabase
+          .from('student_internships')
+          .select('current_stage');
+
+        if (iError) throw iError;
+
+        const counts = {
+          totalStudents: internshipData.length,
+          studentsInPreInternship: internshipData.filter(i => i.current_stage === 'PRE_INTERNSHIP').length,
+          studentsInDuringInternship: internshipData.filter(i => i.current_stage === 'DURING_INTERNSHIP').length,
+          studentsInPostInternship: internshipData.filter(i => i.current_stage === 'POST_INTERNSHIP').length,
+          studentsCompleted: internshipData.filter(i => i.current_stage === 'COMPLETED').length,
+        };
+
+        setStats(counts);
+
+        // 2. Fetch Course Breakdown
+        const { data: profileData, error: pError } = await supabase
+          .from('student_profiles')
+          .select('course');
+
+        if (pError) throw pError;
+
+        const breakdown = profileData.reduce((acc, curr) => {
+          const course = curr.course || 'Unassigned';
+          acc[course] = (acc[course] || 0) + 1;
+          return acc;
+        }, {});
+
+        setCourseStats(Object.entries(breakdown).map(([course, enrolled]) => ({ course, enrolled })));
+
+      } catch (err) {
+        console.error('Error fetching dashboard stats:', err);
+        showToast('Failed to load real-time stats', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   // Get top 5 recent audit logs
   const recentActivity = auditLogs.slice(0, 5);
@@ -235,25 +286,25 @@ const DashboardPage = () => {
       <div style={styles.statsGrid}>
         <StatCard 
           title="Total Students" 
-          value={totalStudents} 
+          value={loading ? '...' : stats.totalStudents} 
           icon={Users} 
           color="primary" 
         />
         <StatCard 
           title="Pre-Internship" 
-          value={studentsInPreInternship} 
+          value={loading ? '...' : stats.studentsInPreInternship} 
           icon={FileText} 
           color="warning" 
         />
         <StatCard 
           title="During Internship" 
-          value={studentsInDuringInternship} 
+          value={loading ? '...' : stats.studentsInDuringInternship} 
           icon={Briefcase} 
           color="success" 
         />
         <StatCard 
           title="Post-Internship" 
-          value={studentsInPostInternship + studentsCompleted} 
+          value={loading ? '...' : stats.studentsInPostInternship + stats.studentsCompleted} 
           icon={CheckCircle} 
           color="info" 
         />
@@ -299,14 +350,20 @@ const DashboardPage = () => {
           </div>
           <div style={styles.cardContent}>
             <div style={styles.distributionList}>
-              {systemReports.courseBreakdown.map(course => (
-                <div key={course.course} style={styles.distributionItem}>
-                  <div style={styles.itemLabel}>
-                    <span style={styles.dot(course.course)}></span> {course.course}
+              {loading ? (
+                <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>Loading data...</p>
+              ) : courseStats.length > 0 ? (
+                courseStats.map(course => (
+                  <div key={course.course} style={styles.distributionItem}>
+                    <div style={styles.itemLabel}>
+                      <span style={styles.dot(course.course)}></span> {course.course}
+                    </div>
+                    <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{course.enrolled}</div>
                   </div>
-                  <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{course.enrolled}</div>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p style={{ color: theme.colors.textMuted, fontSize: '0.9rem' }}>No student data found.</p>
+              )}
             </div>
           </div>
         </div>

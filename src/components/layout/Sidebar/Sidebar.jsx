@@ -176,32 +176,6 @@ const Sidebar = () => {
           })}
         </nav>
 
-        <div style={{ padding: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <button 
-            onClick={() => {
-              logout();
-              window.location.href = '/login';
-            }}
-            style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px 16px',
-              borderRadius: '8px',
-              width: '100%', 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              transition: theme.transitions.default,
-            }}
-          >
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </button>
-        </div>
       </div>
     </>
   );

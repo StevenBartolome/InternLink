@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, Search, User, Grid, LogOut } from 'lucide-react';
 import { theme } from '../../../styles/theme';
-import { ojtHeadProfile } from '../../../services/mocks/ojtProfessorMockData';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Modal from '../../common/Modal/Modal';
@@ -9,14 +8,13 @@ import Modal from '../../common/Modal/Modal';
 const Topbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
 
-  const { logout } = useAuth?.() || {};
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsModalOpen(false);
-    if (logout) logout();
-    else localStorage.removeItem('internlink_session');
-    navigate('/login');
+    // Force a direct browser redirect to ensure full state clearance
+    await logout();
+    window.location.replace('/login');
   };
 
   const styles = {
@@ -64,7 +62,7 @@ const Topbar = () => {
       <header style={styles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
           <Grid size={20} />
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{ojtHeadProfile.department}</span>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user?.assigned_course || 'OJT Head'}</span>
         </div>
         <div style={styles.userSection}>
           <div 
@@ -74,8 +72,8 @@ const Topbar = () => {
             <Bell size={20} />
           </div>
           <div style={styles.profile} onClick={() => navigate('/ojt-professor/profile')}>
-            <img src={ojtHeadProfile.avatar} alt="OJT Head" style={styles.avatar} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{ojtHeadProfile.name}</span>
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt="OJT Head" style={styles.avatar} />
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{user?.name}</span>
           </div>
           <button 
             onClick={() => setIsModalOpen(true)}

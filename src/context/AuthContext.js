@@ -59,14 +59,15 @@ export function AuthProvider({ children }) {
     const fetchAction = async () => {
       try {
         // Step 1: Fetch base user data to determine role
+        // Increased timeout to 40s to allow Supabase wake-up, but prevent infinite hang
         const { data: baseUser, error: baseError } = await withTimeout(
           supabase
             .from('users')
             .select('*')
             .eq('id', authUser.id)
             .single(),
-          8000,
-          'Base profile fetch timed out'
+          40000,
+          'Database profile fetch timed out'
         );
 
         if (baseError) {
@@ -101,13 +102,11 @@ export function AuthProvider({ children }) {
             
           if (sInternship) internshipData = sInternship;
         } else if (baseUser.role === 'ojt_head') {
-          const { data: oProfile } = await supabase
-            .from('ojt_head_profiles')
-            .select('*')
-            .eq('id', authUser.id)
-            .maybeSingle();
-            
-          if (oProfile) specificProfile = oProfile;
+          // OJT Heads now have all their data (assigned_course) in the base users table
+          specificProfile = {};
+        } else if (baseUser.role === 'admin') {
+          // Admins currently only have base user data
+          specificProfile = {};
         }
 
         // Flatten the profile data for easy access
@@ -146,14 +145,10 @@ export function AuthProvider({ children }) {
     try {
       console.log('Attempting login for:', email);
       
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email,
-          password,
-        }),
-        8000,
-        'Sign in request timed out after 8 seconds'
-      );
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
       console.log('signInWithPassword completed:', { 
         hasError: !!error, 
@@ -190,8 +185,17 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      // Clear any pending profile fetches first
+      currentFetchPromise.current = null;
+      await supabase.auth.signOut();
+      setUser(null);
+      console.log('User logged out successfully.');
+    } catch (err) {
+      console.error('Error during logout:', err.message);
+      // Still clear local state even if server logout fails
+      setUser(null);
+    }
   };
 
   const updateUser = async (updates) => {

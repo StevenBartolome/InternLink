@@ -7,7 +7,9 @@ import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
 import Welcome from './pages/auth/Welcome/Welcome';
+import SetupAccount from './pages/auth/SetupAccount/SetupAccount';
 import MainLayout from './components/layout/student/MainLayout/MainLayout';
+import { useAuth } from './context/AuthContext';
 
 // ── Student Pages ────────────────────────────────────────────────────
 import ProfilePage from './pages/students/ProfilePage';
@@ -42,6 +44,42 @@ import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 import NotificationsCenterPage from './pages/admin/NotificationsCenterPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
 
+// ── Security Components ───────────────────────────────────────────────
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+        <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#1e3a8a' }}>Verifying Access...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    // Redirect to their own dashboard if they try to access wrong role page
+    const fallback = user.role === 'admin' ? '/admin/dashboard' : user.role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
+    return <Navigate to={fallback} replace />;
+  }
+
+  return children;
+};
+
+const PublicRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  if (loading) return null;
+  if (user) {
+    const fallback = user.role === 'admin' ? '/admin/dashboard' : user.role === 'ojt_head' ? '/ojt-professor/dashboard' : '/welcome';
+    return <Navigate to={fallback} replace />;
+  }
+  return children;
+};
+
 function App() {
   return (
     <AuthProvider>
@@ -49,13 +87,14 @@ function App() {
         <Routes>
           {/* ── Auth & Landing ── */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/welcome" element={<ProtectedRoute allowedRoles={['student']}><Welcome /></ProtectedRoute>} />
+          <Route path="/setup-account" element={<SetupAccount />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
           {/* ── Student Routes ── */}
-          <Route element={<MainLayout />}>
+          <Route element={<ProtectedRoute allowedRoles={['student']}><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/progress" element={<InternshipProgressPage />} />
@@ -69,7 +108,7 @@ function App() {
           </Route>
 
           {/* ── OJT Head Routes ── */}
-          <Route element={<OjtProfessorLayout />}>
+          <Route element={<ProtectedRoute allowedRoles={['ojt_head']}><OjtProfessorLayout /></ProtectedRoute>}>
             <Route path="/ojt-professor/dashboard" element={<OjtProfessorDashboardPage />} />
             <Route path="/ojt-professor/students" element={<StudentDirectoryPage />} />
             <Route path="/ojt-professor/students/:id" element={<OjtProfessorStudentProfilePage />} />
@@ -90,7 +129,7 @@ function App() {
           </Route>
 
           {/* ── Admin Routes ── */}
-          <Route element={<AdminLayout />}>
+          <Route element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/users" element={<UserManagementPage />} />

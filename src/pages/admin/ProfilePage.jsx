@@ -1,51 +1,96 @@
-import React, { useState } from 'react';
-import { adminProfile } from '../../services/mocks/adminMockData';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, Edit2, ShieldCheck, Save, X, 
   Terminal, Activity, Database, Users, 
-  Settings, Lock, Cpu, Globe
+  Settings, Cpu, Globe
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import Toast from '../../components/common/Toast';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../services/supabaseClient';
 
 const AdminProfilePage = () => {
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState({
-    email: adminProfile.email,
-    systemName: adminProfile.systemName,
-    name: adminProfile.name,
+  const [formData, setFormData] = useState({
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    email: user?.email || '',
   });
-  const [formData, setFormData] = useState({ ...profile });
   const [toast, setToast] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [systemStats, setSystemStats] = useState({
+    activeUsers: 0,
+    totalPlacements: 0,
+    linkedDatabases: 1, // Static for now
+    uptime: '99.9%'
+  });
 
   // Mock Admin-Specific Statistics
   const adminStats = [
-    { label: 'Total Placements', value: '1,248', icon: Globe, color: theme.colors.primary },
-    { label: 'System Uptime', value: '99.9%', icon: Activity, color: theme.colors.success },
-    { label: 'Active Users', value: '1,152', icon: Users, color: theme.colors.warning },
-    { label: 'Linked Databases', value: '8', icon: Database, color: theme.colors.info },
+    { label: 'Total Placements', value: systemStats.totalPlacements, icon: Globe, color: theme.colors.primary },
+    { label: 'System Uptime', value: systemStats.uptime, icon: Activity, color: theme.colors.success },
+    { label: 'Active Users', value: systemStats.activeUsers, icon: Users, color: theme.colors.warning },
+    { label: 'Linked Databases', value: systemStats.linkedDatabases, icon: Database, color: theme.colors.info },
   ];
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
+  useEffect(() => {
+    const fetchSystemStats = async () => {
+      try {
+        // Count active users
+        const { count: userCount } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
+        
+        // Count internships (placements)
+        const { count: placementCount } = await supabase
+          .from('student_internships')
+          .select('*', { count: 'exact', head: true });
+
+        setSystemStats(prev => ({
+          ...prev,
+          activeUsers: userCount || 0,
+          totalPlacements: placementCount || 0
+        }));
+      } catch (err) {
+        console.error('Error fetching system stats:', err);
+      }
+    };
+
+    fetchSystemStats();
+  }, []);
+
   const handleEditToggle = () => {
     if (isEditing) {
-      setFormData({ ...profile });
+      setFormData({
+        firstName: user?.first_name || '',
+        lastName: user?.last_name || '',
+        email: user?.email || '',
+      });
     }
     setIsEditing(prev => !prev);
   };
 
-  const handleSave = () => {
-    setIsSaving(true);
-    // Mock saving delay
-    setTimeout(() => {
-      setProfile({ ...formData });
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      const { error } = await updateUser({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+      });
+
+      if (error) throw error;
+
       setIsEditing(false);
+      showToast('Admin profile updated successfully.', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
       setIsSaving(false);
-      showToast('System Admin credentials updated successfully.', 'success');
-    }, 1000);
+    }
   };
 
   const styles = {
@@ -192,17 +237,24 @@ const AdminProfilePage = () => {
         <div style={{ zIndex: 2, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
             {isEditing ? (
-              <input
-                style={{ ...styles.input, fontSize: '1.75rem', fontWeight: 900, width: 'auto', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                value={formData.name}
-                onChange={e => setFormData(f => ({ ...f, name: e.target.value }))}
-              />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input
+                  style={{ ...styles.input, fontSize: '1.75rem', fontWeight: 900, width: '200px', backgroundColor: 'rgba(255,255,255,0.9)' }}
+                  value={formData.firstName}
+                  onChange={e => setFormData(f => ({ ...f, firstName: e.target.value }))}
+                />
+                <input
+                  style={{ ...styles.input, fontSize: '1.75rem', fontWeight: 900, width: '200px', backgroundColor: 'rgba(255,255,255,0.9)' }}
+                  value={formData.lastName}
+                  onChange={e => setFormData(f => ({ ...f, lastName: e.target.value }))}
+                />
+              </div>
             ) : (
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{profile.name}</h1>
+              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{user?.name}</h1>
             )}
             <ShieldCheck size={28} color={theme.colors.success} />
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', margin: 0 }}>{adminProfile.role} • System Engineering & Management</p>
+          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', margin: 0 }}>System Administrator • System Engineering & Management</p>
           
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
             <button 
@@ -267,23 +319,15 @@ const AdminProfilePage = () => {
                     onChange={e => setFormData(f => ({ ...f, email: e.target.value }))}
                   />
                 ) : (
-                  <div style={styles.value}>{profile.email}</div>
+                  <div style={styles.value}>{user?.email}</div>
                 )}
               </div>
             </div>
 
             <div style={{ ...styles.infoRow, marginTop: '20px' }}>
               <div style={{ flex: 1 }}>
-                <label style={styles.label}>Access Node / System Alias</label>
-                {isEditing ? (
-                  <input
-                    style={styles.input}
-                    value={formData.systemName}
-                    onChange={e => setFormData(f => ({ ...f, systemName: e.target.value }))}
-                  />
-                ) : (
-                  <div style={styles.value}>{profile.systemName}</div>
-                )}
+                <label style={styles.label}>Account ID (Internal)</label>
+                <div style={styles.value}>{user?.id}</div>
               </div>
             </div>
 

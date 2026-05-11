@@ -40,10 +40,10 @@ const Topbar = () => {
   const notifications = []; // TODO: Implement real notifications
   const unreadCount = notifications ? notifications.filter(n => !n.read).length : 0;
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsModalOpen(false);
-    logout();
-    navigate('/login');
+    await logout();
+    window.location.replace('/login');
   };
 
   const profileData = user ? {

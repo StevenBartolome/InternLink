@@ -3,14 +3,16 @@ import { NavLink } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, FileCheck, Briefcase, 
   BarChart2, ShieldAlert, Settings, LogOut, GraduationCap,
-  ChevronRight
+  ChevronRight, Shield
 } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { useAuth } from '../../../context/AuthContext';
 
 const Sidebar = () => {
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [isOpen, setIsOpen] = useState(!isMobile);
+  const { logout } = useAuth();
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
@@ -18,6 +20,7 @@ const Sidebar = () => {
     { name: 'Internship Config', path: '/admin/internship-config', icon: Settings },
     { name: 'System Reports', path: '/admin/reports', icon: BarChart2 },
     { name: 'Notification Center', path: '/admin/notifications', icon: ShieldAlert },
+    { name: 'Audit Logs', path: '/admin/audit', icon: Shield },
   ];
 
   const styles = {
@@ -67,7 +70,12 @@ const Sidebar = () => {
       fontSize: '0.875rem',
       fontWeight: 500,
       transition: 'all 0.2s ease',
-    })
+    }),
+    footer: {
+      padding: '24px 12px',
+      borderTop: '1px solid rgba(255,255,255,0.1)',
+      marginTop: 'auto',
+    }
   };
 
   return (

@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, Download, 
   Filter, Calendar,
-  User, AlertTriangle
+  User, AlertTriangle, RefreshCw
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { auditLogs } from '../../services/mocks/adminMockData';
 import Toast from '../../components/common/Toast';
+import { supabase } from '../../services/supabaseClient';
 
 const AuditLogsPage = () => {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('All Types');
   const [filterAction, setFilterAction] = useState('All Actions');
@@ -17,12 +19,36 @@ const AuditLogsPage = () => {
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
-  const allTypes = ['All Types', ...new Set(auditLogs.map(l => l.type))];
-  const allActions = ['All Actions', ...new Set(auditLogs.map(l => l.action))];
+  const fetchLogs = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('timestamp', { ascending: false });
 
-  const filteredLogs = auditLogs.filter(log => {
-    const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      log.action.toLowerCase().includes(searchTerm.toLowerCase());
+      if (error) throw error;
+      setLogs(data || []);
+    } catch (err) {
+      console.error('Error fetching logs:', err.message);
+      showToast('Failed to load audit logs.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const allTypes = ['All Types', ...new Set(logs.map(l => l.type))];
+  const allActions = ['All Actions', ...new Set(logs.map(l => l.action))];
+
+  const filteredLogs = logs.filter(log => {
+    const userSearch = log.user_name || '';
+    const actionSearch = log.action || '';
+    const matchesSearch = userSearch.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      actionSearch.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = filterType === 'All Types' || log.type === filterType;
     const matchesAction = filterAction === 'All Actions' || log.action === filterAction;
     return matchesSearch && matchesType && matchesAction;
@@ -148,21 +174,28 @@ const AuditLogsPage = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredLogs.map(log => (
+            {loading ? (
+              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>Loading real-time logs...</td></tr>
+            ) : filteredLogs.length === 0 ? (
+              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>No logs found.</td></tr>
+            ) : filteredLogs.map(log => (
               <tr key={log.id}>
-                <td style={{ ...styles.td, fontSize: '0.8rem', color: theme.colors.textMuted }}>{log.timestamp}</td>
+                <td style={{ ...styles.td, fontSize: '0.8rem', color: theme.colors.textMuted }}>
+                   {new Date(log.timestamp).toLocaleString()}
+                </td>
                 <td style={styles.td}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <User size={14} color={theme.colors.primary} />
-                    <span style={{ fontWeight: 600 }}>{log.user}</span>
+                    <span style={{ fontWeight: 600 }}>{log.user_name}</span>
                   </div>
+                  <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted }}>{log.user_role?.toUpperCase()}</div>
                 </td>
                 <td style={styles.td}>{log.action}</td>
-                <td style={styles.td}>{log.affectedRecord}</td>
+                <td style={styles.td}>{log.affected_record}</td>
                 <td style={styles.td}>
                   <span style={styles.typeBadge(log.type)}>{log.type}</span>
                 </td>
-                <td style={{ ...styles.td, fontSize: '0.8rem', fontFamily: 'monospace' }}>{log.ipAddress}</td>
+                <td style={{ ...styles.td, fontSize: '0.8rem', fontFamily: 'monospace' }}>{log.ip_address}</td>
               </tr>
             ))}
           </tbody>

@@ -16,11 +16,26 @@ const port = process.env.SERVER_PORT || 8080;
 // Middleware
 app.use(cors());
 app.use(express.json());
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
-});
+// Helper: Log Security Events
+const logEvent = async (req, { action, type, affectedRecord, userId, userName, userRole, metadata = {} }) => {
+    try {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await supabaseAdmin
+            .from('audit_logs')
+            .insert({
+                user_id: userId,
+                user_name: userName,
+                user_role: userRole,
+                action,
+                type,
+                affected_record: affectedRecord,
+                ip_address: ip,
+                metadata
+            });
+    } catch (err) {
+        console.error('Failed to log audit event:', err.message);
+    }
+};
 
 // API Routes
 app.get('/health', async (req, res) => {
@@ -88,15 +103,29 @@ app.post('/admin/create-student', async (req, res) => {
                 current_stage: 'PRE_INTERNSHIP'
             });
 
-        if (internshipError) console.warn('Failed to init internship:', internshipError.message);
+        if (internshipError) console.log('Failed to init internship:', internshipError.message);
 
-        // 5. Email notification (Removed nodemailer per user request)
-        // const emailResult = await sendCredentialsEmail(email, firstName, password);
+        // Fetch OJT Head name for logging
+        const { data: headData } = await supabaseAdmin
+            .from('users')
+            .select('first_name, last_name')
+            .eq('id', ojtHeadId)
+            .single();
+
+        // Log the event
+        await logEvent(req, {
+            action: 'Created Student Account',
+            type: 'Create',
+            affectedRecord: `Student: ${email} (${course})`,
+            userId: ojtHeadId,
+            userName: headData ? `${headData.first_name} ${headData.last_name}` : 'Unknown OJT Head',
+            userRole: 'ojt_head'
+        });
 
         res.json({
             success: true,
             userId,
-            message: 'Student account created successfully. (Email notification disabled)'
+            message: 'Student account created successfully.'
         });
 
     } catch (error) {
@@ -200,10 +229,87 @@ app.post('/admin/setup', async (req, res) => {
         // await sendAdminWelcomeEmail(email, `${firstName} ${lastName}`);
 
         console.log('Admin Setup completed successfully.');
+        
+        // Log the event
+        await logEvent(req, {
+            action: 'Initial Admin Setup',
+            type: 'Security',
+            affectedRecord: `Admin: ${email}`,
+            userId,
+            userName: `${firstName} ${lastName}`,
+            userRole: 'admin'
+        });
+
         res.json({ success: true, message: 'Admin account created successfully.' });
 
     } catch (error) {
         console.error('Admin Setup error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin Route: Create OJT Head (Professor) Account
+app.post('/admin/create-ojt-head', async (req, res) => {
+    const { firstName, lastName, email, assignedCourse } = req.body;
+
+    if (!firstName || !lastName || !email || !assignedCourse) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log('OJT Head Creation started for:', email);
+    try {
+        // 1. Invite user via Supabase Auth (This sends the invitation email)
+        console.log('1. Sending Supabase invitation...');
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+            data: { 
+                first_name: firstName, 
+                last_name: lastName,
+                role: 'ojt_head'
+            },
+            redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/setup-account`
+        });
+
+        if (authError) {
+            console.error('Invitation failed:', authError.message);
+            throw authError;
+        }
+        console.log('Invitation sent successfully:', authData.user.id);
+
+        const userId = authData.user.id;
+
+        // 2. Create entry in 'users' table (including assigned_course)
+        console.log('2. Inserting into "users" table...');
+        const { error: userError } = await supabaseAdmin
+            .from('users')
+            .insert({
+                id: userId,
+                first_name: firstName,
+                last_name: lastName,
+                role: 'ojt_head',
+                assigned_course: assignedCourse
+            });
+
+        if (userError) {
+            console.error('Users table insertion failed:', userError.message);
+            throw userError;
+        }
+
+        console.log('OJT Head creation complete.');
+
+        // Log the event
+        await logEvent(req, {
+            action: 'Created OJT Head Account',
+            type: 'Create',
+            affectedRecord: `OJT Head: ${email} (${assignedCourse})`,
+            userId: userId,
+            userName: `${firstName} ${lastName}`,
+            userRole: 'ojt_head'
+        });
+
+        res.json({ success: true, message: 'Invitation sent to ' + email });
+
+    } catch (error) {
+        console.error('OJT Head Setup error:', error);
         res.status(500).json({ error: error.message });
     }
 });

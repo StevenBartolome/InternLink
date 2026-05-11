@@ -105,20 +105,6 @@ const Sidebar = () => {
           </NavLink>
         ))}
       </nav>
-      <div style={styles.footer}>
-        <div
-          onClick={() => {
-            logout();
-            window.location.href = '/login';
-          }}
-          style={{ ...styles.navLink(false), cursor: 'pointer' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <LogOut size={20} />
-            <span>Sign Out</span>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 };

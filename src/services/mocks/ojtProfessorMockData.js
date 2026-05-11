@@ -1,7 +1,7 @@
 // src/services/mocks/ojtProfessorMockData.js — OJT Head stage-based data
 
 export const ojtHeadProfile = {
-  name: 'Dr. Maria Clara Santos',
+  name: 'OJT Coordinator',
   assignedCourse: 'BSIT',
   department: 'Information Technology Department',
   role: 'OJT Head',
