@@ -35,7 +35,10 @@ export function AuthProvider({ children }) {
         }
 
         try {
-          await fetchProfile(session.user);
+          // Add a small delay to avoid clashing with internal auth lock
+          setTimeout(async () => {
+            if (mounted) await fetchProfile(session.user);
+          }, 100);
         } catch (err) {
           console.error('Auth state change profile fetch failed:', err);
         }
@@ -68,34 +71,33 @@ export function AuthProvider({ children }) {
   const fetchProfile = async (authUser) => {
     if (!authUser) return null;
     
-    // If we're already fetching this user's profile, return the existing promise
+    // If we're already fetching or have the full profile, don't fetch again
     if (currentFetchPromise.current && currentFetchPromise.current.userId === authUser.id) {
-      console.log('fetchProfile: Returning existing promise for user:', authUser.id);
       return currentFetchPromise.current.promise;
+    }
+    
+    if (user?.id === authUser.id && !user?.is_loading_full_profile) {
+      console.log('fetchProfile: Profile already loaded, skipping fetch');
+      return user;
     }
 
     const fetchAction = async () => {
       try {
         // Step 1: Fetch base user data to determine role
         // Increased timeout to 40s to allow Supabase wake-up, but prevent infinite hang
-        const { data: baseUser, error: baseError } = await withTimeout(
-          supabase
+        console.log('fetchProfile: Fetching public.users for', authUser.id);
+        const { data: baseUser, error: baseError } = await supabase
             .from('users')
             .select('*')
             .eq('id', authUser.id)
-            .single(),
-          4000,
-          'Database profile fetch timed out'
-        );
+            .single();
 
         if (baseError) {
-          if (baseError.code === 'PGRST116') {
-            console.warn('No profile found in "users" table for auth user');
-          } else {
-            console.error('Database error fetching base profile:', baseError.message);
-          }
+          console.error('fetchProfile: Base users fetch error:', baseError);
           throw baseError;
         }
+
+        console.log('fetchProfile: Found base user:', baseUser);
 
         let specificProfile = {};
         let internshipData = {};
@@ -103,13 +105,22 @@ export function AuthProvider({ children }) {
         // Step 2: Fetch role-specific data
         if (baseUser.role === 'student') {
           // Fetch student profile
-          const { data: sProfile } = await supabase
+          console.log('fetchProfile: Fetching student_profiles for', authUser.id);
+          const { data: sProfile, error: sError } = await supabase
             .from('student_profiles')
             .select('*')
             .eq('id', authUser.id)
-            .maybeSingle(); // Use maybeSingle to not throw if missing
+            .maybeSingle();
             
-          if (sProfile) specificProfile = sProfile;
+          if (sError) console.error('fetchProfile: student_profiles error:', sError);
+          console.log('fetchProfile: student_profiles data:', sProfile);
+            
+          if (sProfile) {
+            specificProfile = sProfile;
+            console.log('fetchProfile: Specific profile set to:', specificProfile);
+          } else {
+            console.warn('fetchProfile: No student_profile found for ID:', authUser.id);
+          }
 
           // Fetch internship data
           const { data: sInternship } = await supabase
@@ -132,9 +143,9 @@ export function AuthProvider({ children }) {
           ...authUser,
           ...baseUser,
           name: `${baseUser.first_name} ${baseUser.last_name}`,
+          ...internshipData,
           ...specificProfile,
           // Explicitly include internship fields
-          ...internshipData,
           internship_id: internshipData?.id,
           // Ensure we don't overwrite user ID with join IDs if they differ
           id: authUser.id 
@@ -143,7 +154,11 @@ export function AuthProvider({ children }) {
         setUser(userData);
         return userData;
       } catch (err) {
-        console.error('Error in fetchProfile:', err.message);
+        console.error('CRITICAL: Error in fetchProfile:', err);
+        if (err.name === 'NavigatorLockAcquireTimeoutError') {
+          console.warn('Auth Lock Error detected - retrying fetch in 1s...');
+          setTimeout(() => fetchProfile(authUser), 1000);
+        }
         return null;
       } finally {
         currentFetchPromise.current = null;

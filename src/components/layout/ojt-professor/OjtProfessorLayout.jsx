@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import Toast from '../../common/Toast';
-import { theme } from '../../../styles/theme';
+import { studentDesign } from '../../../styles/StudentDesign';
 
 const OjtProfessorLayout = () => {
   const [toast, setToast] = useState(null);
@@ -16,19 +16,20 @@ const OjtProfessorLayout = () => {
     layout: {
       display: 'flex',
       minHeight: '100vh',
-      backgroundColor: theme.colors.bgSecondary,
+      backgroundColor: '#F8FAFC',
+      fontFamily: studentDesign.typography.fontFamily,
     },
     main: {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      marginLeft: '270px', // Slightly wider for coordinator
+      marginLeft: '220px', // Matches Sidebar width
       minWidth: 0,
     },
     content: {
       flex: 1,
-      padding: '24px',
-      marginTop: '70px',
+      padding: '32px',
+      overflowY: 'auto',
     }
   };
 

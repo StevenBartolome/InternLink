@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  Menu, X, LayoutDashboard, User, Bell, LogOut, GraduationCap, ChevronDown, ChevronUp
+  Menu, X, LayoutDashboard, User, Bell, LogOut, GraduationCap, ChevronDown, ChevronUp,
+  Activity, ClipboardList
 } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
@@ -22,6 +23,8 @@ const Sidebar = () => {
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'My Profile', path: '/profile', icon: <User size={20} /> },
+    { name: 'Internship Progress', path: '/progress', icon: <Activity size={20} /> },
+    { name: 'Grades & Evaluations', path: '/grades', icon: <ClipboardList size={20} /> },
     { name: 'Notifications', path: '/notifications', icon: <Bell size={20} /> },
   ];
 

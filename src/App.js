@@ -11,11 +11,15 @@ import MainLayout from './components/layout/student/MainLayout/MainLayout';
 import { useAuth } from './context/AuthContext';
 
 // ── Student Pages ────────────────────────────────────────────────────
+import StudentLayout from './components/layout/student/StudentLayout';
+import Dashboard from './pages/students/redesign/Dashboard';
+import Documents from './pages/students/redesign/Documents';
+import Attendance from './pages/students/redesign/Attendance';
+import WeeklyReports from './pages/students/redesign/WeeklyReports';
+import CompanyInfo from './pages/students/redesign/CompanyInfo';
+import Portfolio from './pages/students/redesign/Portfolio';
+import Notifications from './pages/students/redesign/Notifications';
 import ProfilePage from './pages/students/ProfilePage';
-import InternshipProgressPage from './pages/students/InternshipProgressPage';
-import GradesEvaluationsPage from './pages/students/GradesEvaluationsPage';
-import NotificationsPage from './pages/students/NotificationsPage';
-import DashboardPage from './pages/students/DashboardPage';
 
 // ── OJT Head Pages ───────────────────────────────────────────────────
 import OjtProfessorLayout from './components/layout/ojt-professor/OjtProfessorLayout';
@@ -91,13 +95,19 @@ function App() {
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
 
           {/* ── Student Routes ── */}
-          <Route element={<ProtectedRoute allowedRoles={['student']}><MainLayout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+          <Route element={<ProtectedRoute allowedRoles={['student']}><StudentLayout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/company-info" element={<CompanyInfo />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/weekly-reports" element={<WeeklyReports />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/progress" element={<InternshipProgressPage />} />
-            <Route path="/grades" element={<GradesEvaluationsPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            {/* Redirect old routes to dashboard */}
+            
+            {/* Redirect old routes to new ones */}
+            <Route path="/progress" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/grades" element={<Navigate to="/dashboard" replace />} />
             <Route path="/internships" element={<Navigate to="/dashboard" replace />} />
             <Route path="/applications" element={<Navigate to="/dashboard" replace />} />
             <Route path="/skills" element={<Navigate to="/profile" replace />} />

@@ -1,110 +1,204 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Users, FileCheck, BarChart2,
-  LogOut, GraduationCap,
   ClipboardCheck, Map, Unlock, BookOpen, Activity, User
 } from 'lucide-react';
-import { theme } from '../../../styles/theme';
-import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
 
 const Sidebar = () => {
-  const isMobile = useMediaQuery('(max-width: 1024px)');
-  const [isOpen, setIsOpen] = useState(!isMobile);
-  const { logout } = useAuth();
+  const { user } = useAuth();
+  const location = useLocation();
 
-  const navItems = [
-    { name: 'Dashboard', path: '/ojt-professor/dashboard', icon: BarChart2 },
-    { name: 'Student Directory', path: '/ojt-professor/students', icon: Users },
-    { name: 'Document Review', path: '/ojt-professor/document-review', icon: FileCheck },
-    { name: 'WAR Review', path: '/ojt-professor/war-review', icon: BookOpen },
-    { name: 'Progress Monitoring', path: '/ojt-professor/monitoring', icon: Activity },
-    { name: 'Completion Validation', path: '/ojt-professor/completion-validation', icon: Unlock },
-    { name: 'Visit Itinerary', path: '/ojt-professor/visit-itinerary', icon: Map },
-    { name: 'Grade Management', path: '/ojt-professor/grades', icon: ClipboardCheck },
-    { name: 'Reports Dashboard', path: '/ojt-professor/reports', icon: BarChart2 },
-    { name: 'Profile Settings', path: '/ojt-professor/profile', icon: User },
+  const navSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', path: '/ojt-professor/dashboard', icon: BarChart2 },
+        { label: 'Reports Dashboard', path: '/ojt-professor/reports', icon: BarChart2 },
+      ]
+    },
+    {
+      title: 'MANAGEMENT',
+      items: [
+        { label: 'Student Directory', path: '/ojt-professor/students', icon: Users },
+        { label: 'Document Review', path: '/ojt-professor/document-review', icon: FileCheck },
+        { label: 'WAR Review', path: '/ojt-professor/war-review', icon: BookOpen },
+        { label: 'Progress Monitoring', path: '/ojt-professor/monitoring', icon: Activity },
+      ]
+    },
+    {
+      title: 'EVALUATION',
+      items: [
+        { label: 'Completion Validation', path: '/ojt-professor/completion-validation', icon: Unlock },
+        { label: 'Visit Itinerary', path: '/ojt-professor/visit-itinerary', icon: Map },
+        { label: 'Grade Management', path: '/ojt-professor/grades', icon: ClipboardCheck },
+      ]
+    },
+    {
+      title: 'SETTINGS',
+      items: [
+        { label: 'Profile Settings', path: '/ojt-professor/profile', icon: User },
+      ]
+    }
   ];
 
   const styles = {
     sidebar: {
-      width: '270px',
+      width: '220px',
       height: '100vh',
-      backgroundColor: '#1e293b',
-      color: '#fff',
       position: 'fixed',
       left: 0,
       top: 0,
+      backgroundColor: '#FFFFFF',
+      borderRight: `1px solid ${studentDesign.colors.border}`,
       display: 'flex',
       flexDirection: 'column',
+      padding: '24px 0',
       zIndex: 1000,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-      transform: isMobile && !isOpen ? 'translateX(-100%)' : 'translateX(0)',
-      boxShadow: '4px 0 10px rgba(0,0,0,0.1)',
     },
-    brand: {
-      padding: '32px 24px',
+    header: {
+      padding: '0 24px',
+      marginBottom: '32px',
+    },
+    appName: {
+      fontSize: '20px',
+      fontWeight: studentDesign.typography.weights.bold,
+      color: studentDesign.colors.primary,
+      margin: 0,
+      letterSpacing: '-0.5px',
+    },
+    appSubtitle: {
+      fontSize: '11px',
+      color: studentDesign.colors.textMuted,
+      margin: '4px 0 0 0',
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+    },
+    navContainer: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '0 12px',
+    },
+    section: {
+      marginBottom: '24px',
+    },
+    sectionTitle: {
+      fontSize: '10px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      color: studentDesign.colors.textMuted,
+      padding: '0 12px',
+      marginBottom: '8px',
+      letterSpacing: '0.5px',
+    },
+    navItem: (isActive) => ({
+      display: 'flex',
+      alignItems: 'center',
+      padding: '10px 12px',
+      borderRadius: '8px',
+      textDecoration: 'none',
+      color: isActive ? studentDesign.colors.primary : studentDesign.colors.textDark,
+      backgroundColor: isActive ? '#EFF6FF' : 'transparent',
+      transition: 'all 0.2s ease',
+      marginBottom: '2px',
+      cursor: 'pointer',
+      position: 'relative',
+    }),
+    icon: (isActive) => ({
+      width: '18px',
+      height: '18px',
+      marginRight: '12px',
+      color: isActive ? studentDesign.colors.primary : 'inherit',
+    }),
+    label: {
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.medium,
+      flex: 1,
+    },
+    footer: {
+      padding: '20px 16px',
+      borderTop: `1px solid ${studentDesign.colors.border}`,
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      background: 'rgba(255, 255, 255, 0.03)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+      textDecoration: 'none',
+      cursor: 'pointer',
     },
-    brandText: {
-      fontSize: '1.25rem',
-      fontWeight: 800,
-      color: theme.colors.accent,
-    },
-    nav: {
-      flex: 1,
-      padding: '24px 12px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '4px',
-      overflowY: 'auto',
-    },
-    navLink: (isActive) => ({
+    avatar: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      backgroundColor: studentDesign.colors.primary,
+      color: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '12px 16px',
-      borderRadius: '12px',
-      color: isActive ? '#fff' : 'rgba(255,255,255,0.6)',
-      backgroundColor: isActive ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-      textDecoration: 'none',
-      fontSize: '0.9rem',
-      fontWeight: 600,
-      transition: 'all 0.2s ease',
-    }),
-    footer: {
-      padding: '20px',
-      borderTop: '1px solid rgba(255,255,255,0.05)',
+      justifyContent: 'center',
+      fontWeight: studentDesign.typography.weights.bold,
+      fontSize: '14px',
+    },
+    userInfo: {
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
+    },
+    userName: {
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      color: studentDesign.colors.textMain,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    },
+    userDetails: {
+      fontSize: '11px',
+      color: studentDesign.colors.textMuted,
     }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
   return (
     <aside style={styles.sidebar}>
-      <div style={styles.brand}>
-        <div style={{ backgroundColor: theme.colors.accent, padding: '6px', borderRadius: '8px', color: '#fff' }}>
-          <GraduationCap size={20} />
-        </div>
-        <span style={styles.brandText}>OJT Head</span>
+      <div style={styles.header}>
+        <h1 style={styles.appName}>InternLink</h1>
+        <p style={styles.appSubtitle}>OJT Head Portal</p>
       </div>
-      <nav style={styles.nav}>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            style={({ isActive }) => styles.navLink(isActive)}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <item.icon size={20} />
-              <span>{item.name}</span>
-            </div>
-          </NavLink>
+
+      <nav style={styles.navContainer}>
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} style={styles.section}>
+            <h2 style={styles.sectionTitle}>{section.title}</h2>
+            {section.items.map((item, iIdx) => {
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <NavLink 
+                  key={iIdx} 
+                  to={item.path} 
+                  style={styles.navItem(isActive)}
+                >
+                  <item.icon style={styles.icon(isActive)} />
+                  <span style={styles.label}>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </div>
         ))}
       </nav>
+
+      <NavLink to="/ojt-professor/profile" style={styles.footer}>
+        <div style={styles.avatar}>
+          {getInitials(user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : ''))}
+        </div>
+        <div style={styles.userInfo}>
+          <span style={styles.userName}>{user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : 'OJT Head')}</span>
+          <span style={styles.userDetails}>{user?.assigned_course || 'OJT Head'}</span>
+        </div>
+      </NavLink>
     </aside>
   );
 };

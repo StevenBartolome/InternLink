@@ -1,98 +1,145 @@
 import React, { useState } from 'react';
-import { Bell, Search, User, Grid, LogOut } from 'lucide-react';
-import { theme } from '../../../styles/theme';
+import { Search, Bell, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { studentDesign } from '../../../styles/StudentDesign';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import Modal from '../../common/Modal/Modal';
 
 const Topbar = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
-  const { logout, user } = useAuth();
 
   const handleLogout = async () => {
     setIsModalOpen(false);
-    // Force a direct browser redirect to ensure full state clearance
     await logout();
     window.location.replace('/login');
   };
 
+  const getPageTitle = (path) => {
+    const titles = {
+      '/ojt-professor/dashboard': 'Dashboard',
+      '/ojt-professor/students': 'Student Directory',
+      '/ojt-professor/document-review': 'Document Review',
+      '/ojt-professor/war-review': 'WAR Review',
+      '/ojt-professor/monitoring': 'Progress Monitoring',
+      '/ojt-professor/completion-validation': 'Completion Validation',
+      '/ojt-professor/visit-itinerary': 'Visit Itinerary',
+      '/ojt-professor/grades': 'Grade Management',
+      '/ojt-professor/reports': 'Reports Dashboard',
+      '/ojt-professor/profile': 'Profile Settings',
+      '/ojt-professor/notifications': 'Notifications'
+    };
+    return titles[path] || 'Dashboard';
+  };
+
   const styles = {
-    header: {
-      height: '70px',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    topbar: {
+      height: '64px',
+      backgroundColor: 'rgba(255, 255, 255, 0.8)',
       backdropFilter: 'blur(10px)',
-      borderBottom: `1px solid ${theme.colors.border}`,
+      borderBottom: `1px solid ${studentDesign.colors.border}`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 32px',
-      position: 'fixed',
+      position: 'sticky',
       top: 0,
-      right: 0,
-      left: '270px',
       zIndex: 900,
     },
-    userSection: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '20px',
+    title: {
+      fontSize: '20px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      color: studentDesign.colors.textMain,
+      margin: 0,
     },
-    profile: {
+    actions: {
       display: 'flex',
       alignItems: 'center',
-      gap: '12px',
+      gap: '16px',
+    },
+    iconButton: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       cursor: 'pointer',
-      padding: '6px 12px',
-      borderRadius: '20px',
-      backgroundColor: '#f1f5f9',
+      color: studentDesign.colors.textMuted,
       transition: 'all 0.2s ease',
+      border: 'none',
+      backgroundColor: 'transparent',
     },
     avatar: {
       width: '32px',
       height: '32px',
       borderRadius: '50%',
-      objectFit: 'cover',
-      border: `2px solid #fff`,
+      backgroundColor: studentDesign.colors.primaryLight,
+      color: studentDesign.colors.primary,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '12px',
+      marginLeft: '8px',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      border: 'none',
+    },
+    logoutBtn: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: studentDesign.colors.textMuted,
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      border: 'none',
+      backgroundColor: 'transparent',
     }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
   return (
     <>
-      <header style={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
-          <Grid size={20} />
-          <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{user?.assigned_course || 'OJT Head'}</span>
-        </div>
-        <div style={styles.userSection}>
-          <div 
-            style={{ color: theme.colors.textMuted, cursor: 'pointer' }}
+      <header style={styles.topbar}>
+        <h2 style={styles.title}>{getPageTitle(location.pathname)}</h2>
+        
+        <div style={styles.actions}>
+          <button style={styles.iconButton}>
+            <Search size={20} />
+          </button>
+          <motion.button 
+            whileHover={{ backgroundColor: '#F1F5F9' }}
+            style={styles.iconButton}
             onClick={() => navigate('/ojt-professor/notifications')}
           >
             <Bell size={20} />
-          </div>
-          <div style={styles.profile} onClick={() => navigate('/ojt-professor/profile')}>
-            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt="OJT Head" style={styles.avatar} />
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.colors.textMain }}>{user?.name}</span>
-          </div>
-          <button 
+          </motion.button>
+          <motion.div 
+            whileHover={{ scale: 1.1 }}
+            style={styles.avatar}
+            onClick={() => navigate('/ojt-professor/profile')}
+          >
+            {getInitials(user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : ''))}
+          </motion.div>
+          <div style={{ width: '1px', height: '24px', backgroundColor: studentDesign.colors.border, margin: '0 8px' }} />
+          <motion.button 
+            whileHover={{ backgroundColor: '#FEE2E2', color: studentDesign.colors.danger }}
+            style={styles.logoutBtn}
             onClick={() => setIsModalOpen(true)}
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: theme.colors.danger, 
-              cursor: 'pointer',
-              padding: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '10px',
-              transition: 'all 0.2s',
-            }}
             title="Logout"
           >
             <LogOut size={20} />
-          </button>
+          </motion.button>
         </div>
       </header>
 

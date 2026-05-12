@@ -1,36 +1,51 @@
-import React, { useState, useRef } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  Mail, Phone, MapPin, 
-  Calendar, Edit,
-  ShieldCheck, ExternalLink, Github,
-  FileText, Award, Star, Save, X, Plus, Trash2, Eye, Upload
+  Mail, 
+  Phone, 
+  MapPin, 
+  Calendar, 
+  Edit,
+  ShieldCheck, 
+  ExternalLink, 
+  Github,
+  FileText, 
+  Award, 
+  Star, 
+  Save, 
+  X, 
+  Plus, 
+  Trash2, 
+  Eye, 
+  Upload
 } from 'lucide-react';
-import { theme } from '../../styles/theme';
-import { commonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../context/AuthContext';
-import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { studentDesign } from '../../styles/StudentDesign';
 
 const ProfilePage = () => {
   const { user } = useAuth();
-  const { showToast } = useOutletContext() || {};
-  const isMobile = useMediaQuery('(max-width: 1024px)');
   
-  // Default structure for student profile, merged with real auth user
   const initialData = {
-    name: user?.name || '',
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
-    email: user?.email || '',
-    course: user?.course || '',
-    contact: user?.contact_number || '',
-    studentId: user?.student_id || '',
-    address: 'Not provided', // Placeholder for data not yet in DB
-    avatar: `https://ui-avatars.com/api/?name=${user?.first_name}+${user?.last_name}&background=random`,
-    skills: ['Communication', 'Teamwork'],
-    certifications: [],
-    portfolioLinks: [],
-    resumeFiles: []
+    firstName: user?.first_name || 'Juan',
+    lastName: user?.last_name || 'Dela Cruz',
+    email: user?.email || 'juan.delacruz@example.com',
+    course: user?.course_code || 'BS Information Technology',
+    contact: user?.contact_number || '09123456789',
+    studentId: user?.student_id || '2021-12345',
+    address: '123 Sampaguita St., Quezon City',
+    avatar: null,
+    skills: ['React', 'JavaScript', 'UI Design', 'Problem Solving'],
+    certifications: [
+      { id: 1, title: 'AWS Cloud Practitioner', issuer: 'Amazon Web Services', date: 'Dec 2025' },
+      { id: 2, title: 'Google UX Design Professional', issuer: 'Coursera', date: 'Oct 2025' }
+    ],
+    portfolioLinks: [
+      { id: 1, url: 'github.com/juandelacruz' },
+      { id: 2, url: 'juandelacruz.dev' }
+    ],
+    resumeFiles: [
+      { id: 1, filename: 'Juan_Dela_Cruz_Resume.pdf', date: 'May 10, 2026' }
+    ]
   };
 
   const [isEditing, setIsEditing] = useState(false);
@@ -40,59 +55,21 @@ const ProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Sync profile state when user data changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setProfile(prev => ({
         ...prev,
-        name: user.name,
-        firstName: user.first_name,
-        lastName: user.last_name,
-        email: user.email,
-        course: user.course,
-        contact: user.contact_number,
-        studentId: user.student_id
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        email: user.email || prev.email,
+        course: user.course || prev.course,
+        studentId: user.student_id || prev.studentId,
       }));
     }
   }, [user]);
 
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (showToast) showToast(`Uploading ${file.name}...`, 'info');
-      setTimeout(() => {
-        const fileUrl = URL.createObjectURL(file);
-        const newFile = {
-          id: Date.now(),
-          filename: file.name,
-          date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-          url: fileUrl
-        };
-        setProfile(prev => ({
-          ...prev,
-          resumeFiles: [newFile, ...prev.resumeFiles]
-        }));
-        if (showToast) showToast('Resume uploaded successfully!', 'success');
-      }, 1000);
-    }
-  };
-
-  const toggleEdit = () => {
-    setTempProfile({...profile});
-    setIsEditing(true);
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-  };
-
   const handleSave = () => {
     setIsSaving(true);
-    // Mock saving delay
     setTimeout(() => {
       setProfile({...tempProfile});
       setIsSaving(false);
@@ -105,392 +82,288 @@ const ProfilePage = () => {
     setTempProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleAddSkill = (e) => {
-    e.preventDefault();
-    if (skillInput.trim() && !tempProfile.skills.includes(skillInput.trim())) {
-      setTempProfile(prev => ({
-        ...prev,
-        skills: [...prev.skills, skillInput.trim()]
-      }));
-      setSkillInput('');
-    }
-  };
-
-  const removeSkill = (skillToRemove) => {
-    setTempProfile(prev => ({
-      ...prev,
-      skills: prev.skills.filter(s => s !== skillToRemove)
-    }));
+  const getInitials = (first, last) => {
+    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase();
   };
 
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px',
+      gap: '32px',
+      fontFamily: studentDesign.typography.fontFamily,
     },
     headerCard: {
-      ...commonStyles.dashboardCard,
+      ...studentDesign.card,
       display: 'flex',
-      flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
       gap: '32px',
-      padding: isMobile ? '24px' : '40px',
-      position: 'relative',
+      padding: '40px',
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
     },
     avatar: {
-      width: isMobile ? '100px' : '120px',
-      height: isMobile ? '100px' : '120px',
-      borderRadius: '50%',
-      border: `4px solid ${theme.colors.bgAccent}`,
-      boxShadow: theme.shadows.md,
-      objectFit: 'cover',
+      width: '120px',
+      height: '120px',
+      borderRadius: '32px',
+      backgroundColor: studentDesign.colors.primary,
+      color: '#FFFFFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '40px',
+      fontWeight: studentDesign.typography.weights.bold,
+      boxShadow: '0 20px 25px -5px rgba(30, 64, 175, 0.2)',
+    },
+    badge: {
+      padding: '6px 12px',
+      borderRadius: '20px',
+      backgroundColor: '#EFF6FF',
+      color: studentDesign.colors.primary,
+      fontSize: '12px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+    },
+    section: {
+      ...studentDesign.card,
+      height: '100%',
+    },
+    sectionTitle: {
+      fontSize: '16px',
+      fontWeight: studentDesign.typography.weights.bold,
+      color: studentDesign.colors.textMain,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      marginBottom: '24px',
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr 2fr',
-      gap: '24px',
-    },
-    section: {
-      ...commonStyles.dashboardCard,
-      padding: '24px',
-      height: '100%',
+      gridTemplateColumns: '1fr 2fr',
+      gap: '32px',
     },
     infoItem: {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
       padding: '12px 0',
-      borderBottom: `1px solid ${theme.colors.bgSecondary}`,
+      borderBottom: `1px solid ${studentDesign.colors.border}`,
     },
-    badge: {
-      ...commonStyles.dashboardBadge,
-      backgroundColor: theme.colors.bgAccent,
-      color: theme.colors.primary,
-      margin: '4px',
+    infoLabel: {
+      fontSize: '12px',
+      color: studentDesign.colors.textMuted,
+      width: '100px',
+    },
+    infoValue: {
+      fontSize: '14px',
+      color: studentDesign.colors.textDark,
+      fontWeight: studentDesign.typography.weights.medium,
+    },
+    skillBadge: {
+      padding: '8px 16px',
+      borderRadius: '12px',
+      backgroundColor: '#F1F5F9',
+      color: studentDesign.colors.textDark,
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.medium,
+      margin: '0 8px 8px 0',
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '6px',
+      gap: '8px',
     },
     input: {
       width: '100%',
-      padding: '10px 12px',
-      borderRadius: '8px',
-      border: `1px solid ${theme.colors.border}`,
-      fontSize: '0.9rem',
+      padding: '12px 16px',
+      borderRadius: '12px',
+      border: `1px solid ${studentDesign.colors.border}`,
+      fontSize: '14px',
       outline: 'none',
-      backgroundColor: '#f8fafc',
-      marginTop: '4px',
+      transition: 'border-color 0.2s ease',
+      backgroundColor: '#F8FAFC',
     },
-    label: {
-      fontSize: '0.8rem',
-      fontWeight: 700,
-      color: theme.colors.textMuted,
-      display: 'block',
-    },
-    editActions: {
+    primaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: studentDesign.colors.primary,
+      color: '#FFFFFF',
+      border: 'none',
+      fontWeight: studentDesign.typography.weights.semibold,
+      cursor: 'pointer',
       display: 'flex',
-      gap: '12px',
-      marginTop: '12px',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
     },
-    resumeSection: {
-      ...commonStyles.dashboardCard,
-      padding: '24px',
-      gridColumn: isMobile ? 'span 1' : 'span 2',
-      maxWidth: '1000px',
-      width: '100%',
+    secondaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: 'transparent',
+      color: studentDesign.colors.textDark,
+      border: `1px solid ${studentDesign.colors.border}`,
+      fontWeight: studentDesign.typography.weights.semibold,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
     }
   };
 
   return (
-    <div style={styles.container}>
-      {/* Header Card */}
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      style={styles.container}
+    >
+      {/* Header */}
       <div style={styles.headerCard}>
-        <img src={profile.avatar} alt={profile.name} style={styles.avatar} />
-        
-        <div style={{ flex: 1, textAlign: isMobile ? 'center' : 'left' }}>
-          {isEditing ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={styles.label}>Full Name</label>
-                <input 
-                  style={styles.input} 
-                  name="name" 
-                  value={tempProfile.name} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div>
-                <label style={styles.label}>Course & Major</label>
-                <input 
-                  style={styles.input} 
-                  name="course" 
-                  value={tempProfile.course} 
-                  onChange={handleChange} 
-                />
-              </div>
-              <div style={styles.editActions}>
+        <div style={styles.avatar}>
+          {getInitials(profile.firstName, profile.lastName)}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>{profile.firstName} {profile.lastName}</h1>
+            <div style={styles.badge}>
+              <ShieldCheck size={14} /> Verified Student
+            </div>
+          </div>
+          <p style={{ color: studentDesign.colors.textMuted, fontSize: '16px', margin: '0 0 24px 0' }}>{profile.course}</p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {!isEditing ? (
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setTempProfile({...profile});
+                  setIsEditing(true);
+                }}
+                style={styles.primaryButton}
+              >
+                <Edit size={16} /> Edit Profile
+              </motion.button>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button 
                   onClick={handleSave} 
+                  style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }}
                   disabled={isSaving}
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, opacity: isSaving ? 0.7 : 1 }}
                 >
                   {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
                 </button>
                 <button 
-                  onClick={cancelEdit} 
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+                  onClick={() => setIsEditing(false)} 
+                  style={styles.secondaryButton}
                 >
                   <X size={16} /> Cancel
                 </button>
               </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>{profile.name}</h1>
-                <ShieldCheck size={20} color={theme.colors.success} />
-              </div>
-              <p style={{ color: theme.colors.textMuted, fontSize: '1rem', margin: '4px 0 16px 0' }}>{profile.course}</p>
-              <div style={{ display: 'flex', gap: '12px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
-                <button 
-                  onClick={toggleEdit}
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
-                >
-                  <Edit size={16} /> Edit Profile
-                </button>
-                <button style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}>
-                  <ExternalLink size={16} /> View Public Link
-                </button>
-              </div>
-            </>
-          )}
+            )}
+            <button style={styles.secondaryButton}>
+              <ExternalLink size={16} /> Public Portfolio
+            </button>
+          </div>
         </div>
       </div>
 
       <div style={styles.grid}>
-        {/* Left Column: Contact & Social */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={styles.section}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Mail size={18} color={theme.colors.primary} /> Contact Information
-            </h3>
-            {isEditing ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <label style={styles.label}>Email Address</label>
-                  <input style={styles.input} name="email" value={tempProfile.email} onChange={handleChange} />
-                </div>
-                <div>
-                  <label style={styles.label}>Contact Number</label>
-                  <input style={styles.input} name="contact" value={tempProfile.contact} onChange={handleChange} />
-                </div>
-                <div>
-                  <label style={styles.label}>Address</label>
-                  <input style={styles.input} name="address" value={tempProfile.address} onChange={handleChange} />
-                </div>
+            <h3 style={styles.sectionTitle}><Mail size={18} color={studentDesign.colors.primary} /> Contact Info</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Email</span>
+                <span style={styles.infoValue}>{profile.email}</span>
               </div>
-            ) : (
-              <>
-                <div style={styles.infoItem}><Mail size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{profile.email}</span></div>
-                <div style={styles.infoItem}><Phone size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{profile.contact}</span></div>
-                <div style={styles.infoItem}><MapPin size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>{profile.address}</span></div>
-                <div style={styles.infoItem}><Calendar size={18} color={theme.colors.textMuted}/> <span style={{ fontSize: '0.9rem' }}>Joined March 2024</span></div>
-              </>
-            )}
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Phone</span>
+                <span style={styles.infoValue}>{profile.contact}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Address</span>
+                <span style={styles.infoValue}>{profile.address}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Student ID</span>
+                <span style={styles.infoValue}>{profile.studentId}</span>
+              </div>
+            </div>
           </div>
 
           <div style={styles.section}>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Github size={18} color={theme.colors.primary} /> Social & Portfolio
-            </h3>
+            <h3 style={styles.sectionTitle}><Github size={18} color={studentDesign.colors.primary} /> Links</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(isEditing ? tempProfile : profile).portfolioLinks.map(link => (
-                <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {isEditing ? (
-                    <input 
-                      style={styles.input} 
-                      value={link.url} 
-                      onChange={(e) => {
-                        const newLinks = tempProfile.portfolioLinks.map(l => l.id === link.id ? {...l, url: e.target.value} : l);
-                        setTempProfile({...tempProfile, portfolioLinks: newLinks});
-                      }}
-                    />
-                  ) : (
-                    <a href={link.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.primary, textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
-                      {link.url.includes('github') ? <Github size={18} /> : <ExternalLink size={18} />}
-                      {link.url.replace('https://', '')}
-                    </a>
-                  )}
-                </div>
+              {profile.portfolioLinks.map(link => (
+                <a key={link.id} href={`https://${link.url}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: studentDesign.colors.textDark, textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
+                    <ExternalLink size={14} style={{ margin: 'auto' }} />
+                  </div>
+                  {link.url}
+                </a>
               ))}
-              {isEditing && (
-                <button 
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.8rem', padding: '8px' }}
-                  onClick={() => setTempProfile({...tempProfile, portfolioLinks: [...tempProfile.portfolioLinks, {id: Date.now(), url: ''}]})}
-                >
-                  <Plus size={14} /> Add Link
-                </button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Right Column: Skills & Certifications */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={styles.section}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Star size={18} color={theme.colors.primary} /> Technical Skills
-            </h3>
-            {isEditing && (
-              <form onSubmit={handleAddSkill} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                <input 
-                  style={styles.input} 
-                  placeholder="Add a skill..." 
-                  value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                />
-                <button type="submit" style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '0 16px' }}>
-                  <Plus size={18} />
-                </button>
-              </form>
-            )}
+            <h3 style={styles.sectionTitle}><Star size={18} color={studentDesign.colors.primary} /> Skills</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              {(isEditing ? tempProfile : profile).skills.map((skill, i) => (
-                <span key={i} style={styles.badge}>
-                  {skill}
-                  {isEditing && (
-                    <X size={14} style={{ cursor: 'pointer' }} onClick={() => removeSkill(skill)} />
-                  )}
-                </span>
+              {profile.skills.map((skill, i) => (
+                <span key={i} style={styles.skillBadge}>{skill}</span>
               ))}
+              <button style={{ ...styles.skillBadge, backgroundColor: 'transparent', border: `1px dashed ${studentDesign.colors.border}`, color: studentDesign.colors.textMuted }}>
+                <Plus size={14} /> Add Skill
+              </button>
             </div>
           </div>
 
           <div style={styles.section}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={18} color={theme.colors.primary} /> Certifications
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {(isEditing ? tempProfile : profile).certifications.map(cert => (
-                <div key={cert.id} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                  <div style={{ backgroundColor: theme.colors.bgAccent, padding: '10px', borderRadius: '10px', color: theme.colors.primary }}>
+            <h3 style={styles.sectionTitle}><Award size={18} color={studentDesign.colors.primary} /> Certifications</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {profile.certifications.map(cert => (
+                <div key={cert.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: studentDesign.colors.primaryLight, color: studentDesign.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Award size={24} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <input 
-                          style={styles.input} 
-                          value={cert.title} 
-                          onChange={(e) => {
-                            const newCerts = tempProfile.certifications.map(c => c.id === cert.id ? {...c, title: e.target.value} : c);
-                            setTempProfile({...tempProfile, certifications: newCerts});
-                          }}
-                        />
-                        <input 
-                          style={styles.input} 
-                          value={cert.issuer} 
-                          onChange={(e) => {
-                            const newCerts = tempProfile.certifications.map(c => c.id === cert.id ? {...c, issuer: e.target.value} : c);
-                            setTempProfile({...tempProfile, certifications: newCerts});
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{cert.title}</div>
-                        <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>{cert.issuer} • {cert.date}</div>
-                      </>
-                    )}
+                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{cert.title}</div>
+                    <div style={{ fontSize: '12px', color: studentDesign.colors.textMuted }}>{cert.issuer} • {cert.date}</div>
                   </div>
-                  {isEditing && (
-                    <Trash2 
-                      size={18} 
-                      color={theme.colors.danger} 
-                      style={{ cursor: 'pointer', marginTop: '10px' }} 
-                      onClick={() => setTempProfile({...tempProfile, certifications: tempProfile.certifications.filter(c => c.id !== cert.id)})}
-                    />
-                  )}
                 </div>
               ))}
-              {isEditing && (
-                <button 
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.8rem' }}
-                  onClick={() => setTempProfile({...tempProfile, certifications: [...tempProfile.certifications, {id: Date.now(), title: 'New Certification', issuer: 'Issuer', date: 'Date'}]})}
-                >
-                  <Plus size={14} /> Add Certification
-                </button>
-              )}
-            </div>
-          </div>
-          <div style={styles.section}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={18} color={theme.colors.primary} /> Resume & Documents
-              </h3>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, fontSize: '0.85rem' }}
-                  onClick={() => showToast && showToast('Opening Resume Builder...', 'info')}
-                >
-                  <Plus size={16} /> Create
-                </button>
-                <button 
-                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem' }}
-                  onClick={handleUploadClick}
-                >
-                  <Upload size={16} /> Upload
-                </button>
-              </div>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                style={{ display: 'none' }} 
-                onChange={handleFileChange}
-                accept=".pdf,.doc,.docx"
-              />
-            </div>
-            
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              {profile.resumeFiles.length === 0 ? (
-                <div style={{ width: '100%', padding: '32px', textAlign: 'center', color: theme.colors.textMuted, border: `2px dashed ${theme.colors.border}`, borderRadius: '12px' }}>
-                  <FileText size={32} style={{ opacity: 0.5, marginBottom: '12px' }} />
-                  <p style={{ margin: 0, fontWeight: 600 }}>No resumes uploaded yet.</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem' }}>Upload a file or create a new resume to get started.</p>
-                </div>
-              ) : (
-                profile.resumeFiles.map(file => (
-                  <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px 20px', border: `1px solid ${theme.colors.bgSecondary}`, borderRadius: '12px', width: 'fit-content' }}>
-                    <div style={{ backgroundColor: '#EEF2FF', padding: '10px', borderRadius: '8px', color: '#4F46E5' }}>
-                      <FileText size={24} />
-                    </div>
-                    <div style={{ paddingRight: '24px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{file.filename}</div>
-                      <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>Uploaded {file.date}</div>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        if (file.url) {
-                          window.open(file.url, '_blank');
-                        } else {
-                          showToast && showToast('Viewing system resume sample...', 'info');
-                        }
-                      }}
-                      style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer', padding: '4px' }}
-                      title="View Resume"
-                    >
-                      <Eye size={18} />
-                    </button>
-                  </div>
-                ))
-              )}
             </div>
           </div>
 
+          <div style={styles.section}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ ...styles.sectionTitle, marginBottom: 0 }}><FileText size={18} color={studentDesign.colors.primary} /> Resumes</h3>
+              <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>
+                <Upload size={14} /> Upload New
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              {profile.resumeFiles.map(file => (
+                <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${studentDesign.colors.border}`, flex: 1, minWidth: '240px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: studentDesign.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                    <FileText size={20} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{file.filename}</div>
+                    <div style={{ fontSize: '11px', color: studentDesign.colors.textMuted }}>Uploaded {file.date}</div>
+                  </div>
+                  <button style={{ background: 'none', border: 'none', color: studentDesign.colors.textMuted, cursor: 'pointer' }}>
+                    <Eye size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
