@@ -38,10 +38,20 @@ export const parseStudentCSV = (csvText) => {
     const firstIdx = cols.findIndex(c => c.includes('first') || c.includes('given'));
     const lastIdx = cols.findIndex(c => c.includes('last') || c.includes('family') || c.includes('surname'));
     const fullIdx = cols.findIndex(c => c.includes('name') && !c.includes('first') && !c.includes('last'));
+    
+    // New fields
+    const yearIdx = cols.findIndex(c => c.includes('year') && (c.includes('level') || c.includes('lvl')));
+    const ayIdx = cols.findIndex(c => c.includes('academic') || c.includes('ay'));
+    const semIdx = cols.findIndex(c => c.includes('sem'));
+    const subjectIdx = cols.findIndex(c => c.includes('subject') || c.includes('ojt'));
 
     if (idIdx !== -1) mapping.id = idIdx;
     if (emailIdx !== -1) mapping.email = emailIdx;
     if (courseIdx !== -1) mapping.course = courseIdx;
+    if (yearIdx !== -1) mapping.yearLevel = yearIdx;
+    if (ayIdx !== -1) mapping.academicYear = ayIdx;
+    if (semIdx !== -1) mapping.semester = semIdx;
+    if (subjectIdx !== -1) mapping.ojtSubject = subjectIdx;
 
     if (firstIdx !== -1 && lastIdx !== -1) {
       mapping.first = firstIdx;
@@ -63,6 +73,13 @@ export const parseStudentCSV = (csvText) => {
       let studentId = mapping.id < parts.length ? parts[mapping.id] : '';
       let email = mapping.email < parts.length ? parts[mapping.email] : '';
       let course = mapping.course < parts.length ? parts[mapping.course] : 'BSIT';
+      
+      // New fields extraction
+      let yearLevel = mapping.yearLevel !== undefined && mapping.yearLevel < parts.length ? parts[mapping.yearLevel] : null;
+      let academicYear = mapping.academicYear !== undefined && mapping.academicYear < parts.length ? parts[mapping.academicYear] : null;
+      let semester = mapping.semester !== undefined && mapping.semester < parts.length ? parts[mapping.semester] : null;
+      let ojtSubject = mapping.ojtSubject !== undefined && mapping.ojtSubject < parts.length ? parts[mapping.ojtSubject] : null;
+
       let firstName = '';
       let lastName = '';
 
@@ -87,7 +104,11 @@ export const parseStudentCSV = (csvText) => {
           firstName, 
           lastName, 
           studentId: studentId || `S-${Date.now()}-${i}`,
-          course 
+          course,
+          year_level: yearLevel,
+          academic_year: academicYear,
+          semester: semester,
+          ojt_subject_name: ojtSubject
         });
       }
     }

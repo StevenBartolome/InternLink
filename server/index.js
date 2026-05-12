@@ -52,7 +52,19 @@ app.get('/health', async (req, res) => {
 
 // Admin Route: Create Student Account
 app.post('/admin/create-student', async (req, res) => {
-    const { email, firstName, lastName, studentId, course, ojtHeadId, password } = req.body;
+    const { 
+        email, 
+        firstName, 
+        lastName, 
+        studentId, 
+        course, 
+        year_level, 
+        academic_year, 
+        semester, 
+        ojt_subject_name, 
+        ojtHeadId, 
+        password 
+    } = req.body;
 
     if (!email || !firstName || !lastName || !password) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -94,7 +106,11 @@ app.post('/admin/create-student', async (req, res) => {
             .insert({
                 id: userId,
                 student_id: studentId || `S-${Date.now()}`, // Fallback if no student ID provided
-                course: course || 'BSIT' // Default course
+                course: course || 'BSIT',
+                year_level: year_level || '4th Year',
+                academic_year: academic_year,
+                semester: semester || 'First Semester',
+                ojt_subject_name: ojt_subject_name
             });
 
         if (profileError) throw profileError;

@@ -295,11 +295,10 @@ export function AuthProvider({ children }) {
           id: authData.user.id,
           student_id: studentData.studentId,
           course: studentData.course,
-          course_full_name: studentData.courseFullName,
-          year_level: studentData.yearLevel,
-          academic_year: studentData.academicYear,
+          year_level: studentData.yearLevel || studentData.year_level,
+          academic_year: studentData.academicYear || studentData.academic_year,
           semester: studentData.semester,
-          ojt_subject_name: studentData.ojtSubjectName
+          ojt_subject_name: studentData.ojtSubjectName || studentData.ojt_subject_name
         });
 
       if (studError) {

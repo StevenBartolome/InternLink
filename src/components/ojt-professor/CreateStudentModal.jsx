@@ -118,11 +118,11 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
       const res = await createStudentAccount({ 
         ...student, 
         password,
-        // Default values for bulk upload
-        year_level: '4th Year',
-        academic_year: activeAY || '2024-2025',
-        semester: 'First Semester',
-        ojt_subject_name: 'CCNTERN1'
+        // Use values from CSV if present, otherwise fall back to defaults
+        year_level: student.year_level || '4th Year',
+        academic_year: student.academic_year || activeAY || '2024-2025',
+        semester: student.semester || 'First Semester',
+        ojt_subject_name: student.ojt_subject_name || 'CCNTERN1'
       });
       
       if (res.success) {

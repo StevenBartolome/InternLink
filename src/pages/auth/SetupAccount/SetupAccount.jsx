@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, CheckCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, CheckCircle, ArrowRight, ShieldCheck, Loader2 } from 'lucide-react';
 import { supabase } from '../../../services/supabaseClient';
 import { theme } from '../../../styles/theme';
+import { useAuth } from '../../../context/AuthContext';
 import Toast from '../../../components/common/Toast';
 
 export default function SetupAccount() {
+  const { user, updateUser } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
@@ -26,27 +27,29 @@ export default function SetupAccount() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.updateUser({ 
-        password,
-        data: { is_first_login: false } 
-      });
-      if (error) throw error;
-
-      // Also update the users table
-      const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from('users').update({ is_first_login: false }).eq('id', user.id);
-
-      setSuccess(true);
-      setToast({ message: 'Account activated! Redirecting...', type: 'success' });
       
+      // 1. Update Password in Supabase Auth
+      const { error: authError } = await supabase.auth.updateUser({ 
+        password
+      });
+      if (authError) throw authError;
+
+      // 2. Clear first login flag in both DB and AuthContext state
+      const { error: profileError } = await updateUser({ is_first_login: false });
+      if (profileError) throw profileError;
+
+      setToast({ message: 'Account activated! Redirecting to dashboard...', type: 'success' });
+      
+      // 3. Navigate to appropriate dashboard
       setTimeout(() => {
-        const role = user.user_metadata?.role;
+        const role = user?.role;
         const target = role === 'admin' ? '/admin/dashboard' : role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
         navigate(target);
-      }, 2000);
+      }, 1500);
+      
     } catch (err) {
+      console.error('Setup error:', err);
       setToast({ message: err.message, type: 'error' });
-    } finally {
       setLoading(false);
     }
   };
@@ -120,22 +123,6 @@ export default function SetupAccount() {
     }
   };
 
-  if (success) {
-    return (
-      <div style={s.container}>
-        <div style={s.card}>
-          <div style={{ backgroundColor: '#dcfce7', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <CheckCircle size={40} color="#15803d" />
-          </div>
-          <h2 style={s.title}>Setup Complete!</h2>
-          <p style={s.sub}>Your account is now ready. You can now log in using your new password.</p>
-          <button onClick={() => navigate('/login')} style={s.btn}>
-            Go to Login <ArrowRight size={18} />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={s.container}>
