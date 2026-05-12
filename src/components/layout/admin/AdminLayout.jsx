@@ -2,31 +2,34 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
-import { theme } from '../../../styles/theme';
-import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { studentDesign } from '../../../styles/StudentDesign';
 
 const AdminLayout = () => {
-  const isMobile = useMediaQuery('(max-width: 1024px)');
-
   const styles = {
     layout: {
       display: 'flex',
       minHeight: '100vh',
-      backgroundColor: theme.colors.bgSecondary,
+      backgroundColor: '#F8FAFC',
+      fontFamily: studentDesign.typography.fontFamily,
     },
     main: {
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
-      marginLeft: isMobile ? '0' : '260px',
+      marginLeft: '220px', // Matches Sidebar width
       minWidth: 0,
     },
     content: {
       flex: 1,
-      padding: '16px 24px',
-      marginTop: '70px',
+      padding: '32px',
+      overflowY: 'auto',
     }
   };
+
+  const isMobile = window.innerWidth <= 1024;
+  if (isMobile) {
+    styles.main.marginLeft = '0';
+  }
 
   return (
     <div style={styles.layout}>

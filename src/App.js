@@ -7,7 +7,6 @@ import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
 import SetupAccount from './pages/auth/SetupAccount/SetupAccount';
-import MainLayout from './components/layout/student/MainLayout/MainLayout';
 import { useAuth } from './context/AuthContext';
 
 // ── Student Pages ────────────────────────────────────────────────────

@@ -1,101 +1,201 @@
-import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, FileCheck, Briefcase, 
-  BarChart2, ShieldAlert, Settings, LogOut, GraduationCap,
-  ChevronRight, Shield
+  LayoutDashboard, Users, BarChart2, ShieldAlert, 
+  Settings, Shield, User
 } from 'lucide-react';
-import { theme } from '../../../styles/theme';
-import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
 
 const Sidebar = () => {
-  const isMobile = useMediaQuery('(max-width: 1024px)');
-  const [isOpen, setIsOpen] = useState(!isMobile);
-  const { logout } = useAuth();
+  const { user } = useAuth();
+  const location = useLocation();
 
-  const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-    { name: 'User Management', path: '/admin/users', icon: Users },
-    { name: 'Internship Config', path: '/admin/internship-config', icon: Settings },
-    { name: 'System Reports', path: '/admin/reports', icon: BarChart2 },
-    { name: 'Notification Center', path: '/admin/notifications', icon: ShieldAlert },
-    { name: 'Audit Logs', path: '/admin/audit', icon: Shield },
+  const navSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+        { label: 'System Reports', path: '/admin/reports', icon: BarChart2 },
+      ]
+    },
+    {
+      title: 'MANAGEMENT',
+      items: [
+        { label: 'User Management', path: '/admin/users', icon: Users },
+        { label: 'Internship Config', path: '/admin/internship-config', icon: Settings },
+      ]
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { label: 'Notification Center', path: '/admin/notifications', icon: ShieldAlert },
+        { label: 'Audit Logs', path: '/admin/audit', icon: Shield },
+      ]
+    },
+    {
+      title: 'SETTINGS',
+      items: [
+        { label: 'Admin Profile', path: '/admin/profile', icon: User },
+      ]
+    }
   ];
 
   const styles = {
     sidebar: {
-      width: '260px',
+      width: '220px',
       height: '100vh',
-      backgroundColor: theme.colors.primary,
-      color: '#fff',
       position: 'fixed',
       left: 0,
       top: 0,
+      backgroundColor: '#FFFFFF',
+      borderRight: `1px solid ${studentDesign.colors.border}`,
       display: 'flex',
       flexDirection: 'column',
+      padding: '24px 0',
       zIndex: 1000,
-      transition: 'transform 0.3s ease',
-      transform: isMobile && !isOpen ? 'translateX(-100%)' : 'translateX(0)',
-      boxShadow: theme.shadows.lg,
     },
-    brand: {
-      padding: '32px 24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      borderBottom: '1px solid rgba(255,255,255,0.1)',
+    header: {
+      padding: '0 24px',
+      marginBottom: '32px',
     },
-    brandText: {
-      fontSize: '1.25rem',
-      fontWeight: 800,
+    appName: {
+      fontSize: '20px',
+      fontWeight: studentDesign.typography.weights.bold,
+      color: studentDesign.colors.primary,
+      margin: 0,
+      letterSpacing: '-0.5px',
+    },
+    appSubtitle: {
+      fontSize: '11px',
+      color: studentDesign.colors.textMuted,
+      margin: '4px 0 0 0',
+      textTransform: 'uppercase',
+      letterSpacing: '1px',
+    },
+    navContainer: {
+      flex: 1,
+      overflowY: 'auto',
+      padding: '0 12px',
+    },
+    section: {
+      marginBottom: '24px',
+    },
+    sectionTitle: {
+      fontSize: '10px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      color: studentDesign.colors.textMuted,
+      padding: '0 12px',
+      marginBottom: '8px',
       letterSpacing: '0.5px',
     },
-    nav: {
-      flex: 1,
-      padding: '24px 12px',
+    navItem: (isActive) => ({
       display: 'flex',
-      flexDirection: 'column',
-      gap: '4px',
+      alignItems: 'center',
+      padding: '10px 12px',
+      borderRadius: '8px',
+      textDecoration: 'none',
+      color: isActive ? studentDesign.colors.primary : studentDesign.colors.textDark,
+      backgroundColor: isActive ? '#EFF6FF' : 'transparent',
+      transition: 'all 0.2s ease',
+      marginBottom: '2px',
+      cursor: 'pointer',
+      position: 'relative',
+    }),
+    icon: (isActive) => ({
+      width: '18px',
+      height: '18px',
+      marginRight: '12px',
+      color: isActive ? studentDesign.colors.primary : 'inherit',
+    }),
+    label: {
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.medium,
+      flex: 1,
     },
-    navLink: (isActive) => ({
+    footer: {
+      padding: '20px 16px',
+      borderTop: `1px solid ${studentDesign.colors.border}`,
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      padding: '12px 16px',
-      borderRadius: '12px',
-      color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
-      backgroundColor: isActive ? 'rgba(255,255,255,0.15)' : 'transparent',
       textDecoration: 'none',
-      fontSize: '0.875rem',
-      fontWeight: 500,
-      transition: 'all 0.2s ease',
-    }),
-    footer: {
-      padding: '24px 12px',
-      borderTop: '1px solid rgba(255,255,255,0.1)',
-      marginTop: 'auto',
+      cursor: 'pointer',
+    },
+    avatar: {
+      width: '36px',
+      height: '36px',
+      borderRadius: '10px',
+      backgroundColor: studentDesign.colors.primary,
+      color: '#FFFFFF',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: studentDesign.typography.weights.bold,
+      fontSize: '14px',
+    },
+    userInfo: {
+      display: 'flex',
+      flexDirection: 'column',
+      minWidth: 0,
+    },
+    userName: {
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.semibold,
+      color: studentDesign.colors.textMain,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+    },
+    userDetails: {
+      fontSize: '11px',
+      color: studentDesign.colors.textMuted,
     }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'AD';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
   return (
     <aside style={styles.sidebar}>
-      <div style={styles.brand}>
-        <GraduationCap size={28} />
-        <span style={styles.brandText}>Admin Panel</span>
+      <div style={styles.header}>
+        <h1 style={styles.appName}>InternLink</h1>
+        <p style={styles.appSubtitle}>Admin Control Panel</p>
       </div>
-      <nav style={styles.nav}>
-        {navItems.map((item) => (
-          <NavLink 
-            key={item.path} 
-            to={item.path} 
-            style={({ isActive }) => styles.navLink(isActive)}
-          >
-            <item.icon size={20} />
-            <span>{item.name}</span>
-          </NavLink>
+
+      <nav style={styles.navContainer}>
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} style={styles.section}>
+            <h2 style={styles.sectionTitle}>{section.title}</h2>
+            {section.items.map((item, iIdx) => {
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <NavLink 
+                  key={iIdx} 
+                  to={item.path} 
+                  style={styles.navItem(isActive)}
+                >
+                  <item.icon style={styles.icon(isActive)} />
+                  <span style={styles.label}>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </div>
         ))}
       </nav>
+
+      <NavLink to="/admin/profile" style={styles.footer}>
+        <div style={styles.avatar}>
+          {getInitials(user?.name || user?.first_name + ' ' + user?.last_name || 'Admin')}
+        </div>
+        <div style={styles.userInfo}>
+          <span style={styles.userName}>{user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : 'System Admin')}</span>
+          <span style={styles.userDetails}>Administrator</span>
+        </div>
+      </NavLink>
     </aside>
   );
 };
