@@ -16,6 +16,24 @@ export function AuthProvider({ children }) {
       if (!mounted) return;
 
       if (session) {
+        // Step 1: Immediate 'Instant Role' check from metadata
+        const metadata = session.user.user_metadata || {};
+        const role = metadata.role || session.user.app_metadata?.role;
+        
+        if (role) {
+          // Set a basic user object immediately so the UI can render
+          setUser({
+            ...session.user,
+            role,
+            first_name: metadata.first_name || '',
+            last_name: metadata.last_name || '',
+            name: metadata.first_name ? `${metadata.first_name} ${metadata.last_name}` : '',
+            is_first_login: metadata.is_first_login !== undefined ? metadata.is_first_login : true,
+            is_loading_full_profile: true
+          });
+          setLoading(false);
+        }
+
         try {
           await fetchProfile(session.user);
         } catch (err) {
@@ -66,7 +84,7 @@ export function AuthProvider({ children }) {
             .select('*')
             .eq('id', authUser.id)
             .single(),
-          40000,
+          4000,
           'Database profile fetch timed out'
         );
 
@@ -177,6 +195,14 @@ export function AuthProvider({ children }) {
       }
 
       console.log('Login successful for:', fullProfile.name, 'Role:', fullProfile.role);
+
+      // AUTO-CLEAR FIRST LOGIN FLAG FOR NON-STUDENTS
+      // Students have their flag cleared in SetupAccount.jsx after password change
+      if (fullProfile.is_first_login && fullProfile.role !== 'student') {
+        await supabase.from('users').update({ is_first_login: false }).eq('id', data.user.id);
+        fullProfile.is_first_login = false;
+      }
+
       return { success: true, user: fullProfile };
     } catch (err) {
       console.error('Unexpected error during login:', err.message);
@@ -185,16 +211,24 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
+    // 1. CLEAR STATE IMMEDIATELY (Synchronous)
+    // This ensures the UI updates and ProtectedRoutes kick the user out instantly
+    currentFetchPromise.current = null;
+    setUser(null);
+
     try {
-      // Clear any pending profile fetches first
-      currentFetchPromise.current = null;
-      await supabase.auth.signOut();
-      setUser(null);
-      console.log('User logged out successfully.');
+      // 2. Clear Supabase storage manually as a backup
+      // This ensures that even if signOut() fails, the session is gone from the browser
+      const storageKey = `sb-${new URL(process.env.REACT_APP_SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+      localStorage.removeItem(storageKey);
+      
+      // 3. Fire and forget the server-side sign out
+      // We don't await this because if the network is slow, it blocks the UI
+      supabase.auth.signOut().catch(err => console.error('SignOut background error:', err));
+      
+      console.log('User logout initiated and local state cleared.');
     } catch (err) {
-      console.error('Error during logout:', err.message);
-      // Still clear local state even if server logout fails
-      setUser(null);
+      console.error('Logout cleanup error:', err);
     }
   };
 

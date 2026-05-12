@@ -6,7 +6,6 @@ import LandingPage from './pages/auth/LandingPage/LandingPage';
 import Login from './pages/auth/Login/Login';
 import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
-import Welcome from './pages/auth/Welcome/Welcome';
 import SetupAccount from './pages/auth/SetupAccount/SetupAccount';
 import MainLayout from './components/layout/student/MainLayout/MainLayout';
 import { useAuth } from './context/AuthContext';
@@ -48,13 +47,7 @@ import AdminProfilePage from './pages/admin/ProfilePage';
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', height: '100vh', width: '100vw', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
-        <div style={{ fontSize: '1.2rem', fontWeight: 600, color: '#1e3a8a' }}>Verifying Access...</div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -66,6 +59,11 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to={fallback} replace />;
   }
 
+  // FORCE PASSWORD CHANGE ON FIRST LOGIN (Students Only)
+  if (user.role === 'student' && user.is_first_login && window.location.pathname !== '/setup-account') {
+    return <Navigate to="/setup-account" replace />;
+  }
+
   return children;
 };
 
@@ -74,7 +72,7 @@ const PublicRoute = ({ children }) => {
   
   if (loading) return null;
   if (user) {
-    const fallback = user.role === 'admin' ? '/admin/dashboard' : user.role === 'ojt_head' ? '/ojt-professor/dashboard' : '/welcome';
+    const fallback = user.role === 'admin' ? '/admin/dashboard' : user.role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
     return <Navigate to={fallback} replace />;
   }
   return children;
@@ -88,7 +86,6 @@ function App() {
           {/* ── Auth & Landing ── */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/welcome" element={<ProtectedRoute allowedRoles={['student']}><Welcome /></ProtectedRoute>} />
           <Route path="/setup-account" element={<SetupAccount />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />

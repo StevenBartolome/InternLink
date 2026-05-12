@@ -10,8 +10,11 @@ const studentSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   confirm_password: z.string(),
   student_id: z.string().min(5, 'Student ID is required'),
-  school_id: z.string().min(1, 'Please select a school'),
-  program_id: z.string().min(1, 'Please select a program'),
+  course: z.string().min(1, 'Course is required'),
+  year_level: z.string().default('4th Year'),
+  academic_year: z.string().min(1, 'Academic year is required'),
+  semester: z.string().min(1, 'Please select a semester'),
+  ojt_subject_name: z.string().min(1, 'Please select an OJT subject'),
   contact_number: z.string().min(10, 'Valid contact number is required'),
 }).refine((data) => data.password === data.confirm_password, {
   message: "Passwords don't match",
@@ -19,35 +22,32 @@ const studentSchema = z.object({
 });
 
 const StudentRegistrationForm = () => {
-  const [schools, setSchools] = useState([]);
-  const [programs, setPrograms] = useState([]);
-  const [filteredPrograms, setFilteredPrograms] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [activeAY, setActiveAY] = useState('');
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm({
-    resolver: zodResolver(studentSchema)
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm({
+    resolver: zodResolver(studentSchema),
+    defaultValues: {
+      year_level: '4th Year'
+    }
   });
 
-  const selectedSchool = watch('school_id');
-
   useEffect(() => {
-    fetchSchoolsAndPrograms();
+    fetchActiveAY();
   }, []);
 
-  useEffect(() => {
-    if (selectedSchool) {
-      setFilteredPrograms(programs.filter(p => p.school_id === selectedSchool));
-    } else {
-      setFilteredPrograms([]);
+  const fetchActiveAY = async () => {
+    const { data } = await supabase
+      .from('academic_years')
+      .select('year_range')
+      .eq('is_active', true)
+      .single();
+    
+    if (data) {
+      setActiveAY(data.year_range);
+      setValue('academic_year', data.year_range);
     }
-  }, [selectedSchool, programs]);
-
-  const fetchSchoolsAndPrograms = async () => {
-    const { data: schoolsData } = await supabase.from('schools').select('*');
-    const { data: programsData } = await supabase.from('programs').select('*');
-    setSchools(schoolsData || []);
-    setPrograms(programsData || []);
   };
 
   const onSubmit = async (data) => {
@@ -55,6 +55,10 @@ const StudentRegistrationForm = () => {
     setMessage({ type: '', text: '' });
 
     try {
+      const names = data.full_name.split(' ');
+      const firstName = names[0];
+      const lastName = names.slice(1).join(' ') || '';
+
       // 1. Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -62,27 +66,50 @@ const StudentRegistrationForm = () => {
         options: {
           data: {
             full_name: data.full_name,
+            first_name: firstName,
+            last_name: lastName,
             role: 'student',
-            contact_number: data.contact_number
+            is_first_login: false // Registering users set their own password
           }
         }
       });
 
       if (authError) throw authError;
 
-      // 2. Insert into students table
-      const { error: studentError } = await supabase.from('students').insert([{
+      // 2. Insert into users table
+      const { error: userError } = await supabase.from('users').insert([{
+        id: authData.user.id,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'student',
+        assigned_course: data.course,
+        is_first_login: false
+      }]);
+
+      if (userError) throw userError;
+
+      // 3. Insert into student_profiles table
+      const { error: studentError } = await supabase.from('student_profiles').insert([{
         id: authData.user.id,
         student_id: data.student_id,
-        school_id: data.school_id,
-        program_id: data.program_id,
-        status: 'pending'
+        course: data.course,
+        year_level: data.year_level,
+        academic_year: data.academic_year,
+        semester: data.semester,
+        ojt_subject_name: data.ojt_subject_name
       }]);
 
       if (studentError) throw studentError;
 
-      setMessage({ type: 'success', text: 'Registration submitted. Please wait for verification.' });
+      // 4. Initialize internship
+      await supabase.from('student_internships').insert([{
+        student_id: authData.user.id,
+        current_stage: 'PRE_INTERNSHIP'
+      }]);
+
+      setMessage({ type: 'success', text: 'Registration successful! You can now log in.' });
     } catch (error) {
+      console.error('Registration error:', error);
       setMessage({ type: 'error', text: error.message });
     } finally {
       setLoading(false);
@@ -259,25 +286,55 @@ const StudentRegistrationForm = () => {
         </div>
 
         <div style={styles.inputGroup}>
-          <label style={styles.label}>School</label>
-          <select {...register('school_id')} style={styles.input}>
-            <option value="">Select School</option>
-            {schools.map(school => (
-              <option key={school.id} value={school.id}>{school.name}</option>
-            ))}
-          </select>
-          {errors.school_id && <span style={styles.error}>{errors.school_id.message}</span>}
+          <label style={styles.label}>Course</label>
+          <input 
+            {...register('course')} 
+            style={styles.input} 
+            placeholder="Bachelor of Science in Information Technology"
+          />
+          {errors.course && <span style={styles.error}>{errors.course.message}</span>}
+        </div>
+
+        <div style={styles.grid}>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Year Level</label>
+            <input 
+              {...register('year_level')} 
+              style={{ ...styles.input, backgroundColor: '#f1f5f9' }} 
+              readOnly 
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Academic Year</label>
+            <input 
+              {...register('academic_year')} 
+              style={styles.input} 
+              placeholder="2024-2025"
+            />
+            {errors.academic_year && <span style={styles.error}>{errors.academic_year.message}</span>}
+          </div>
         </div>
 
         <div style={styles.inputGroup}>
-          <label style={styles.label}>Program</label>
-          <select {...register('program_id')} style={styles.input} disabled={!selectedSchool}>
-            <option value="">Select Program</option>
-            {filteredPrograms.map(program => (
-              <option key={program.id} value={program.id}>{program.name}</option>
-            ))}
+          <label style={styles.label}>Semester</label>
+          <select {...register('semester')} style={styles.input}>
+            <option value="">Select Semester</option>
+            <option value="First Semester">First Semester</option>
+            <option value="Second Semester">Second Semester</option>
+            <option value="Third Semester">Third Semester</option>
           </select>
-          {errors.program_id && <span style={styles.error}>{errors.program_id.message}</span>}
+          {errors.semester && <span style={styles.error}>{errors.semester.message}</span>}
+        </div>
+
+        <div style={styles.inputGroup}>
+          <label style={styles.label}>OJT Subject Name</label>
+          <select {...register('ojt_subject_name')} style={styles.input}>
+            <option value="">Select Subject</option>
+            <option value="CCNTERN1">CCNTERN1</option>
+            <option value="CCNTERN2">CCNTERN2</option>
+          </select>
+          {errors.ojt_subject_name && <span style={styles.error}>{errors.ojt_subject_name.message}</span>}
         </div>
 
         <button 

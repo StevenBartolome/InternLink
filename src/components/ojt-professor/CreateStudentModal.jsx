@@ -5,6 +5,8 @@ import { commonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../context/AuthContext';
 import { generatePassword } from '../../utils/passwordGenerator';
 import { parseStudentCSV } from '../../utils/csvParser';
+import { supabase } from '../../services/supabaseClient';
+import emailjs from '@emailjs/browser';
 
 const CreateStudentModal = ({ onClose, onSuccess }) => {
   const { createStudentAccount, bulkCreateStudentAccounts } = useAuth();
@@ -18,8 +20,26 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     firstName: '',
     lastName: '',
     studentId: '',
-    course: 'BSIT'
+    course: 'BSIT',
+    yearLevel: '4th Year',
+    academicYear: '',
+    semester: 'First Semester',
+    ojtSubjectName: 'CCNTERN1'
   });
+
+  const [activeAY, setActiveAY] = useState('');
+
+  // Fetch active academic year
+  React.useEffect(() => {
+    const fetchAY = async () => {
+      const { data } = await supabase.from('academic_years').select('year_range').eq('is_active', true).single();
+      if (data) {
+        setActiveAY(data.year_range);
+        setSingleData(p => ({ ...p, academicYear: data.year_range }));
+      }
+    };
+    fetchAY();
+  }, []);
 
   // Bulk Account State
   const [csvFile, setCsvFile] = useState(null);
@@ -32,15 +52,44 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     setError('');
 
     const password = generatePassword(10);
-    const result = await createStudentAccount({ ...singleData, password });
+    const result = await createStudentAccount({ 
+      ...singleData, 
+      password,
+      // For backend compatibility
+      course: singleData.course,
+      year_level: singleData.yearLevel,
+      academic_year: singleData.academicYear,
+      semester: singleData.semester,
+      ojt_subject_name: singleData.ojtSubjectName
+    });
 
-    setLoading(false);
     if (result.success) {
-      onSuccess(`Successfully created account for ${singleData.firstName}. Credentials emailed to ${singleData.email}`);
-      onClose();
+      // Send Email via EmailJS
+      try {
+        await emailjs.send(
+          process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_id',
+          process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_id',
+          {
+            to_name: `${singleData.firstName} ${singleData.lastName}`,
+            to_email: singleData.email,
+            student_id: singleData.studentId,
+            course: singleData.course,
+            temp_password: password,
+            login_url: `${window.location.origin}/login`
+          },
+          process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'public_key'
+        );
+        onSuccess(`Successfully created account for ${singleData.firstName}. Credentials emailed via EmailJS.`);
+        onClose();
+      } catch (emailErr) {
+        console.error('EmailJS Error:', emailErr);
+        onSuccess(`Account created for ${singleData.firstName}, but failed to send email. Password: ${password}`);
+        onClose();
+      }
     } else {
       setError(result.error);
     }
+    setLoading(false);
   };
 
   const handleFileChange = (e) => {
@@ -62,14 +111,56 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     setLoading(true);
     setError('');
 
-    const results = await bulkCreateStudentAccounts(bulkPreview);
+    const results = { success: [], failed: [], emailFailed: [] };
+
+    for (const student of bulkPreview) {
+      const password = generatePassword(10);
+      const res = await createStudentAccount({ 
+        ...student, 
+        password,
+        // Default values for bulk upload
+        year_level: '4th Year',
+        academic_year: activeAY || '2024-2025',
+        semester: 'First Semester',
+        ojt_subject_name: 'CCNTERN1'
+      });
+      
+      if (res.success) {
+        // Send Email via EmailJS
+        try {
+          await emailjs.send(
+            process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_id',
+            process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_id',
+            {
+              to_name: `${student.firstName} ${student.lastName}`,
+              to_email: student.email,
+              student_id: student.studentId,
+              course: student.course,
+              temp_password: password,
+              login_url: `${window.location.origin}/login`
+            },
+            process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'public_key'
+          );
+          results.success.push(student.email);
+        } catch (emailErr) {
+          console.error('EmailJS Bulk Error:', emailErr);
+          results.emailFailed.push(student.email);
+        }
+      } else {
+        results.failed.push({ email: student.email, error: res.error });
+      }
+    }
 
     setLoading(false);
-    if (results.failed.length === 0) {
-      onSuccess(`Successfully created ${results.success.length} accounts.`);
+    if (results.failed.length === 0 && results.emailFailed.length === 0) {
+      onSuccess(`Successfully created ${results.success.length} accounts and sent emails.`);
       onClose();
     } else {
-      setError(`Created ${results.success.length} accounts. Failed to create ${results.failed.length} accounts.`);
+      const msg = `Created ${results.success.length + results.emailFailed.length} accounts. ` + 
+                  (results.failed.length > 0 ? `Failed: ${results.failed.length}. ` : '') +
+                  (results.emailFailed.length > 0 ? `Emails failed: ${results.emailFailed.length}.` : '');
+      setError(msg);
+      if (results.success.length > 0) onSuccess(msg);
     }
   };
 
@@ -123,7 +214,10 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     },
     previewItem: {
       padding: '0.75rem 1rem', borderBottom: `1px solid ${theme.colors.border}`,
-      fontSize: '0.875rem', display: 'flex', justifyContent: 'space-between',
+      fontSize: '0.875rem', display: 'flex', flexDirection: 'column', gap: '2px'
+    },
+    previewRow: {
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center'
     }
   };
 
@@ -215,9 +309,50 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                 </div>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Semester</label>
+                  <select
+                    style={{ ...styles.input, paddingLeft: '1rem' }}
+                    value={singleData.semester} onChange={e => setSingleData(p => ({ ...p, semester: e.target.value }))}
+                  >
+                    <option value="First Semester">First Semester</option>
+                    <option value="Second Semester">Second Semester</option>
+                    <option value="Third Semester">Third Semester</option>
+                  </select>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>OJT Subject Name</label>
+                  <select
+                    style={{ ...styles.input, paddingLeft: '1rem' }}
+                    value={singleData.ojtSubjectName} onChange={e => setSingleData(p => ({ ...p, ojtSubjectName: e.target.value }))}
+                  >
+                    <option value="CCNTERN1">CCNTERN1</option>
+                    <option value="CCNTERN2">CCNTERN2</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Year Level</label>
+                  <input
+                    type="text" readOnly style={{ ...styles.input, paddingLeft: '1rem', backgroundColor: '#f8fafc' }}
+                    value={singleData.yearLevel}
+                  />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Academic Year</label>
+                  <input
+                    type="text" placeholder="2024-2025" style={{ ...styles.input, paddingLeft: '1rem' }}
+                    value={singleData.academicYear} onChange={e => setSingleData(p => ({ ...p, academicYear: e.target.value }))}
+                  />
+                </div>
+              </div>
+
               <div style={{ padding: '12px', backgroundColor: '#f0f9ff', borderRadius: '10px', fontSize: '0.85rem', color: '#0369a1', marginBottom: '1.5rem', display: 'flex', gap: '10px' }}>
                 <Info size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
-                <span>The password will be auto-generated and emailed to the student immediately after creation.</span>
+                <span>The password will be auto-generated and emailed via <strong>EmailJS</strong> immediately.</span>
               </div>
 
               <button type="submit" disabled={loading} style={{ ...commonStyles.dashboardBtnPrimary, width: '100%', padding: '0.875rem' }}>
@@ -229,8 +364,8 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
               <div style={styles.dropZone} onClick={() => fileInputRef.current.click()}>
                 <input ref={fileInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFileChange} />
                 <Upload size={32} color={theme.colors.primary} style={{ marginBottom: '12px' }} />
-                <p style={{ fontWeight: 700, margin: '0 0 4px 0' }}>Upload CSV File</p>
-                <p style={{ fontSize: '0.85rem', color: theme.colors.textMuted, margin: 0 }}>Format: Email, FirstName, LastName, StudentID</p>
+                <p style={{ fontWeight: 700, margin: '0 0 4px 0' }}>Upload Student CSV</p>
+                <p style={{ fontSize: '0.85rem', color: theme.colors.textMuted, margin: 0 }}>Required Columns: StudentID, FirstName, LastName, Email, Course</p>
               </div>
 
               {bulkPreview.length > 0 && (
@@ -238,8 +373,14 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                   <div style={styles.previewList}>
                     {bulkPreview.map((s, i) => (
                       <div key={i} style={styles.previewItem}>
-                        <span>{s.firstName} {s.lastName}</span>
-                        <span style={{ color: theme.colors.textMuted }}>{s.email}</span>
+                        <div style={styles.previewRow}>
+                          <span style={{ fontWeight: 600 }}>{s.firstName} {s.lastName}</span>
+                          <span style={{ color: theme.colors.primary, fontSize: '0.75rem', fontWeight: 700 }}>{s.course}</span>
+                        </div>
+                        <div style={styles.previewRow}>
+                          <span style={{ color: theme.colors.textMuted, fontSize: '0.75rem' }}>{s.email}</span>
+                          <span style={{ color: theme.colors.textMuted, fontSize: '0.75rem' }}>ID: {s.studentId}</span>
+                        </div>
                       </div>
                     ))}
                   </div>

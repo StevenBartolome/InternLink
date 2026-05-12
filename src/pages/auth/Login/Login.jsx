@@ -9,7 +9,7 @@ import { useAuth } from '../../../context/AuthContext';
 
 
 const ROLE_REDIRECTS = {
-  student: '/welcome',
+  student: '/dashboard',
   ojt_head: '/ojt-professor/dashboard',
   admin: '/admin/dashboard',
 };

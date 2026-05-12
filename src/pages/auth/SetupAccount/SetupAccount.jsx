@@ -26,11 +26,24 @@ export default function SetupAccount() {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase.auth.updateUser({ 
+        password,
+        data: { is_first_login: false } 
+      });
       if (error) throw error;
 
+      // Also update the users table
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('users').update({ is_first_login: false }).eq('id', user.id);
+
       setSuccess(true);
-      setToast({ message: 'Account setup successful!', type: 'success' });
+      setToast({ message: 'Account activated! Redirecting...', type: 'success' });
+      
+      setTimeout(() => {
+        const role = user.user_metadata?.role;
+        const target = role === 'admin' ? '/admin/dashboard' : role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
+        navigate(target);
+      }, 2000);
     } catch (err) {
       setToast({ message: err.message, type: 'error' });
     } finally {

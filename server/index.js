@@ -64,7 +64,11 @@ app.post('/admin/create-student', async (req, res) => {
             email,
             password,
             email_confirm: true,
-            user_metadata: { first_name: firstName, last_name: lastName }
+            user_metadata: { 
+                first_name: firstName, 
+                last_name: lastName,
+                role: 'student' 
+            }
         });
 
         if (authError) throw authError;
@@ -78,7 +82,8 @@ app.post('/admin/create-student', async (req, res) => {
                 id: userId,
                 first_name: firstName,
                 last_name: lastName,
-                role: 'student'
+                role: 'student',
+                assigned_course: course
             });
 
         if (userError) throw userError;
