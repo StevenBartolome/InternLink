@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 
   MapPin, 
@@ -7,19 +7,100 @@ import {
   Edit3,
   Mail,
   User,
-  Calendar
+  Trash2,
+  Plus,
+  Loader2,
+  Briefcase,
+  Layers,
+  Globe
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
+import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../services/supabaseClient';
+import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
 
 const CompanyInfo = () => {
-  const fields = [
-    { label: 'Position / role', value: 'Software Engineer Intern', icon: Building2 },
-    { label: 'Department', value: 'Product Development', icon: Building2 },
-    { label: 'Company address', value: '123 Tech Avenue, Makati City, Philippines', icon: MapPin },
-    { label: 'Supervisor name', value: 'Engr. John Doe', icon: User },
-    { label: 'Supervisor email', value: 'johndoe@company.com', icon: Mail },
-    { label: 'Start date', value: 'March 15, 2026', icon: Calendar },
-  ];
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [internship, setInternship] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+
+  const fetchInternship = async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('student_internships')
+        .select('*, companies(*)')
+        .eq('student_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data && data.companies) {
+        // Flatten the company data for easier access in the UI
+        setInternship({
+          ...data,
+          company_name: data.companies.name,
+          company_address: data.companies.address,
+          company_latitude: data.companies.latitude,
+          company_longitude: data.companies.longitude,
+          industry: data.companies.industry
+        });
+      } else {
+        setInternship(data);
+      }
+    } catch (err) {
+      console.error('Error fetching internship:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInternship();
+  }, [user?.id]);
+
+  const handleRemove = async () => {
+    if (!window.confirm('Are you sure you want to remove your company information? This will clear all hired details.')) return;
+    
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('student_internships')
+        .update({
+          company_id: null,
+          position: null,
+          department: null,
+          supervisor_name: null,
+          supervisor_email: null,
+          supervisor_phone: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('student_id', user.id);
+
+      if (error) throw error;
+      setInternship(prev => ({ 
+        ...prev, 
+        company_id: null,
+        company_name: null, 
+        company_address: null,
+        position: null,
+        department: null,
+        supervisor_name: null,
+        supervisor_email: null,
+        supervisor_phone: null,
+        industry: null
+      }));
+    } catch (err) {
+      console.error('Error removing company info:', err);
+      alert('Failed to remove company information.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const hasCompany = !!internship?.company_name;
 
   const styles = {
     container: {
@@ -32,21 +113,46 @@ const CompanyInfo = () => {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    editButton: {
+    actionButtons: {
+      display: 'flex',
+      gap: '12px',
+    },
+    button: {
       padding: '8px 16px',
       borderRadius: '10px',
       backgroundColor: 'transparent',
-      color: studentDesign.colors.textMuted,
-      border: `1px solid ${studentDesign.colors.border}`,
       fontWeight: studentDesign.typography.weights.medium,
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
       fontSize: '13px',
+      transition: 'all 0.2s',
+    },
+    editButton: {
+      color: studentDesign.colors.textMuted,
+      border: `1px solid ${studentDesign.colors.border}`,
+    },
+    removeButton: {
+      color: '#ef4444',
+      border: '1px solid #fee2e2',
     },
     mainCard: {
       ...studentDesign.card,
+      position: 'relative',
+      overflow: 'hidden',
+    },
+    emptyState: {
+      ...studentDesign.card,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '60px 40px',
+      textAlign: 'center',
+      gap: '20px',
+      backgroundColor: 'rgba(255, 255, 255, 0.6)',
+      border: `2px dashed ${studentDesign.colors.border}`,
     },
     companyHeader: {
       display: 'flex',
@@ -76,6 +182,7 @@ const CompanyInfo = () => {
       display: 'flex',
       alignItems: 'center',
       gap: '4px',
+      marginTop: '4px',
     },
     verifiedBadge: {
       marginLeft: 'auto',
@@ -113,8 +220,29 @@ const CompanyInfo = () => {
       fontSize: '15px',
       color: studentDesign.colors.textDark,
       fontWeight: studentDesign.typography.weights.medium,
+    },
+    addButton: {
+      padding: '12px 24px',
+      borderRadius: '12px',
+      backgroundColor: studentDesign.colors.primary,
+      color: '#fff',
+      border: 'none',
+      fontWeight: 600,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
     }
   };
+
+  if (loading && !internship) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
+        <Loader2 className="animate-spin" size={40} color={studentDesign.colors.primary} />
+      </div>
+    );
+  }
 
   return (
     <motion.div 
@@ -124,39 +252,112 @@ const CompanyInfo = () => {
     >
       <div style={styles.header}>
         <h2 style={{ fontSize: '18px', fontWeight: studentDesign.typography.weights.semibold }}>Company Information</h2>
-        <motion.button 
-          whileHover={{ backgroundColor: '#F8FAFC' }}
-          style={styles.editButton}
-        >
-          <Edit3 size={16} /> Edit
-        </motion.button>
+        {hasCompany && (
+          <div style={styles.actionButtons}>
+            <motion.button 
+              whileHover={{ backgroundColor: '#F8FAFC' }}
+              style={{ ...styles.button, ...styles.editButton }}
+              onClick={() => setShowForm(true)}
+            >
+              <Edit3 size={16} /> Edit Info
+            </motion.button>
+            <motion.button 
+              whileHover={{ backgroundColor: '#fef2f2' }}
+              style={{ ...styles.button, ...styles.removeButton }}
+              onClick={handleRemove}
+            >
+              <Trash2 size={16} /> Remove
+            </motion.button>
+          </div>
+        )}
       </div>
 
-      <div style={styles.mainCard}>
-        <div style={styles.companyHeader}>
-          <div style={styles.companyLogo}>
-            <Building2 size={32} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <h1 style={styles.companyName}>TechNova Solutions Inc.</h1>
-            <div style={styles.location}>
-              <MapPin size={14} /> Makati City, Metro Manila
+      <AnimatePresence mode="wait">
+        {!hasCompany ? (
+          <motion.div 
+            key="empty"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={styles.emptyState}
+          >
+            <div style={{ padding: '20px', backgroundColor: '#eff6ff', borderRadius: '50%', color: studentDesign.colors.primary }}>
+              <Building2 size={48} />
             </div>
-          </div>
-          <div style={styles.verifiedBadge}>
-            <CheckCircle size={14} /> Verified
-          </div>
-        </div>
+            <div>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>Hired? Tell us about it!</h3>
+              <p style={{ margin: 0, color: studentDesign.colors.textMuted, maxWidth: '400px' }}>
+                Fill in your company details to update your internship status and allow your OJT Head to track your progress.
+              </p>
+            </div>
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={styles.addButton}
+              onClick={() => setShowForm(true)}
+            >
+              <Plus size={20} /> Add Company Information
+            </motion.button>
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="data"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={styles.mainCard}
+          >
+            <div style={styles.companyHeader}>
+              <div style={styles.companyLogo}>
+                <Building2 size={32} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <h1 style={styles.companyName}>{internship.company_name}</h1>
+                <div style={styles.location}>
+                  <MapPin size={14} /> {internship.company_address || 'Address not set'}
+                </div>
+              </div>
+              <div style={styles.verifiedBadge}>
+                <CheckCircle size={14} /> Hired & Verified
+              </div>
+            </div>
 
-        <div style={styles.grid}>
-          {fields.map((field, idx) => (
-            <div key={idx} style={styles.field}>
-              <span style={styles.fieldLabel}>{field.label}</span>
-              <span style={styles.fieldValue}>{field.value}</span>
+            <div style={styles.grid}>
+              <div style={styles.field}>
+                <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Briefcase size={12} /> Position / Role</span>
+                <span style={styles.fieldValue}>{internship.position || 'N/A'}</span>
+              </div>
+              <div style={styles.field}>
+                <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={12} /> Department</span>
+                <span style={styles.fieldValue}>{internship.department || 'N/A'}</span>
+              </div>
+              <div style={styles.field}>
+                <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><User size={12} /> Supervisor Name</span>
+                <span style={styles.fieldValue}>{internship.supervisor_name || 'N/A'}</span>
+              </div>
+              <div style={styles.field}>
+                <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} /> Supervisor Email</span>
+                <span style={styles.fieldValue}>{internship.supervisor_email || 'N/A'}</span>
+              </div>
+              {internship.industry && (
+                <div style={styles.field}>
+                  <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Globe size={12} /> Industry</span>
+                  <span style={styles.fieldValue}>{internship.industry}</span>
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {showForm && (
+        <CompanyInfoForm 
+          userId={user.id}
+          initialData={internship}
+          onClose={() => setShowForm(false)}
+          onSave={(newData) => setInternship(prev => ({ ...prev, ...newData }))}
+        />
+      )}
     </motion.div>
   );
 };
