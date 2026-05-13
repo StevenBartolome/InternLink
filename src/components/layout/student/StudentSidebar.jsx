@@ -29,6 +29,23 @@ const StudentSidebar = () => {
     }
   }, [user]);
 
+  const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
+  
+  const STAGE_LEVELS = {
+    'PRE_INTERNSHIP': 1,
+    'DURING_INTERNSHIP': 2,
+    'POST_INTERNSHIP': 3,
+    'COMPLETED': 4
+  };
+
+  const currentLevel = STAGE_LEVELS[currentStage] || 1;
+
+  const getStatus = (itemLevel) => {
+    if (currentLevel > itemLevel) return 'Done';
+    if (currentLevel === itemLevel) return 'Active';
+    return 'Locked';
+  };
+
   const navSections = [
     {
       title: 'OVERVIEW',
@@ -38,22 +55,25 @@ const StudentSidebar = () => {
     },
     {
       title: 'STAGE 1 — PRE-INTERNSHIP',
+      level: 1,
       items: [
-        { label: 'Company info', path: '/company-info', icon: Building2, status: 'Done' },
-        { label: 'Documents', path: '/documents', icon: FileText, status: 'Done' },
+        { label: 'Company info', path: '/company-info', icon: Building2, status: getStatus(1) },
+        { label: 'Documents', path: '/documents', icon: FileText, status: getStatus(1) },
       ]
     },
     {
       title: 'STAGE 2 — DURING INTERNSHIP',
+      level: 2,
       items: [
-        { label: 'Attendance', path: '/attendance', icon: Clock, status: 'Active' },
-        { label: 'Weekly reports', path: '/weekly-reports', icon: ClipboardList, status: 'Active' },
+        { label: 'Attendance', path: '/attendance', icon: Clock, status: getStatus(2) },
+        { label: 'Weekly reports', path: '/weekly-reports', icon: ClipboardList, status: getStatus(2) },
       ]
     },
     {
       title: 'STAGE 3 — POST-INTERNSHIP',
+      level: 3,
       items: [
-        { label: 'Portfolio', path: '/portfolio', icon: Briefcase, status: 'Locked' },
+        { label: 'Portfolio', path: '/portfolio', icon: Briefcase, status: getStatus(3) },
       ]
     }
   ];
@@ -201,8 +221,9 @@ const StudentSidebar = () => {
               return (
                 <NavLink 
                   key={iIdx} 
-                  to={item.path} 
+                  to={isLocked ? '#' : item.path} 
                   style={styles.navItem(isActive, isLocked)}
+                  onClick={(e) => isLocked && e.preventDefault()}
                 >
                   <item.icon style={styles.icon(isActive)} />
                   <span style={styles.label}>{item.label}</span>

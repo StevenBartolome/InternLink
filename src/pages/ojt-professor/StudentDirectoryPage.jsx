@@ -41,58 +41,46 @@ const StudentDirectoryPage = () => {
     try {
       setLoading(true);
       
-      // 1. Fetch Students from the users table
-      const { data: userData, error: userError } = await supabase
+      // Use a single relational query to fetch students belonging to the professor's program
+      const { data, error } = await supabase
         .from('users')
         .select(`
-          id, first_name, last_name, role, program_id,
-          programs ( id, code, name )
+          id, first_name, last_name,
+          student_profiles!inner (
+            student_id, year_level, program_id,
+            programs ( id, code, name, required_hours )
+          ),
+          student_internships!student_id (
+            current_stage, rendered_hours, supervisor_name, is_deployed,
+            companies ( name )
+          )
         `)
-        .eq('role', 'student');
+        .eq('role', 'student')
+        .eq('student_profiles.program_id', user.program_id);
 
-      if (userError) throw userError;
+      if (error) throw error;
 
-      // 2. Fetch all Student Profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('student_profiles')
-        .select('*');
-
-      if (profileError) throw profileError;
-
-      // 3. Fetch all Student Internships
-      const { data: internshipData, error: internshipError } = await supabase
-        .from('student_internships')
-        .select('*');
-
-      if (internshipError) throw internshipError;
-
-      // 4. Perform Manual Join and Filter by Program
-      const transformed = userData
-        .filter(s => {
-          // Robust comparison: trim and handle nulls
-          const sId = String(s.program_id || '').trim();
-          const pId = String(user.program_id || '').trim();
-          return sId === pId && sId !== '';
-        })
-        .map(s => {
-          // Find matching profile and internship
-          const profile = profileData.find(p => p.id === s.id) || {};
-          const internship = internshipData.find(i => i.student_id === s.id) || {};
-          
-          return {
-            id: s.id,
-            studentId: profile.student_id || 'N/A',
-            name: `${s.first_name} ${s.last_name}`,
-            course: s.programs?.code || 'N/A',
-            yearLevel: profile.year_level || 'N/A',
-            status: STATUS_MAP[internship.current_stage] || 'Pre-Internship',
-            company: internship.company_name || 'Not Placed',
-            supervisor: internship.supervisor_name || 'N/A',
-            hoursRendered: internship.rendered_hours || 0,
-            hoursRequired: internship.required_hours || 486,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
-          };
-        });
+      const transformed = data.map(s => {
+        // Handle cases where Supabase might return either an array or a single object for 1:1 relationships
+        const profile = (Array.isArray(s.student_profiles) ? s.student_profiles[0] : s.student_profiles) || {};
+        const internship = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+        const company = internship.companies || {};
+        
+        return {
+          id: s.id,
+          studentId: profile.student_id || 'N/A',
+          name: `${s.first_name} ${s.last_name}`,
+          course: profile.programs?.code || 'N/A',
+          yearLevel: profile.year_level || 'N/A',
+          status: STATUS_MAP[internship.current_stage] || 'Pre-Internship',
+          company: company.name || 'Not Placed',
+          supervisor: internship.supervisor_name || 'N/A',
+          isDeployed: internship.is_deployed || false,
+          hoursRendered: internship.rendered_hours || 0,
+          hoursRequired: profile.programs?.required_hours || 486,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
+        };
+      });
 
       setStudents(transformed);
     } catch (err) {
@@ -342,9 +330,25 @@ const StudentDirectoryPage = () => {
                   <td style={commonStyles.dashboardTableTd}>{student.course} ({student.yearLevel})</td>
                   <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
                   <td style={commonStyles.dashboardTableTd}>
-                    {student.company ? (
+                    {student.company && student.company !== 'Not Placed' ? (
                       <div style={styles.companyInfo}>
-                        <span style={styles.companyName}>{student.company}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={styles.companyName}>{student.company}</span>
+                          {!student.isDeployed && (
+                            <span style={{ 
+                              fontSize: '0.65rem', 
+                              backgroundColor: '#fff7ed', 
+                              color: '#c2410c', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              border: '1px solid #fed7aa',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              PENDING
+                            </span>
+                          )}
+                        </div>
                         <span style={styles.supervisorName}>{student.supervisor}</span>
                       </div>
                     ) : (

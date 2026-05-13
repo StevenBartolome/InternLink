@@ -50,6 +50,18 @@ app.get('/health', async (req, res) => {
     }
 });
 
+// Admin Route: Get User Email
+app.get('/admin/user-email/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { data, error } = await supabaseAdmin.auth.admin.getUserById(id);
+        if (error) throw error;
+        res.json({ email: data.user.email });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Admin Route: Create Student Account
 app.post('/admin/create-student', async (req, res) => {
     const { 

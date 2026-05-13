@@ -8,13 +8,31 @@ import {
   ChevronRight,
   Lock
 } from 'lucide-react';
+import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  
+  const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
+  const STAGE_LEVELS = {
+    'PRE_INTERNSHIP': 1,
+    'DURING_INTERNSHIP': 2,
+    'POST_INTERNSHIP': 3,
+    'COMPLETED': 4
+  };
+  const currentLevel = STAGE_LEVELS[currentStage] || 1;
+
+  const getStageStatus = (level) => {
+    if (currentLevel > level) return 'done';
+    if (currentLevel === level) return 'active';
+    return 'locked';
+  };
+
   const stages = [
-    { label: 'Pre-internship', status: 'done' },
-    { label: 'During internship', status: 'active' },
-    { label: 'Post-internship', status: 'locked' }
+    { label: 'Pre-internship', status: getStageStatus(1) },
+    { label: 'During internship', status: getStageStatus(2) },
+    { label: 'Post-internship', status: getStageStatus(3) }
   ];
 
   const metrics = [
