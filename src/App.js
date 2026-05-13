@@ -8,6 +8,7 @@ import Register from './pages/auth/Register/Register';
 import ForgotPassword from './pages/auth/ForgotPassword/ForgotPassword';
 import SetupAccount from './pages/auth/SetupAccount/SetupAccount';
 import { useAuth } from './context/AuthContext';
+import LoadingScreen from './components/common/LoadingScreen';
 
 // ── Student Pages ────────────────────────────────────────────────────
 import StudentLayout from './components/layout/student/StudentLayout';
@@ -45,12 +46,13 @@ import AuditLogsPage from './pages/admin/AuditLogsPage';
 import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 import NotificationsCenterPage from './pages/admin/NotificationsCenterPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
+import DepartmentProgramPage from './pages/admin/DepartmentProgramPage';
 
 // ── Security Components ───────────────────────────────────────────────
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -64,6 +66,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   // FORCE PASSWORD CHANGE ON FIRST LOGIN (Students Only)
   if (user.role === 'student' && user.is_first_login && window.location.pathname !== '/setup-account') {
+    console.log('[Auth] Redirecting student to setup-account:', {
+      userId: user.id,
+      email: user.email,
+      is_first_login: user.is_first_login,
+      currentPath: window.location.pathname
+    });
     return <Navigate to="/setup-account" replace />;
   }
 
@@ -73,7 +81,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const PublicRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
-  if (loading) return null;
+  if (loading) return <LoadingScreen />;
   if (user) {
     const fallback = user.role === 'admin' ? '/admin/dashboard' : user.role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
     return <Navigate to={fallback} replace />;
@@ -145,6 +153,7 @@ function App() {
             <Route path="/admin/settings" element={<SystemSettingsPage />} />
             <Route path="/admin/notifications" element={<NotificationsCenterPage />} />
             <Route path="/admin/profile" element={<AdminProfilePage />} />
+            <Route path="/admin/departments" element={<DepartmentProgramPage />} />
             {/* Redirect old routes */}
             <Route path="/admin/verification" element={<Navigate to="/admin/users" replace />} />
             <Route path="/admin/oversight" element={<Navigate to="/admin/reports" replace />} />

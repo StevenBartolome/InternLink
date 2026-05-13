@@ -25,6 +25,7 @@ const StudentRegistrationForm = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [activeAY, setActiveAY] = useState('');
+  const [programs, setPrograms] = useState([]);
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(studentSchema),
@@ -35,7 +36,13 @@ const StudentRegistrationForm = () => {
 
   useEffect(() => {
     fetchActiveAY();
+    fetchPrograms();
   }, []);
+
+  const fetchPrograms = async () => {
+    const { data } = await supabase.from('programs').select('id, code').order('code');
+    if (data) setPrograms(data);
+  };
 
   const fetchActiveAY = async () => {
     const { data } = await supabase
@@ -69,7 +76,8 @@ const StudentRegistrationForm = () => {
             first_name: firstName,
             last_name: lastName,
             role: 'student',
-            is_first_login: false // Registering users set their own password
+            program_id: data.course, // course now stores program_id
+            is_first_login: false 
           }
         }
       });
@@ -82,7 +90,7 @@ const StudentRegistrationForm = () => {
         first_name: firstName,
         last_name: lastName,
         role: 'student',
-        assigned_course: data.course,
+        program_id: data.course,
         is_first_login: false
       }]);
 
@@ -92,7 +100,7 @@ const StudentRegistrationForm = () => {
       const { error: studentError } = await supabase.from('student_profiles').insert([{
         id: authData.user.id,
         student_id: data.student_id,
-        course: data.course,
+        program_id: data.course,
         year_level: data.year_level,
         academic_year: data.academic_year,
         semester: data.semester,
@@ -286,12 +294,14 @@ const StudentRegistrationForm = () => {
         </div>
 
         <div style={styles.inputGroup}>
-          <label style={styles.label}>Course</label>
-          <input 
+          <label style={styles.label}>Course / Program</label>
+          <select 
             {...register('course')} 
-            style={styles.input} 
-            placeholder="Bachelor of Science in Information Technology"
-          />
+            style={styles.input}
+          >
+            <option value="">Select Program...</option>
+            {programs.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
+          </select>
           {errors.course && <span style={styles.error}>{errors.course.message}</span>}
         </div>
 

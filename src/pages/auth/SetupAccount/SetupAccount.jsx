@@ -13,6 +13,15 @@ export default function SetupAccount() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
+  
+  // Redirect away if already setup
+  React.useEffect(() => {
+    if (user && user.is_first_login === false) {
+      const role = user.role;
+      const target = role === 'admin' ? '/admin/dashboard' : role === 'ojt_head' ? '/ojt-professor/dashboard' : '/dashboard';
+      navigate(target, { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSetup = async (e) => {
     e.preventDefault();

@@ -20,7 +20,8 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     firstName: '',
     lastName: '',
     studentId: '',
-    course: 'BSIT',
+    course: '',
+    programId: '',
     yearLevel: '4th Year',
     academicYear: '',
     semester: 'First Semester',
@@ -28,6 +29,7 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
   });
 
   const [activeAY, setActiveAY] = useState('');
+  const [programs, setPrograms] = useState([]);
 
   // Fetch active academic year
   React.useEffect(() => {
@@ -38,7 +40,19 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
         setSingleData(p => ({ ...p, academicYear: data.year_range }));
       }
     };
+
+    const fetchPrograms = async () => {
+      const { data } = await supabase.from('programs').select('id, code').order('code');
+      if (data) {
+        setPrograms(data);
+        if (data.length > 0) {
+          setSingleData(p => ({ ...p, course: data[0].code, programId: data[0].id }));
+        }
+      }
+    };
+
     fetchAY();
+    fetchPrograms();
   }, []);
 
   // Bulk Account State
@@ -56,6 +70,7 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
       ...singleData, 
       password,
       // For backend compatibility
+      program_id: singleData.programId,
       course: singleData.course,
       year_level: singleData.yearLevel,
       academic_year: singleData.academicYear,
@@ -299,12 +314,16 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                   <label style={styles.label}>Course</label>
                   <select
                     style={{ ...styles.input, paddingLeft: '1rem' }}
-                    value={singleData.course} onChange={e => setSingleData(p => ({ ...p, course: e.target.value }))}
+                    value={singleData.programId} 
+                    onChange={e => {
+                      const prog = programs.find(p => p.id === e.target.value);
+                      setSingleData(p => ({ ...p, programId: e.target.value, course: prog?.code || '' }));
+                    }}
                   >
-                    <option value="BSIT">BSIT</option>
-                    <option value="BSCS">BSCS</option>
-                    <option value="BSIS">BSIS</option>
-                    <option value="BSCPE">BSCPE</option>
+                    {programs.map(p => (
+                      <option key={p.id} value={p.id}>{p.code}</option>
+                    ))}
+                    {programs.length === 0 && <option value="">No programs available</option>}
                   </select>
                 </div>
               </div>

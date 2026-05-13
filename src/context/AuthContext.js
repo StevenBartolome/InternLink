@@ -21,15 +21,29 @@ export function AuthProvider({ children }) {
         const role = metadata.role || session.user.app_metadata?.role;
         
         if (role) {
-          // Set a basic user object immediately so the UI can render
-          setUser({
-            ...session.user,
-            role,
-            first_name: metadata.first_name || '',
-            last_name: metadata.last_name || '',
-            name: metadata.first_name ? `${metadata.first_name} ${metadata.last_name}` : '',
-            is_first_login: metadata.is_first_login !== undefined ? metadata.is_first_login : true,
-            is_loading_full_profile: true
+          // Set a basic user object immediately if we don't have one, 
+          // but don't overwrite a fully loaded profile for the same user.
+          setUser(prev => {
+            if (prev && prev.id === session.user.id && !prev.is_loading_full_profile) {
+              return prev;
+            }
+            const basicUser = {
+              ...session.user,
+              role,
+              first_name: metadata.first_name || '',
+              last_name: metadata.last_name || '',
+              name: metadata.first_name ? `${metadata.first_name} ${metadata.last_name}` : '',
+              program_id: metadata.program_id || '',
+              is_first_login: metadata.is_first_login !== undefined ? metadata.is_first_login : false,
+              is_loading_full_profile: true
+            };
+            console.log('[Auth] Setting basic user profile:', {
+              id: basicUser.id,
+              role: basicUser.role,
+              is_first_login: basicUser.is_first_login,
+              source: 'metadata'
+            });
+            return basicUser;
           });
           setLoading(false);
         }
@@ -88,7 +102,7 @@ export function AuthProvider({ children }) {
         console.log('fetchProfile: Fetching public.users for', authUser.id);
         const { data: baseUser, error: baseError } = await supabase
             .from('users')
-            .select('*')
+            .select('*, programs(id, code, name)')
             .eq('id', authUser.id)
             .single();
 
@@ -131,7 +145,8 @@ export function AuthProvider({ children }) {
             
           if (sInternship) internshipData = sInternship;
         } else if (baseUser.role === 'ojt_head') {
-          // OJT Heads now have all their data (assigned_course) in the base users table
+          // OJT Heads now have all their data in the base users table
+          console.log('fetchProfile: Professor detected, program:', baseUser.programs?.code);
           specificProfile = {};
         } else if (baseUser.role === 'admin') {
           // Admins currently only have base user data
@@ -142,22 +157,30 @@ export function AuthProvider({ children }) {
         const userData = {
           ...authUser,
           ...baseUser,
+          course_code: baseUser.programs?.code,
+          course_name: baseUser.programs?.name,
           name: `${baseUser.first_name} ${baseUser.last_name}`,
           ...internshipData,
           ...specificProfile,
           // Explicitly include internship fields
           internship_id: internshipData?.id,
           // Ensure we don't overwrite user ID with join IDs if they differ
-          id: authUser.id 
+          id: authUser.id,
+          is_loading_full_profile: false
         };
 
         setUser(userData);
+        console.log('[Auth] Full profile loaded:', {
+          id: userData.id,
+          role: userData.role,
+          is_first_login: userData.is_first_login,
+          source: 'database'
+        });
         return userData;
       } catch (err) {
         console.error('CRITICAL: Error in fetchProfile:', err);
-        if (err.name === 'NavigatorLockAcquireTimeoutError') {
-          console.warn('Auth Lock Error detected - retrying fetch in 1s...');
-          setTimeout(() => fetchProfile(authUser), 1000);
+        if (user) {
+          setUser(prev => ({ ...prev, is_loading_full_profile: false }));
         }
         return null;
       } finally {
@@ -215,6 +238,8 @@ export function AuthProvider({ children }) {
       // Students have their flag cleared in SetupAccount.jsx after password change
       if (fullProfile.is_first_login && fullProfile.role !== 'student') {
         await supabase.from('users').update({ is_first_login: false }).eq('id', data.user.id);
+        // Also sync to Auth Metadata
+        await supabase.auth.updateUser({ data: { is_first_login: false } });
         fullProfile.is_first_login = false;
       }
 
@@ -248,15 +273,30 @@ export function AuthProvider({ children }) {
   };
 
   const updateUser = async (updates) => {
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', user.id);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id);
 
-    if (!error) {
-      setUser(prev => ({ ...prev, ...updates }));
+      if (!error) {
+        // Sync to Auth Metadata if relevant fields are updated
+        const metadataUpdates = {};
+        if (updates.is_first_login !== undefined) metadataUpdates.is_first_login = updates.is_first_login;
+        if (updates.first_name) metadataUpdates.first_name = updates.first_name;
+        if (updates.last_name) metadataUpdates.last_name = updates.last_name;
+        
+        if (Object.keys(metadataUpdates).length > 0) {
+          await supabase.auth.updateUser({ data: metadataUpdates });
+        }
+
+        setUser(prev => ({ ...prev, ...updates }));
+      }
+      return { error };
+    } catch (err) {
+      console.error('updateUser error:', err);
+      return { error: err };
     }
-    return { error };
   };
 
   const registerStudent = async (studentData, password) => {
@@ -294,7 +334,7 @@ export function AuthProvider({ children }) {
         .insert({
           id: authData.user.id,
           student_id: studentData.studentId,
-          course: studentData.course,
+          program_id: studentData.programId || studentData.program_id,
           year_level: studentData.yearLevel || studentData.year_level,
           academic_year: studentData.academicYear || studentData.academic_year,
           semester: studentData.semester,

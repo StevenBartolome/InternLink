@@ -15,7 +15,7 @@ const StudentTopbar = () => {
   const handleLogout = async () => {
     setIsModalOpen(false);
     await logout();
-    window.location.replace('/login');
+    navigate('/login');
   };
 
   // Map path to title

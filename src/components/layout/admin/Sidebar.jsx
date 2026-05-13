@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, BarChart2, ShieldAlert, 
-  Settings, Shield, User
+  Settings, Shield, User, Building2
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -23,6 +23,7 @@ const Sidebar = () => {
       title: 'MANAGEMENT',
       items: [
         { label: 'User Management', path: '/admin/users', icon: Users },
+        { label: 'Departments & Programs', path: '/admin/departments', icon: Building2 },
         { label: 'Internship Config', path: '/admin/internship-config', icon: Settings },
       ]
     },

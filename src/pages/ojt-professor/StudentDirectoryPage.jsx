@@ -8,10 +8,22 @@ import { mockStudents } from '../../services/mocks/ojtProfessorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
+import { Loader2 } from 'lucide-react';
+
+const STATUS_MAP = {
+  'PRE_INTERNSHIP': 'Pre-Internship',
+  'DURING_INTERNSHIP': 'During Internship',
+  'POST_INTERNSHIP': 'Post-Internship',
+  'COMPLETED': 'Completed'
+};
 
 const StudentDirectoryPage = () => {
+  const { user } = useAuth();
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [courseFilter, setCourseFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [hoveredRow, setHoveredRow] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -20,13 +32,87 @@ const StudentDirectoryPage = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { showToast } = useOutletContext() || {};
 
-  const filteredStudents = mockStudents.filter(student => {
+  const fetchStudents = React.useCallback(async () => {
+    if (!user?.program_id) {
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // 1. Fetch Students from the users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select(`
+          id, first_name, last_name, role, program_id,
+          programs ( id, code, name )
+        `)
+        .eq('role', 'student');
+
+      if (userError) throw userError;
+
+      // 2. Fetch all Student Profiles
+      const { data: profileData, error: profileError } = await supabase
+        .from('student_profiles')
+        .select('*');
+
+      if (profileError) throw profileError;
+
+      // 3. Fetch all Student Internships
+      const { data: internshipData, error: internshipError } = await supabase
+        .from('student_internships')
+        .select('*');
+
+      if (internshipError) throw internshipError;
+
+      // 4. Perform Manual Join and Filter by Program
+      const transformed = userData
+        .filter(s => {
+          // Robust comparison: trim and handle nulls
+          const sId = String(s.program_id || '').trim();
+          const pId = String(user.program_id || '').trim();
+          return sId === pId && sId !== '';
+        })
+        .map(s => {
+          // Find matching profile and internship
+          const profile = profileData.find(p => p.id === s.id) || {};
+          const internship = internshipData.find(i => i.student_id === s.id) || {};
+          
+          return {
+            id: s.id,
+            studentId: profile.student_id || 'N/A',
+            name: `${s.first_name} ${s.last_name}`,
+            course: s.programs?.code || 'N/A',
+            yearLevel: profile.year_level || 'N/A',
+            status: STATUS_MAP[internship.current_stage] || 'Pre-Internship',
+            company: internship.company_name || 'Not Placed',
+            supervisor: internship.supervisor_name || 'N/A',
+            hoursRendered: internship.rendered_hours || 0,
+            hoursRequired: internship.required_hours || 486,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
+          };
+        });
+
+      setStudents(transformed);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      if (showToast) showToast('Failed to load students', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.program_id, showToast]);
+
+  React.useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         student.id.includes(searchTerm);
-    const matchesCourse = courseFilter === 'All' || student.course === courseFilter;
+                         student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
     
-    return matchesSearch && matchesCourse && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const openProfile = (student) => {
@@ -35,8 +121,7 @@ const StudentDirectoryPage = () => {
 
   const handleSuccess = (message) => {
     if (showToast) showToast(message, 'success');
-    else alert(message);
-    // Ideally we would refresh the list here from Supabase
+    fetchStudents(); // Refresh the list
   };
 
   const styles = {
@@ -192,17 +277,8 @@ const StudentDirectoryPage = () => {
         
         <div style={styles.filtersGroup}>
           <div style={styles.filterItem}>
-            <Filter size={16} />
-            <select 
-              value={courseFilter} 
-              onChange={(e) => setCourseFilter(e.target.value)}
-              style={styles.filterItem.select}
-            >
-              <option value="All">All Courses</option>
-              <option value="BSIT">BSIT</option>
-              <option value="BSCS">BSCS</option>
-              <option value="BSBA">BSBA</option>
-            </select>
+            <span style={{ fontWeight: 600, color: theme.colors.primary }}>{user?.course_code || 'All Programs'}</span>
+            <span style={{ color: theme.colors.textMuted, fontSize: '0.75rem' }}>Fixed to your course</span>
           </div>
 
           <div style={styles.filterItem}>
@@ -223,63 +299,75 @@ const StudentDirectoryPage = () => {
 
       {/* Students List */}
       <div style={commonStyles.dashboardTableContainer}>
-        <table style={commonStyles.dashboardTable}>
-          <thead>
-            <tr>
-              <th style={commonStyles.dashboardTableTh}>Name / ID</th>
-              <th style={commonStyles.dashboardTableTh}>Course</th>
-              <th style={commonStyles.dashboardTableTh}>Status</th>
-              <th style={commonStyles.dashboardTableTh}>Assigned Company</th>
-              <th style={commonStyles.dashboardTableTh}>Hours Progress</th>
-              <th style={commonStyles.dashboardTableTh}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.map((student) => (
-              <tr 
-                key={student.id} 
-                style={styles.tableRow(hoveredRow === student.id)} 
-                onMouseEnter={() => setHoveredRow(student.id)}
-                onMouseLeave={() => setHoveredRow(null)}
-                onClick={() => openProfile(student)}
-              >
-                <td style={commonStyles.dashboardTableTd}>
-                  <div style={styles.studentInfo}>
-                    <img src={student.avatar} alt={student.name} style={styles.avatarSmall} />
-                    <div>
-                      <span style={styles.studentName}>{student.name}</span>
-                      <span style={styles.studentId}>{student.id}</span>
-                    </div>
-                  </div>
-                </td>
-                <td style={commonStyles.dashboardTableTd}>{student.course} ({student.yearLevel})</td>
-                <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
-                <td style={commonStyles.dashboardTableTd}>
-                  {student.company ? (
-                    <div style={styles.companyInfo}>
-                      <span style={styles.companyName}>{student.company}</span>
-                      <span style={styles.supervisorName}>{student.supervisor}</span>
-                    </div>
-                  ) : (
-                    <span style={{ color: theme.colors.textMuted }}>Not Placed</span>
-                  )}
-                </td>
-                <td style={commonStyles.dashboardTableTd}>
-                  <ProgressBar value={student.hoursRendered} max={student.hoursRequired} size="sm" />
-                  <span style={styles.hoursText}>{student.hoursRendered}/{student.hoursRequired} hrs</span>
-                </td>
-                <td style={commonStyles.dashboardTableTd}>
-                  <button 
-                    style={{...commonStyles.dashboardBtnSecondary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
-                    onClick={(e) => { e.stopPropagation(); openProfile(student); }}
-                  >
-                    View Profile
-                  </button>
-                </td>
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+            <Loader2 className="animate-spin" size={40} color={theme.colors.primary} />
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div style={{ padding: '3rem', textAlign: 'center', color: theme.colors.textMuted }}>
+            <p style={{ marginBottom: '1rem' }}>No students found for {user?.course_code || 'this program'}.</p>
+            <p style={{ fontSize: '0.75rem' }}>Program ID: <code style={{ backgroundColor: theme.colors.bgSecondary, padding: '2px 4px', borderRadius: '4px' }}>{user?.program_id || 'NOT SET'}</code></p>
+            <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Total students fetched (unfiltered): {students.length === 0 && !loading ? 'Check console' : students.length}</p>
+          </div>
+        ) : (
+          <table style={commonStyles.dashboardTable}>
+            <thead>
+              <tr>
+                <th style={commonStyles.dashboardTableTh}>Name / ID</th>
+                <th style={commonStyles.dashboardTableTh}>Course</th>
+                <th style={commonStyles.dashboardTableTh}>Status</th>
+                <th style={commonStyles.dashboardTableTh}>Assigned Company</th>
+                <th style={commonStyles.dashboardTableTh}>Hours Progress</th>
+                <th style={commonStyles.dashboardTableTh}>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredStudents.map((student) => (
+                <tr 
+                  key={student.id} 
+                  style={styles.tableRow(hoveredRow === student.id)} 
+                  onMouseEnter={() => setHoveredRow(student.id)}
+                  onMouseLeave={() => setHoveredRow(null)}
+                  onClick={() => openProfile(student)}
+                >
+                  <td style={commonStyles.dashboardTableTd}>
+                    <div style={styles.studentInfo}>
+                      <img src={student.avatar} alt={student.name} style={styles.avatarSmall} />
+                      <div>
+                        <span style={styles.studentName}>{student.name}</span>
+                        <span style={styles.studentId}>{student.studentId}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={commonStyles.dashboardTableTd}>{student.course} ({student.yearLevel})</td>
+                  <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
+                  <td style={commonStyles.dashboardTableTd}>
+                    {student.company ? (
+                      <div style={styles.companyInfo}>
+                        <span style={styles.companyName}>{student.company}</span>
+                        <span style={styles.supervisorName}>{student.supervisor}</span>
+                      </div>
+                    ) : (
+                      <span style={{ color: theme.colors.textMuted }}>Not Placed</span>
+                    )}
+                  </td>
+                  <td style={commonStyles.dashboardTableTd}>
+                    <ProgressBar value={student.hoursRendered} max={student.hoursRequired} size="sm" />
+                    <span style={styles.hoursText}>{student.hoursRendered}/{student.hoursRequired} hrs</span>
+                  </td>
+                  <td style={commonStyles.dashboardTableTd}>
+                    <button 
+                      style={{...commonStyles.dashboardBtnSecondary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
+                      onClick={(e) => { e.stopPropagation(); openProfile(student); }}
+                    >
+                      View Profile
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {showCreateModal && (

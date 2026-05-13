@@ -196,7 +196,7 @@ const Sidebar = () => {
         </div>
         <div style={styles.userInfo}>
           <span style={styles.userName}>{user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : 'OJT Head')}</span>
-          <span style={styles.userDetails}>{user?.assigned_course || 'OJT Head'}</span>
+          <span style={styles.userDetails}>{user?.course_code || 'OJT Head'}</span>
         </div>
       </NavLink>
     </aside>

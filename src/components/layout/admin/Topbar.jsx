@@ -15,7 +15,7 @@ const Topbar = () => {
   const handleLogout = async () => {
     setIsModalOpen(false);
     await logout();
-    window.location.replace('/login');
+    navigate('/login');
   };
 
   const getPageTitle = (path) => {

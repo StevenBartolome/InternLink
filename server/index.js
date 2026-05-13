@@ -58,6 +58,7 @@ app.post('/admin/create-student', async (req, res) => {
         lastName, 
         studentId, 
         course, 
+        program_id,
         year_level, 
         academic_year, 
         semester, 
@@ -79,7 +80,8 @@ app.post('/admin/create-student', async (req, res) => {
             user_metadata: { 
                 first_name: firstName, 
                 last_name: lastName,
-                role: 'student' 
+                role: 'student',
+                is_first_login: true
             }
         });
 
@@ -95,7 +97,7 @@ app.post('/admin/create-student', async (req, res) => {
                 first_name: firstName,
                 last_name: lastName,
                 role: 'student',
-                assigned_course: course
+                program_id: program_id
             });
 
         if (userError) throw userError;
@@ -105,11 +107,11 @@ app.post('/admin/create-student', async (req, res) => {
             .from('student_profiles')
             .insert({
                 id: userId,
-                student_id: studentId || `S-${Date.now()}`, // Fallback if no student ID provided
-                course: course || 'BSIT',
-                year_level: year_level || '4th Year',
+                student_id: studentId,
+                program_id: program_id,
+                year_level: year_level,
                 academic_year: academic_year,
-                semester: semester || 'First Semester',
+                semester: semester,
                 ojt_subject_name: ojt_subject_name
             });
 
@@ -271,7 +273,7 @@ app.post('/admin/setup', async (req, res) => {
 
 // Admin Route: Create OJT Head (Professor) Account
 app.post('/admin/create-ojt-head', async (req, res) => {
-    const { firstName, lastName, email, assignedCourse } = req.body;
+    const { firstName, lastName, email, assignedCourse, programId } = req.body;
 
     if (!firstName || !lastName || !email || !assignedCourse) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -285,7 +287,9 @@ app.post('/admin/create-ojt-head', async (req, res) => {
             data: { 
                 first_name: firstName, 
                 last_name: lastName,
-                role: 'ojt_head'
+                role: 'ojt_head',
+                assigned_course: assignedCourse,
+                program_id: programId
             },
             redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/setup-account`
         });
@@ -307,7 +311,7 @@ app.post('/admin/create-ojt-head', async (req, res) => {
                 first_name: firstName,
                 last_name: lastName,
                 role: 'ojt_head',
-                assigned_course: assignedCourse
+                program_id: programId
             });
 
         if (userError) {

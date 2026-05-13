@@ -21,7 +21,7 @@ const ProfilePage = () => {
     lastName: user?.last_name || '',
     email: user?.email || '',
     role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
-    department: user?.assigned_course || '',
+    department: user?.course_code || '',
     phone: '',
     office: '',
   });
@@ -60,7 +60,7 @@ const ProfilePage = () => {
       lastName: user?.last_name || '',
       email: user?.email || '',
       role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
-      department: user?.assigned_course || '',
+      department: user?.course_code || '',
       phone: '',
       office: '',
     });
@@ -295,7 +295,7 @@ const ProfilePage = () => {
                   <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.role === 'ojt_head' ? 'Coordinator' : user?.role}</span>
                 </div>
                 <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#fff', opacity: 0.5 }}></div>
-                <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.assigned_course} Department</span>
+                <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.course_code} Department</span>
               </div>
             </>
           )}
