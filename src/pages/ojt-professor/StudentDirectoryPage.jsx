@@ -25,6 +25,8 @@ const StudentDirectoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [sectionFilter, setSectionFilter] = useState('All');
+  const [availableSections, setAvailableSections] = useState([]);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   
@@ -42,13 +44,14 @@ const StudentDirectoryPage = () => {
       setLoading(true);
       
       // Use a single relational query to fetch students belonging to the professor's program
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select(`
           id, first_name, last_name,
           student_profiles!inner (
-            student_id, year_level, program_id,
-            programs ( id, code, name, required_hours )
+            student_id, year_level, program_id, section_id,
+            programs ( id, code, name, required_hours ),
+            program_sections ( id, name )
           ),
           student_internships!student_id (
             current_stage, rendered_hours, supervisor_name, is_deployed,
@@ -57,6 +60,14 @@ const StudentDirectoryPage = () => {
         `)
         .eq('role', 'student')
         .eq('student_profiles.program_id', user.program_id);
+
+      // If professor has assigned sections, restrict query
+      const profSectionIds = user?.professor_sections?.map(ps => ps.section_id) || [];
+      if (profSectionIds.length > 0) {
+        query = query.in('student_profiles.section_id', profSectionIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -78,11 +89,16 @@ const StudentDirectoryPage = () => {
           isDeployed: internship.is_deployed || false,
           hoursRendered: internship.rendered_hours || 0,
           hoursRequired: profile.programs?.required_hours || 486,
+          section: profile.program_sections?.name || 'N/A',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
         };
       });
 
       setStudents(transformed);
+      
+      // Extract unique sections for filtering
+      const uniqueSections = [...new Set(transformed.map(s => s.section).filter(sec => sec !== 'N/A'))].sort();
+      setAvailableSections(uniqueSections);
     } catch (err) {
       console.error('Error fetching students:', err);
       if (showToast) showToast('Failed to load students', 'error');
@@ -99,8 +115,9 @@ const StudentDirectoryPage = () => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
+    const matchesSection = sectionFilter === 'All' || student.section === sectionFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesSection;
   });
 
   const openProfile = (student) => {
@@ -282,6 +299,20 @@ const StudentDirectoryPage = () => {
               <option value="Post-Internship">Post-Internship</option>
             </select>
           </div>
+
+          <div style={styles.filterItem}>
+            <Filter size={16} />
+            <select 
+              value={sectionFilter} 
+              onChange={(e) => setSectionFilter(e.target.value)}
+              style={styles.filterItem.select}
+            >
+              <option value="All">All Sections</option>
+              {availableSections.map(sec => (
+                <option key={sec} value={sec}>{sec}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -302,7 +333,7 @@ const StudentDirectoryPage = () => {
             <thead>
               <tr>
                 <th style={commonStyles.dashboardTableTh}>Name / ID</th>
-                <th style={commonStyles.dashboardTableTh}>Course</th>
+                <th style={commonStyles.dashboardTableTh}>Course / Section</th>
                 <th style={commonStyles.dashboardTableTh}>Status</th>
                 <th style={commonStyles.dashboardTableTh}>Assigned Company</th>
                 <th style={commonStyles.dashboardTableTh}>Hours Progress</th>
@@ -327,7 +358,10 @@ const StudentDirectoryPage = () => {
                       </div>
                     </div>
                   </td>
-                  <td style={commonStyles.dashboardTableTd}>{student.course} ({student.yearLevel})</td>
+                  <td style={commonStyles.dashboardTableTd}>
+                    <div>{student.course} ({student.yearLevel})</div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: theme.colors.primary }}>{student.section}</div>
+                  </td>
                   <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
                   <td style={commonStyles.dashboardTableTd}>
                     {student.company && student.company !== 'Not Placed' ? (

@@ -102,7 +102,7 @@ export function AuthProvider({ children }) {
         console.log('fetchProfile: Fetching public.users for', authUser.id);
         const { data: baseUser, error: baseError } = await supabase
             .from('users')
-            .select('*, programs(id, code, name)')
+            .select('*, programs(id, code, name), professor_sections(section_id, program_sections(id, name))')
             .eq('id', authUser.id)
             .single();
 
@@ -122,7 +122,7 @@ export function AuthProvider({ children }) {
           console.log('fetchProfile: Fetching student_profiles for', authUser.id);
           const { data: sProfile, error: sError } = await supabase
             .from('student_profiles')
-            .select('*')
+            .select('*, program_sections(id, name)')
             .eq('id', authUser.id)
             .maybeSingle();
             
@@ -338,7 +338,8 @@ export function AuthProvider({ children }) {
           year_level: studentData.yearLevel || studentData.year_level,
           academic_year: studentData.academicYear || studentData.academic_year,
           semester: studentData.semester,
-          ojt_subject_name: studentData.ojtSubjectName || studentData.ojt_subject_name
+          ojt_subject_name: studentData.ojtSubjectName || studentData.ojt_subject_name,
+          section_id: studentData.sectionId || studentData.section_id
         });
 
       if (studError) {

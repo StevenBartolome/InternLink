@@ -17,6 +17,12 @@ const DepartmentProgramPage = () => {
   const [isProgModalOpen, setIsProgModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', code: '', department_id: '', required_hours: 486 });
+  
+  // Section management state
+  const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [selectedProg, setSelectedProg] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [newSectionName, setNewSectionName] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -27,12 +33,15 @@ const DepartmentProgramPage = () => {
       setLoading(true);
       const { data: depts, error: deptsError } = await supabase.from('departments').select('*').order('name');
       const { data: progs, error: progsError } = await supabase.from('programs').select('*').order('name');
+      const { data: sects, error: sectsError } = await supabase.from('program_sections').select('*').order('name');
       
       if (deptsError) throw deptsError;
       if (progsError) throw progsError;
+      if (sectsError) throw sectsError;
       
       setDepartments(depts);
       setPrograms(progs);
+      setSections(sects);
     } catch (error) {
       console.error('Error fetching data:', error);
       showToast('Failed to load data', 'error');
@@ -105,6 +114,44 @@ const DepartmentProgramPage = () => {
       setEditingItem(null);
       setFormData({ name: '', code: '', department_id: '', required_hours: 486 });
       fetchData();
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
+
+  const handleAddSection = async () => {
+    if (!newSectionName.trim() || !selectedProg) return;
+    try {
+      const { error } = await supabase.from('program_sections').insert([
+        { name: newSectionName.trim(), program_id: selectedProg.id }
+      ]);
+      if (error) throw error;
+      setNewSectionName('');
+      fetchData();
+      showToast('Section added successfully');
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
+
+  const toggleSectionStatus = async (section) => {
+    try {
+      const { error } = await supabase.from('program_sections').update({ is_active: !section.is_active }).eq('id', section.id);
+      if (error) throw error;
+      fetchData();
+      showToast(`Section ${!section.is_active ? 'activated' : 'deactivated'}`);
+    } catch (error) {
+      showToast(error.message, 'error');
+    }
+  };
+
+  const handleDeleteSection = async (id) => {
+    if (!window.confirm('Delete this section?')) return;
+    try {
+      const { error } = await supabase.from('program_sections').delete().eq('id', id);
+      if (error) throw error;
+      fetchData();
+      showToast('Section deleted');
     } catch (error) {
       showToast(error.message, 'error');
     }
@@ -236,7 +283,12 @@ const DepartmentProgramPage = () => {
                             <div style={{ fontWeight: 600, color: theme.colors.textMain }}>{prog.name}</div>
                             <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted }}>{prog.code} • {prog.required_hours} Required Hours</div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button 
+                              onClick={() => { setSelectedProg(prog); setIsSectionModalOpen(true); }}
+                              style={{ ...commonStyles.dashboardBtnSecondary, padding: '4px 10px', fontSize: '0.75rem', height: 'fit-content' }}
+                            >
+                              Sections ({sections.filter(s => s.program_id === prog.id).length})
+                            </button>
                             <button 
                               onClick={() => { setEditingItem(prog); setFormData({ ...prog }); setIsProgModalOpen(true); }}
                               style={{ background: 'none', border: 'none', color: theme.colors.primary, cursor: 'pointer', padding: '6px' }}
@@ -258,7 +310,6 @@ const DepartmentProgramPage = () => {
                             >
                               <Trash2 size={14} />
                             </button>
-                          </div>
                         </div>
                       ))
                     )}
@@ -357,6 +408,83 @@ const DepartmentProgramPage = () => {
               <button onClick={handleSaveProgram} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, marginTop: '12px' }}>
                 <Save size={18} /> {editingItem ? 'Update Program' : 'Save Program'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Section Management Modal */}
+      {isSectionModalOpen && (
+        <div style={styles.modalOverlay}>
+          <div style={{ ...styles.modal, maxWidth: '600px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Manage Sections</h2>
+                <p style={{ margin: '4px 0 0', color: theme.colors.textMuted, fontSize: '0.85rem' }}>{selectedProg?.name} ({selectedProg?.code})</p>
+              </div>
+              <button onClick={() => setIsSectionModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X /></button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+              <input 
+                value={newSectionName}
+                onChange={e => setNewSectionName(e.target.value)}
+                placeholder="Section name (e.g. ITE231)"
+                style={{ ...commonStyles.input, flex: 1 }}
+                onKeyPress={e => e.key === 'Enter' && handleAddSection()}
+              />
+              <button onClick={handleAddSection} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}>
+                <Plus size={18} /> Add
+              </button>
+            </div>
+
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              <table style={{ ...commonStyles.dashboardTable, width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ ...commonStyles.dashboardTableTh, padding: '10px' }}>Section Name</th>
+                    <th style={{ ...commonStyles.dashboardTableTh, padding: '10px' }}>Status</th>
+                    <th style={{ ...commonStyles.dashboardTableTh, padding: '10px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sections.filter(s => s.program_id === selectedProg?.id).length === 0 ? (
+                    <tr>
+                      <td colSpan="3" style={{ textAlign: 'center', padding: '20px', color: theme.colors.textMuted }}>No sections defined yet.</td>
+                    </tr>
+                  ) : (
+                    sections.filter(s => s.program_id === selectedProg?.id).map(section => (
+                      <tr key={section.id}>
+                        <td style={{ ...commonStyles.dashboardTableTd, padding: '10px', fontWeight: 600 }}>{section.name}</td>
+                        <td style={{ ...commonStyles.dashboardTableTd, padding: '10px' }}>
+                          <button 
+                            onClick={() => toggleSectionStatus(section)}
+                            style={{ 
+                              padding: '4px 12px', 
+                              borderRadius: '20px', 
+                              border: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              backgroundColor: section.is_active ? '#dcfce7' : '#fee2e2',
+                              color: section.is_active ? '#15803d' : '#dc2626'
+                            }}
+                          >
+                            {section.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                        </td>
+                        <td style={{ ...commonStyles.dashboardTableTd, padding: '10px', textAlign: 'right' }}>
+                          <button 
+                            onClick={() => handleDeleteSection(section.id)}
+                            style={{ background: 'none', border: 'none', color: theme.colors.danger, cursor: 'pointer' }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

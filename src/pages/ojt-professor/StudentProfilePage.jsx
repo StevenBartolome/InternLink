@@ -23,6 +23,11 @@ const StudentProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Section Editing State
+  const [isEditingSection, setIsEditingSection] = useState(false);
+  const [availableSections, setAvailableSections] = useState([]);
+  const [savingSection, setSavingSection] = useState(false);
 
   const fetchStudentData = useCallback(async () => {
     try {
@@ -33,7 +38,8 @@ const StudentProfilePage = () => {
           id, first_name, last_name,
           student_profiles (
             *,
-            programs ( id, name, code, required_hours )
+            programs ( id, name, code, required_hours ),
+            program_sections ( id, name )
           ),
           student_internships!student_id (
             *,
@@ -61,6 +67,7 @@ const StudentProfilePage = () => {
       const programs = profile.programs || {};
       const internship = data.student_internships?.[0] || data.student_internships || {};
       const company = internship.companies || {};
+      const section = profile.program_sections || {};
 
       setStudent({
         uuid: data.id,
@@ -78,6 +85,9 @@ const StudentProfilePage = () => {
         status: internship.current_stage || 'PRE_INTERNSHIP',
         hoursRendered: internship.rendered_hours || 0,
         hoursRequired: programs.required_hours || 486,
+        sectionId: profile.section_id,
+        sectionName: section.name || 'Not Assigned',
+        programId: programs.id,
         
         // Placement Info
         companyName: company.name || null,
@@ -101,9 +111,51 @@ const StudentProfilePage = () => {
     }
   }, [id, showToast]);
 
+  const fetchAvailableSections = useCallback(async (programId) => {
+    if (!programId) return;
+    try {
+      const { data, error } = await supabase
+        .from('program_sections')
+        .select('*')
+        .eq('program_id', programId)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      setAvailableSections(data || []);
+    } catch (err) {
+      console.error('Error fetching sections:', err);
+    }
+  }, []);
+
+  const handleUpdateSection = async (newSectionId) => {
+    try {
+      setSavingSection(true);
+      const { error } = await supabase
+        .from('student_profiles')
+        .update({ section_id: newSectionId })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      showToast('Section updated successfully');
+      setIsEditingSection(false);
+      fetchStudentData(); // Refresh
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setSavingSection(false);
+    }
+  };
+
   useEffect(() => {
     fetchStudentData();
   }, [fetchStudentData]);
+
+  useEffect(() => {
+    if (student?.programId) {
+      fetchAvailableSections(student.programId);
+    }
+  }, [student?.programId, fetchAvailableSections]);
 
   if (loading) {
     return (
@@ -182,7 +234,7 @@ const StudentProfilePage = () => {
             <StatusBadge status={student.status} />
           </div>
           <p style={{ color: theme.colors.textMuted, fontSize: '1rem', margin: '0 0 16px 0' }}>
-            {student.studentId} • {student.courseCode} ({student.yearLevel})
+            {student.studentId} • {student.courseCode} ({student.yearLevel}) • <span style={{ color: theme.colors.primary, fontWeight: 700 }}>{student.sectionName}</span>
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: isMobile ? 'center' : 'flex-start' }}>
             <button 
@@ -236,6 +288,37 @@ const StudentProfilePage = () => {
                   <div>
                     <div style={styles.label}>Full Program</div>
                     <div style={styles.value}>{student.course} ({student.courseCode})</div>
+                  </div>
+                </div>
+                <div style={styles.infoItem}>
+                  <div style={styles.iconBox}><Star size={18} /></div>
+                  <div>
+                    <div style={styles.label}>Assigned Section</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isEditingSection ? (
+                        <select 
+                          style={{ ...commonStyles.input, padding: '4px 8px', fontSize: '0.85rem' }}
+                          value={student.sectionId || ''}
+                          onChange={(e) => handleUpdateSection(e.target.value)}
+                          disabled={savingSection}
+                        >
+                          <option value="">Select Section...</option>
+                          {availableSections.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <>
+                          <div style={{ ...styles.value, color: theme.colors.primary }}>{student.sectionName}</div>
+                          <button 
+                            onClick={() => setIsEditingSection(true)}
+                            style={{ background: 'none', border: 'none', color: theme.colors.primary, fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                          >
+                            Edit
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

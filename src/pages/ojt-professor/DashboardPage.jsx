@@ -35,7 +35,6 @@ const DashboardPage = () => {
     welcomeBanner: {
       display: 'flex',
       justifyContent: 'space-between',
-      alignItems: 'center',
       background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
       color: theme.colors.white,
       padding: '2.25rem 2rem',

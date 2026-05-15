@@ -9,7 +9,7 @@ import { supabase } from '../../services/supabaseClient';
 import emailjs from '@emailjs/browser';
 
 const CreateStudentModal = ({ onClose, onSuccess }) => {
-  const { createStudentAccount, bulkCreateStudentAccounts } = useAuth();
+  const { user, createStudentAccount, bulkCreateStudentAccounts } = useAuth();
   const [activeTab, setActiveTab] = useState('single'); // 'single' | 'bulk'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,11 +25,14 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
     yearLevel: '4th Year',
     academicYear: '',
     semester: 'First Semester',
-    ojtSubjectName: 'CCNTERN1'
+    ojtSubjectName: 'CCNTERN1',
+    sectionId: ''
   });
 
   const [activeAY, setActiveAY] = useState('');
   const [programs, setPrograms] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [activeSections, setActiveSections] = useState([]);
 
   // Fetch active academic year
   React.useEffect(() => {
@@ -46,14 +49,37 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
       if (data) {
         setPrograms(data);
         if (data.length > 0) {
-          setSingleData(p => ({ ...p, course: data[0].code, programId: data[0].id }));
+          // If professor, they might already have a program_id in user context
+          const defaultProg = user?.program_id ? data.find(p => p.id === user.program_id) : data[0];
+          setSingleData(p => ({ ...p, course: defaultProg?.code || data[0].code, programId: defaultProg?.id || data[0].id }));
+        }
+      }
+    };
+
+    const fetchSections = async () => {
+      const { data } = await supabase.from('program_sections').select('*').eq('is_active', true).order('name');
+      if (data) {
+        const profSectionIds = user?.professor_sections?.map(ps => ps.section_id) || [];
+        // Only restrict if the professor has specific assignments
+        if (profSectionIds.length > 0) {
+          setSections(data.filter(s => profSectionIds.includes(s.id)));
+        } else {
+          setSections(data);
         }
       }
     };
 
     fetchAY();
     fetchPrograms();
-  }, []);
+    fetchSections();
+  }, [user?.program_id]);
+
+  // Filter sections when program changes
+  React.useEffect(() => {
+    if (singleData.programId) {
+      setActiveSections(sections.filter(s => s.program_id === singleData.programId));
+    }
+  }, [singleData.programId, sections]);
 
   // Bulk Account State
   const [csvFile, setCsvFile] = useState(null);
@@ -75,7 +101,8 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
       year_level: singleData.yearLevel,
       academic_year: singleData.academicYear,
       semester: singleData.semester,
-      ojt_subject_name: singleData.ojtSubjectName
+      ojt_subject_name: singleData.ojtSubjectName,
+      section_id: singleData.sectionId
     });
 
     if (result.success) {
@@ -350,6 +377,21 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                     <option value="CCNTERN2">CCNTERN2</option>
                   </select>
                 </div>
+              </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Section</label>
+                <select
+                  style={{ ...styles.input, paddingLeft: '1rem' }}
+                  value={singleData.sectionId} 
+                  onChange={e => setSingleData(p => ({ ...p, sectionId: e.target.value }))}
+                >
+                  <option value="">Select Section...</option>
+                  {activeSections.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                  {activeSections.length === 0 && <option value="" disabled>No active sections</option>}
+                </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

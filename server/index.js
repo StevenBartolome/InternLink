@@ -16,6 +16,13 @@ const port = process.env.SERVER_PORT || 8080;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Request Logger
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+    next();
+});
+
 // Helper: Log Security Events
 const logEvent = async (req, { action, type, affectedRecord, userId, userName, userRole, metadata = {} }) => {
     try {
@@ -154,7 +161,8 @@ app.post('/admin/create-student', async (req, res) => {
                 year_level: year_level,
                 academic_year: academic_year,
                 semester: semester,
-                ojt_subject_name: ojt_subject_name
+                ojt_subject_name: ojt_subject_name,
+                section_id: req.body.section_id // Save the section association
             });
 
         if (profileError) throw profileError;
@@ -361,6 +369,21 @@ app.post('/admin/create-ojt-head', async (req, res) => {
             throw userError;
         }
 
+        // 3. Insert section assignments if provided
+        const { sectionIds } = req.body;
+        if (sectionIds && Array.isArray(sectionIds) && sectionIds.length > 0) {
+            console.log('3. Inserting professor section assignments...');
+            const sectionInserts = sectionIds.map(sid => ({
+                professor_id: userId,
+                section_id: sid
+            }));
+            const { error: sectionError } = await supabaseAdmin
+                .from('professor_sections')
+                .insert(sectionInserts);
+            
+            if (sectionError) console.error('Failed to assign sections:', sectionError.message);
+        }
+
         console.log('OJT Adviser creation complete.');
 
         // Log the event
@@ -377,6 +400,40 @@ app.post('/admin/create-ojt-head', async (req, res) => {
 
     } catch (error) {
         console.error('OJT Adviser Setup error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin Route: Update Professor Sections
+app.post('/admin/update-professor-sections', async (req, res) => {
+    const { professorId, sectionIds } = req.body;
+
+    if (!professorId || !Array.isArray(sectionIds)) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    try {
+        // 1. Remove existing assignments
+        await supabaseAdmin
+            .from('professor_sections')
+            .delete()
+            .eq('professor_id', professorId);
+
+        // 2. Insert new assignments
+        if (sectionIds.length > 0) {
+            const sectionInserts = sectionIds.map(sid => ({
+                professor_id: professorId,
+                section_id: sid
+            }));
+            const { error } = await supabaseAdmin
+                .from('professor_sections')
+                .insert(sectionInserts);
+            if (error) throw error;
+        }
+
+        res.json({ success: true, message: 'Sections updated successfully' });
+    } catch (error) {
+        console.error('Update sections error:', error);
         res.status(500).json({ error: error.message });
     }
 });
