@@ -36,8 +36,7 @@ const StudentProfilePage = () => {
             programs ( id, name, code, required_hours )
           ),
           student_internships!student_id (
-            current_stage, rendered_hours, position, department,
-            supervisor_name, supervisor_email, supervisor_phone,
+            *,
             companies ( id, name, address, industry )
           )
         `)
@@ -89,6 +88,8 @@ const StudentProfilePage = () => {
         supervisor: internship.supervisor_name || 'Not Assigned',
         supervisorEmail: internship.supervisor_email || 'N/A',
         supervisorPhone: internship.supervisor_phone || 'N/A',
+        startDate: internship.start_date ? new Date(internship.start_date).toLocaleDateString() : 'Not Set',
+        estimatedEndDate: internship.estimated_end_date ? new Date(internship.estimated_end_date).toLocaleDateString() : 'Not Set',
         
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.first_name + ' ' + user.last_name)}&background=random&size=128`
       });
@@ -339,6 +340,24 @@ const StudentProfilePage = () => {
                 <div>
                   <div style={styles.label}>Supervisor Contact</div>
                   <div style={styles.value}>{student.supervisorEmail}</div>
+                </div>
+              </div>
+              
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '24px 0 20px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={20} color={theme.colors.primary} /> Internship Duration
+              </h3>
+              <div style={styles.infoItem}>
+                <div style={styles.iconBox}><Calendar size={18} /></div>
+                <div>
+                  <div style={styles.label}>Start Date</div>
+                  <div style={styles.value}>{student.startDate}</div>
+                </div>
+              </div>
+              <div style={styles.infoItem}>
+                <div style={styles.iconBox}><Calendar size={18} /></div>
+                <div>
+                  <div style={styles.label}>Estimated End Date</div>
+                  <div style={styles.value}>{student.estimatedEndDate}</div>
                 </div>
               </div>
             </div>
