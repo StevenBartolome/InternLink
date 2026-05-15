@@ -165,7 +165,7 @@ const Sidebar = () => {
     <aside style={styles.sidebar}>
       <div style={styles.header}>
         <h1 style={styles.appName}>InternLink</h1>
-        <p style={styles.appSubtitle}>OJT Head Portal</p>
+        <p style={styles.appSubtitle}>OJT Adviser Portal</p>
       </div>
 
       <nav style={styles.navContainer}>
@@ -195,8 +195,8 @@ const Sidebar = () => {
           {getInitials(user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : ''))}
         </div>
         <div style={styles.userInfo}>
-          <span style={styles.userName}>{user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : 'OJT Head')}</span>
-          <span style={styles.userDetails}>{user?.course_code || 'OJT Head'}</span>
+          <span style={styles.userName}>{user?.name || (user?.first_name ? user.first_name + ' ' + user.last_name : 'OJT Adviser')}</span>
+          <span style={styles.userDetails}>{user?.course_code || 'OJT Adviser'}</span>
         </div>
       </NavLink>
     </aside>

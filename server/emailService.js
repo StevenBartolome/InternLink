@@ -21,7 +21,7 @@ export const sendCredentialsEmail = async (studentEmail, studentName, password) 
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; borderRadius: 12px;">
         <h2 style="color: #1e40af;">Welcome to InternLink, ${studentName}!</h2>
-        <p>Your account has been created by your OJT Head. You can now log in to the portal using the following credentials:</p>
+        <p>Your account has been created by your OJT Adviser. You can now log in to the portal using the following credentials:</p>
         
         <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
           <p style="margin: 5px 0;"><strong>Email:</strong> ${studentEmail}</p>
@@ -66,7 +66,7 @@ export const sendAdminWelcomeEmail = async (adminEmail, adminName) => {
           <p style="margin: 5px 0;"><strong>Role:</strong> System Administrator</p>
         </div>
         
-        <p>You can now log in to manage students, OJT Heads, and system settings.</p>
+        <p>You can now log in to manage students, OJT Advisers, and system settings.</p>
         
         <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
            style="display: inline-block; background-color: #1e40af; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 10px;">

@@ -196,7 +196,7 @@ const DashboardPage = () => {
       <div style={styles.welcomeBanner}>
         <div style={styles.welcomeText}>
           <h2 style={styles.welcomeText.h2}>Welcome back, {user?.first_name || 'Professor'}!</h2>
-          <p style={styles.welcomeText.p}>{user?.course_code || 'All'} OJT Head • {user?.department || 'Department'}</p>
+          <p style={styles.welcomeText.p}>{user?.course_code || 'All'} OJT Adviser • {user?.department || 'Department'}</p>
         </div>
         <div style={styles.quickActions}>
           <button 

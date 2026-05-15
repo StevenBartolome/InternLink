@@ -111,7 +111,7 @@ const Login = () => {
             OJT Internship<br /><span style={{ color: '#fbbf24' }}>Management</span><br />System
           </h1>
           <p style={{ opacity: 0.85, lineHeight: 1.7, fontSize: '1rem' }}>
-            A unified platform for students, OJT Heads, and Administrators to manage the complete internship journey — from pre-deployment to final grading.
+            A unified platform for students, OJT Advisers, and Administrators to manage the complete internship journey — from pre-deployment to final grading.
           </p>
           <div style={{ display: 'flex', gap: '24px', marginTop: '2.5rem' }}>
             {[{ v: '3', l: 'Stages' }, { v: '3', l: 'Roles' }, { v: '100%', l: 'COR-Verified' }].map(x => (
@@ -181,7 +181,7 @@ const Login = () => {
           <motion.div variants={itemV} style={{ marginTop: '2rem', padding: '14px 16px', backgroundColor: '#f1f5f9', borderRadius: '12px', display: 'flex', gap: '12px', color: '#475569' }}>
             <Users size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
             <p style={{ fontSize: '0.8rem', lineHeight: 1.5, margin: 0 }}>
-              <strong>One portal for all roles.</strong> The system automatically detects whether you are a Student, OJT Head, or Admin and redirects you to the correct dashboard.
+              <strong>One portal for all roles.</strong> The system automatically detects whether you are a Student, OJT Adviser, or Admin and redirects you to the correct dashboard.
             </p>
           </motion.div>
 

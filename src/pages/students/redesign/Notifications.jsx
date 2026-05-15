@@ -11,7 +11,7 @@ import { studentDesign } from '../../../styles/StudentDesign';
 
 const Notifications = () => {
   const notifications = [
-    { type: 'WAR approved', msg: 'Your Week 8 Weekly Activity Report has been approved by the OJT Head.', time: '2 hours ago', icon: CheckCircle2, color: studentDesign.colors.success },
+    { type: 'WAR approved', msg: 'Your Week 8 Weekly Activity Report has been approved by the OJT Adviser.', time: '2 hours ago', icon: CheckCircle2, color: studentDesign.colors.success },
     { type: 'WAR reminder', msg: 'Don\'t forget to submit your Week 9 WAR by the end of the week.', time: '5 hours ago', icon: Calendar, color: studentDesign.colors.warning },
     { type: 'Document rejected', msg: 'Your Resume / CV was rejected due to blurry scan. Please re-upload.', time: 'Yesterday', icon: AlertCircle, color: studentDesign.colors.danger },
     { type: 'Missed attendance', msg: 'You were marked as absent for yesterday\'s log. Please check with your supervisor.', time: '2 days ago', icon: AlertCircle, color: studentDesign.colors.danger },

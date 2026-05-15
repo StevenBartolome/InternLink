@@ -287,7 +287,7 @@ const ProfilePage = () => {
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
                 <h1 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{user?.name}</h1>
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Verified OJT Head</div>
+                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Verified OJT Adviser</div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0.9 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -287,7 +287,7 @@ const CompanyInfo = () => {
             <div>
               <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>Hired? Tell us about it!</h3>
               <p style={{ margin: 0, color: studentDesign.colors.textMuted, maxWidth: '400px' }}>
-                Fill in your company details to update your internship status and allow your OJT Head to track your progress.
+                Fill in your company details to update your internship status and allow your OJT Adviser to track your progress.
               </p>
             </div>
             <motion.button 

@@ -21,7 +21,7 @@ import Portfolio from './pages/students/redesign/Portfolio';
 import Notifications from './pages/students/redesign/Notifications';
 import ProfilePage from './pages/students/ProfilePage';
 
-// ── OJT Head Pages ───────────────────────────────────────────────────
+// ── OJT Adviser Pages ───────────────────────────────────────────────────
 import OjtProfessorLayout from './components/layout/ojt-professor/OjtProfessorLayout';
 import OjtProfessorDashboardPage from './pages/ojt-professor/DashboardPage';
 import StudentDirectoryPage from './pages/ojt-professor/StudentDirectoryPage';
@@ -121,7 +121,7 @@ function App() {
             <Route path="/resume" element={<Navigate to="/profile" replace />} />
           </Route>
 
-          {/* ── OJT Head Routes ── */}
+          {/* ── OJT Adviser Routes ── */}
           <Route element={<ProtectedRoute allowedRoles={['ojt_head']}><OjtProfessorLayout /></ProtectedRoute>}>
             <Route path="/ojt-professor/dashboard" element={<OjtProfessorDashboardPage />} />
             <Route path="/ojt-professor/students" element={<StudentDirectoryPage />} />

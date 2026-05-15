@@ -1,10 +1,10 @@
-// src/services/mocks/ojtProfessorMockData.js — OJT Head stage-based data
+// src/services/mocks/ojtProfessorMockData.js — OJT Adviser stage-based data
 
 export const ojtHeadProfile = {
   name: 'OJT Coordinator',
   assignedCourse: 'BSIT',
   department: 'Information Technology Department',
-  role: 'OJT Head',
+  role: 'OJT Adviser',
   email: 'ojthead@internlink.edu',
   avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
   isFirstLogin: false,

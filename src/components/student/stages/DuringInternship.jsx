@@ -236,13 +236,13 @@ export default function DuringInternship({ onComplete }) {
                   <div style={{ padding: '0 20px 20px', borderTop: `1px solid ${theme.colors.border}` }}>
                     {war.status === 'REJECTED' && war.comment && (
                       <div style={{ padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444', margin: '16px 0 12px' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', marginBottom: '4px' }}>OJT Head Comment:</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', marginBottom: '4px' }}>OJT Adviser Comment:</div>
                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#991b1b' }}>{war.comment}</p>
                       </div>
                     )}
                     {war.status === 'APPROVED' && war.comment && (
                       <div style={{ padding: '10px 14px', backgroundColor: '#f0fdf4', borderRadius: '8px', borderLeft: '4px solid #16a34a', margin: '16px 0 12px' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', marginBottom: '4px' }}>OJT Head Feedback:</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#15803d', marginBottom: '4px' }}>OJT Adviser Feedback:</div>
                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#166534' }}>{war.comment}</p>
                       </div>
                     )}
@@ -264,7 +264,7 @@ export default function DuringInternship({ onComplete }) {
       {activeTab === 'completion' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ padding: '16px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', fontSize: '0.875rem', color: '#92400e' }}>
-            ⚠️ These documents can only be uploaded after completing all required OJT hours. Upload both to allow your OJT Head to validate your completion.
+            ⚠️ These documents can only be uploaded after completing all required OJT hours. Upload both to allow your OJT Adviser to validate your completion.
           </div>
           {[
             { key: 'certificateOfCompletion', label: 'Certificate of Completion', desc: 'Official certificate from your company/supervisor confirming you completed your OJT.' },

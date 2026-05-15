@@ -1,4 +1,4 @@
-// src/services/mocks/adminMockData.js — Admin mock data (OJT Head-centric)
+// src/services/mocks/adminMockData.js — Admin mock data (OJT Adviser-centric)
 
 export const adminProfile = {
   name: 'System Administrator',
@@ -9,7 +9,7 @@ export const adminProfile = {
 
 export const dashboardStats = {
   totalStudents: 54,
-  totalOjtHeads: 4,
+  totalOjtHeads: 4, // Total OJT Advisers
   studentsInPreInternship: 18,
   studentsInDuringInternship: 24,
   studentsInPostInternship: 6,
@@ -17,7 +17,7 @@ export const dashboardStats = {
   activeRegistrationsToday: 3,
 };
 
-// OJT Head accounts
+// OJT Adviser accounts
 export const ojtHeadsList = [
   { id: 'h1', name: 'Dr. Maria Clara Santos', email: 'mcsantos@internlink.edu', assignedCourse: 'BSIT', status: 'Active', dateCreated: '2026-01-10', studentsCount: 20 },
   { id: 'h2', name: 'Prof. Rodrigo dela Peña', email: 'rdpeña@internlink.edu', assignedCourse: 'BSCS', status: 'Active', dateCreated: '2026-01-10', studentsCount: 15 },
@@ -87,8 +87,8 @@ export const auditLogs = [
     id: i + 1,
     timestamp: new Date(Date.now() - i * 3600000).toISOString().replace('T', ' ').substring(0, 19),
     user: ['System Admin', 'Dr. Maria Clara Santos', 'Prof. Rodrigo dela Peña'][i % 3],
-    role: ['Admin', 'OJT Head', 'OJT Head'][i % 3],
-    action: ['Created OJT Head account', 'Approved student document', 'Approved WAR', 'Approved deployment', 'Encoded final grade', 'Reset user password', 'Updated internship config'][i % 7],
+    role: ['Admin', 'OJT Adviser', 'OJT Adviser'][i % 3],
+    action: ['Created OJT Adviser account', 'Approved student document', 'Approved WAR', 'Approved deployment', 'Encoded final grade', 'Reset user password', 'Updated internship config'][i % 7],
     affectedRecord: `Record #${100 + i}`,
     type: ['Create', 'Update', 'Update', 'Update', 'Update', 'Update', 'Update'][i % 7],
   }))

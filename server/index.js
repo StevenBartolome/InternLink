@@ -62,6 +62,36 @@ app.get('/admin/user-email/:id', async (req, res) => {
     }
 });
 
+// Admin Route: Get All User Emails
+app.get('/api/admin/users-emails', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+        if (error) throw error;
+        const emails = {};
+        data.users.forEach(u => {
+            emails[u.id] = u.email;
+        });
+        res.json({ emails });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Alias without /api just in case
+app.get('/admin/users-emails', async (req, res) => {
+    try {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+        if (error) throw error;
+        const emails = {};
+        data.users.forEach(u => {
+            emails[u.id] = u.email;
+        });
+        res.json({ emails });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Admin Route: Create Student Account
 app.post('/admin/create-student', async (req, res) => {
     const { 
@@ -140,7 +170,7 @@ app.post('/admin/create-student', async (req, res) => {
 
         if (internshipError) console.log('Failed to init internship:', internshipError.message);
 
-        // Fetch OJT Head name for logging
+        // Fetch OJT Adviser name for logging
         const { data: headData } = await supabaseAdmin
             .from('users')
             .select('first_name, last_name')
@@ -153,7 +183,7 @@ app.post('/admin/create-student', async (req, res) => {
             type: 'Create',
             affectedRecord: `Student: ${email} (${course})`,
             userId: ojtHeadId,
-            userName: headData ? `${headData.first_name} ${headData.last_name}` : 'Unknown OJT Head',
+            userName: headData ? `${headData.first_name} ${headData.last_name}` : 'Unknown OJT Adviser',
             userRole: 'ojt_head'
         });
 
@@ -283,7 +313,7 @@ app.post('/admin/setup', async (req, res) => {
     }
 });
 
-// Admin Route: Create OJT Head (Professor) Account
+// Admin Route: Create OJT Adviser (Professor) Account
 app.post('/admin/create-ojt-head', async (req, res) => {
     const { firstName, lastName, email, assignedCourse, programId } = req.body;
 
@@ -291,7 +321,7 @@ app.post('/admin/create-ojt-head', async (req, res) => {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    console.log('OJT Head Creation started for:', email);
+    console.log('OJT Adviser Creation started for:', email);
     try {
         // 1. Invite user via Supabase Auth (This sends the invitation email)
         console.log('1. Sending Supabase invitation...');
@@ -331,13 +361,13 @@ app.post('/admin/create-ojt-head', async (req, res) => {
             throw userError;
         }
 
-        console.log('OJT Head creation complete.');
+        console.log('OJT Adviser creation complete.');
 
         // Log the event
         await logEvent(req, {
-            action: 'Created OJT Head Account',
+            action: 'Created OJT Adviser Account',
             type: 'Create',
-            affectedRecord: `OJT Head: ${email} (${assignedCourse})`,
+            affectedRecord: `OJT Adviser: ${email} (${assignedCourse})`,
             userId: userId,
             userName: `${firstName} ${lastName}`,
             userRole: 'ojt_head'
@@ -346,7 +376,7 @@ app.post('/admin/create-ojt-head', async (req, res) => {
         res.json({ success: true, message: 'Invitation sent to ' + email });
 
     } catch (error) {
-        console.error('OJT Head Setup error:', error);
+        console.error('OJT Adviser Setup error:', error);
         res.status(500).json({ error: error.message });
     }
 });

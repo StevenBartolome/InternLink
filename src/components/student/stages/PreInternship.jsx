@@ -54,7 +54,7 @@ export default function PreInternship({ onDeploy }) {
           <CheckCircle size={32} />
           <div>
             <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>Deployment Approved! 🎉</div>
-            <div style={{ opacity: 0.9, fontSize: '0.9rem' }}>Your OJT Head cleared you. Stage 2 is now unlocked.</div>
+            <div style={{ opacity: 0.9, fontSize: '0.9rem' }}>Your OJT Adviser cleared you. Stage 2 is now unlocked.</div>
           </div>
         </div>
       )}
@@ -130,7 +130,7 @@ export default function PreInternship({ onDeploy }) {
                   <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${theme.colors.border}` }}>
                     {doc.status === 'REJECTED' && doc.comment && (
                       <div style={{ padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444', margin: '12px 0' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', marginBottom: '4px' }}>OJT Head Comment:</div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', marginBottom: '4px' }}>OJT Adviser Comment:</div>
                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#991b1b' }}>{doc.comment}</p>
                       </div>
                     )}
@@ -158,7 +158,7 @@ export default function PreInternship({ onDeploy }) {
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: MOA_COLORS[moaStatus] }} />
             <span style={{ fontWeight: 700, color: MOA_COLORS[moaStatus] }}>{MOA_LABELS[moaStatus]}</span>
           </div>
-          <p style={{ margin: '10px 0 0 0', fontSize: '0.85rem', color: theme.colors.textMuted }}>Updated by your OJT Head. Actual MOA drafting is handled offline.</p>
+          <p style={{ margin: '10px 0 0 0', fontSize: '0.85rem', color: theme.colors.textMuted }}>Updated by your OJT Adviser. Actual MOA drafting is handled offline.</p>
         </div>
 
         <div style={{ ...commonStyles.dashboardCard, padding: '24px', flex: 1, minWidth: '240px' }}>
@@ -166,10 +166,10 @@ export default function PreInternship({ onDeploy }) {
           {deploymentApproved ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#16a34a', fontWeight: 700 }}><CheckCircle size={20} /> Approved — You're Deployed!</div>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.textMuted, fontWeight: 600 }}><Clock size={20} color={theme.colors.warning} /> Awaiting OJT Head Approval</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.textMuted, fontWeight: 600 }}><Clock size={20} color={theme.colors.warning} /> Awaiting OJT Adviser Approval</div>
           )}
           <p style={{ margin: '10px 0 0 0', fontSize: '0.85rem', color: theme.colors.textMuted }}>
-            {deploymentApproved ? 'Your OJT Head approved your deployment. Proceed to Stage 2.' : 'OJT Head will approve after all documents and MOA are processed.'}
+            {deploymentApproved ? 'Your OJT Adviser approved your deployment. Proceed to Stage 2.' : 'OJT Adviser will approve after all documents and MOA are processed.'}
           </p>
           {!deploymentApproved && (
             <button onClick={onDeploy} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, marginTop: '14px', fontSize: '0.8rem' }}>

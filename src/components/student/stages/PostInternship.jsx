@@ -12,7 +12,7 @@ export default function PostInternship() {
   const [toast, setToast] = useState(null);
   const [items, setItems] = useState([]); // Real items will be fetched from DB
   const [submitted, setSubmitted] = useState(user?.stage3_submitted || false);
-  const finalGrade = user?.final_grade; // null until OJT Head encodes
+  const finalGrade = user?.final_grade; // null until OJT Adviser encodes
 
   const handleUpload = (itemId, file) => {
     if (!file) return;
@@ -29,7 +29,7 @@ export default function PostInternship() {
       return;
     }
     setSubmitted(true);
-    setToast({ message: 'Portfolio submitted successfully! Awaiting OJT Head review and grading.', type: 'success' });
+    setToast({ message: 'Portfolio submitted successfully! Awaiting OJT Adviser review and grading.', type: 'success' });
   };
 
   const gradeLabel = (g) => {
@@ -52,7 +52,7 @@ export default function PostInternship() {
         <Award size={56} style={{ marginBottom: '12px', opacity: 0.9 }} />
         <h2 style={{ margin: '0 0 8px 0', fontSize: '1.75rem', fontWeight: 800 }}>Post-Internship Stage</h2>
         <p style={{ margin: '0 0 24px 0', opacity: 0.85, maxWidth: '480px', marginLeft: 'auto', marginRight: 'auto' }}>
-          Upload all portfolio components and submit for final grading by your OJT Head.
+          Upload all portfolio components and submit for final grading by your OJT Adviser.
         </p>
 
         {finalGrade ? (
@@ -75,7 +75,7 @@ export default function PostInternship() {
         ) : submitted ? (
           <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', display: 'inline-block', padding: '16px 32px', borderRadius: '12px' }}>
             <Clock size={20} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
-            <span style={{ fontWeight: 600 }}>Portfolio submitted — awaiting OJT Head grading</span>
+            <span style={{ fontWeight: 600 }}>Portfolio submitted — awaiting OJT Adviser grading</span>
           </div>
         ) : (
           <div style={{ backgroundColor: 'rgba(255,255,255,0.12)', display: 'inline-block', padding: '16px 32px', borderRadius: '12px' }}>
@@ -141,7 +141,7 @@ export default function PostInternship() {
           <Clock size={40} color={theme.colors.primary} style={{ marginBottom: '12px' }} />
           <h4 style={{ margin: '0 0 8px 0', fontWeight: 700, color: theme.colors.textMain }}>Portfolio Submitted!</h4>
           <p style={{ margin: 0, color: theme.colors.textSecondary, fontSize: '0.9rem' }}>
-            Your OJT Head is reviewing your portfolio and supervisor evaluation. Your final grade will appear here once encoded.
+            Your OJT Adviser is reviewing your portfolio and supervisor evaluation. Your final grade will appear here once encoded.
           </p>
         </div>
       )}

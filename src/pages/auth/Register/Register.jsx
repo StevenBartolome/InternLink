@@ -68,7 +68,7 @@ export default function Register() {
             </div>
             <h2 style={s.title}>Self-Registration Disabled</h2>
             <p style={{ ...s.sub, marginBottom: '2rem' }}>
-              Student accounts are now created exclusively by the <strong>OJT Head</strong> or <strong>Professor</strong>.
+              Student accounts are now created exclusively by the <strong>OJT Adviser</strong> or <strong>Professor</strong>.
             </p>
 
             <div style={{ padding: '1.5rem', backgroundColor: '#eff6ff', borderRadius: '16px', textAlign: 'left', marginBottom: '2rem', border: '1px solid #dbeafe' }}>
@@ -76,7 +76,7 @@ export default function Register() {
                 <Info size={18} /> How to get your account?
               </h3>
               <ul style={{ paddingLeft: '1.25rem', margin: 0, color: '#1e40af', fontSize: '0.9rem', lineHeight: 1.6 }}>
-                <li>Contact your OJT Head or Program Chair.</li>
+                <li>Contact your OJT Adviser or Program Chair.</li>
                 <li>Provide them with your active university email.</li>
                 <li>Wait for an email containing your login credentials.</li>
               </ul>

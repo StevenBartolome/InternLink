@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { X, Building2, Briefcase, User, Mail, Phone, MapPin, Loader2, Save } from 'lucide-react';
 import { studentDesign } from '../../styles/StudentDesign';
 import GoogleMapPicker from '../common/GoogleMapPicker';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 
 const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
+  const { user } = useAuth();
+  const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     company_name: initialData?.company_name || '',
@@ -179,29 +182,33 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                 />
               </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Supervisor Name</label>
-                <input 
-                  name="supervisor_name" required value={formData.supervisor_name} onChange={handleChange}
-                  placeholder="e.g. Engr. John Doe" style={styles.input} 
-                />
-              </div>
+              {currentStage !== 'PRE_INTERNSHIP' && (
+                <>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Supervisor Name</label>
+                    <input 
+                      name="supervisor_name" value={formData.supervisor_name} onChange={handleChange}
+                      placeholder="e.g. Engr. John Doe" style={styles.input} 
+                    />
+                  </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Supervisor Email</label>
-                <input 
-                  type="email" name="supervisor_email" required value={formData.supervisor_email} onChange={handleChange}
-                  placeholder="johndoe@company.com" style={styles.input} 
-                />
-              </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Supervisor Email</label>
+                    <input 
+                      type="email" name="supervisor_email" value={formData.supervisor_email} onChange={handleChange}
+                      placeholder="johndoe@company.com" style={styles.input} 
+                    />
+                  </div>
 
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Supervisor Phone (Optional)</label>
-                <input 
-                  name="supervisor_phone" value={formData.supervisor_phone} onChange={handleChange}
-                  placeholder="+63 912 345 6789" style={styles.input} 
-                />
-              </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Supervisor Phone (Optional)</label>
+                    <input 
+                      name="supervisor_phone" value={formData.supervisor_phone} onChange={handleChange}
+                      placeholder="+63 912 345 6789" style={styles.input} 
+                    />
+                  </div>
+                </>
+              )}
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>Industry</label>

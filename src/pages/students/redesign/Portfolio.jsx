@@ -56,7 +56,7 @@ const Portfolio = () => {
         </div>
         <h2 style={styles.heading}>Stage 3 is locked</h2>
         <p style={styles.text}>
-          You need to complete your internship hours and have your during-internship documents approved by the OJT Head to unlock the Portfolio stage.
+          You need to complete your internship hours and have your during-internship documents approved by the OJT Adviser to unlock the Portfolio stage.
         </p>
       </motion.div>
     </div>

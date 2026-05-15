@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
             
           if (sInternship) internshipData = sInternship;
         } else if (baseUser.role === 'ojt_head') {
-          // OJT Heads now have all their data in the base users table
+          // OJT Advisers now have all their data in the base users table
           console.log('fetchProfile: Professor detected, program:', baseUser.programs?.code);
           specificProfile = {};
         } else if (baseUser.role === 'admin') {
@@ -375,7 +375,7 @@ export function AuthProvider({ children }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...studentData,
-          ojtHeadId: user.id // The current logged-in OJT Head
+          ojtHeadId: user.id // The current logged-in OJT Adviser
         }),
       });
 
