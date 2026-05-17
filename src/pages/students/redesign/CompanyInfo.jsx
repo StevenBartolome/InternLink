@@ -325,21 +325,21 @@ const CompanyInfo = () => {
             <div style={styles.grid}>
               <div style={styles.field}>
                 <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Briefcase size={12} /> Position / Role</span>
-                <span style={styles.fieldValue}>{internship.position || 'N/A'}</span>
+                <span style={styles.fieldValue}>{internship.position || 'Not Assigned'}</span>
               </div>
               <div style={styles.field}>
                 <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Layers size={12} /> Department</span>
-                <span style={styles.fieldValue}>{internship.department || 'N/A'}</span>
+                <span style={styles.fieldValue}>{internship.department || 'Not Assigned'}</span>
               </div>
               {internship.is_deployed && (
                 <>
                   <div style={styles.field}>
                     <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><User size={12} /> Supervisor Name</span>
-                    <span style={styles.fieldValue}>{internship.supervisor_name || 'N/A'}</span>
+                    <span style={styles.fieldValue}>{internship.supervisor_name || 'Not Assigned'}</span>
                   </div>
                   <div style={styles.field}>
                     <span style={{ ...styles.fieldLabel, display: 'flex', alignItems: 'center', gap: '6px' }}><Mail size={12} /> Supervisor Email</span>
-                    <span style={styles.fieldValue}>{internship.supervisor_email || 'N/A'}</span>
+                    <span style={styles.fieldValue}>{internship.supervisor_email || 'Not Provided'}</span>
                   </div>
                 </>
               )}

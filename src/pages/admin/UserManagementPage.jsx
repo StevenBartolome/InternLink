@@ -160,10 +160,10 @@ export default function UserManagementPage() {
         return {
           id: s.id,
           name: `${s.first_name} ${s.last_name}`,
-          email: emailsMap[s.id] || 'N/A', // Pulled from backend endpoint
-          studentId: profile.student_id || 'N/A',
-          course: profile.programs?.code || 'N/A',
-          section: profile.program_sections?.name || 'N/A',
+          email: emailsMap[s.id] || 'Not Provided', // Pulled from backend endpoint
+          studentId: profile.student_id || 'Not Set',
+          course: profile.programs?.code || 'Not Assigned',
+          section: profile.program_sections?.name || 'Not Assigned',
           currentStage: internship.current_stage || 'PRE_INTERNSHIP',
           status: s.is_active ? 'Active' : 'Inactive',
           adviserName: adviser.first_name ? `${adviser.first_name} ${adviser.last_name}` : 'Not Assigned'
@@ -209,8 +209,8 @@ export default function UserManagementPage() {
         return {
           id: h.id,
           name: `${h.first_name} ${h.last_name}`,
-          email: emailsMap[h.id] || 'N/A',
-          assignedCourse: h.programs?.code || 'N/A',
+          email: emailsMap[h.id] || 'Not Provided',
+          assignedCourse: h.programs?.code || 'Not Assigned',
           programId: h.programs?.id || '',
           sectionIds: h.professor_sections?.map(ps => ps.program_sections?.id).filter(Boolean) || [],
           sections: h.professor_sections?.map(ps => ({

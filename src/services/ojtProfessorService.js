@@ -31,9 +31,9 @@ export const ojtProfessorService = {
       internshipId: item.id,
       studentId: item.student_id,
       programId: item.student?.profile?.[0]?.program_id,
-      studentNo: item.student?.profile?.[0]?.student_id || 'N/A',
+      studentNo: item.student?.profile?.[0]?.student_id || 'Not Set',
       studentName: `${item.student?.first_name} ${item.student?.last_name}`,
-      company: item.company?.name || 'N/A',
+      company: item.company?.name || 'Not Applied',
       position: item.position,
       moaStatus: item.moa_status,
       deploymentApproved: item.is_deployed,
@@ -41,7 +41,7 @@ export const ojtProfessorService = {
         id: doc.id,
         name: doc.document_name,
         status: doc.status,
-        submittedAt: doc.submitted_at ? new Date(doc.submitted_at).toLocaleDateString() : 'N/A',
+        submittedAt: doc.submitted_at ? new Date(doc.submitted_at).toLocaleDateString() : 'Not Submitted',
         fileUrl: doc.file_url,
         comment: doc.reviewer_comment
       }))

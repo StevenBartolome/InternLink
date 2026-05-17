@@ -17,7 +17,7 @@ const ReportsDashboardPage = () => {
   const completed = mockStudents.filter(s => s.currentStage === 'COMPLETED').length;
   const atRisk = mockStudents.filter(s => s.isAtRisk).length;
   const graded = mockStudents.filter(s => s.grade).map(s => parseFloat(s.grade));
-  const avgGrade = graded.length > 0 ? (graded.reduce((a,b) => a + b, 0) / graded.length).toFixed(2) : 'N/A';
+  const avgGrade = graded.length > 0 ? (graded.reduce((a,b) => a + b, 0) / graded.length).toFixed(2) : 'No Grades';
 
   const stageBreakdown = [
     { label: 'Pre-Internship', count: mockStudents.filter(s => s.currentStage === 'PRE_INTERNSHIP').length, color: '#3b82f6' },

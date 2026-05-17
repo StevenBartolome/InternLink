@@ -51,12 +51,12 @@ const StudentProfilePage = () => {
 
       if (error) throw error;
 
-      let userEmail = 'N/A';
+      let userEmail = 'Not Provided';
       try {
         const emailRes = await fetch(`/api/admin/user-email/${id}`);
         if (emailRes.ok) {
           const emailData = await emailRes.json();
-          userEmail = emailData.email || 'N/A';
+          userEmail = emailData.email || 'Not Provided';
         }
       } catch (err) {
         console.error('Failed to fetch email:', err);
@@ -71,17 +71,17 @@ const StudentProfilePage = () => {
 
       setStudent({
         uuid: data.id,
-        studentId: profile.student_id || 'N/A',
+        studentId: profile.student_id || 'Not Set',
         name: `${user.first_name} ${user.last_name}`,
         email: userEmail,
         firstName: user.first_name,
         lastName: user.last_name,
-        course: programs.name || 'N/A',
-        courseCode: programs.code || 'N/A',
-        yearLevel: profile.year_level || 'N/A',
-        academicYear: profile.academic_year || 'N/A',
-        semester: profile.semester || 'N/A',
-        ojtSubject: profile.ojt_subject_name || 'N/A',
+        course: programs.name || 'Not Assigned',
+        courseCode: programs.code || 'Not Assigned',
+        yearLevel: profile.year_level || 'Not Set',
+        academicYear: profile.academic_year || 'Not Set',
+        semester: profile.semester || 'Not Set',
+        ojtSubject: profile.ojt_subject_name || 'Not Set',
         status: internship.current_stage || 'PRE_INTERNSHIP',
         hoursRendered: internship.rendered_hours || 0,
         hoursRequired: programs.required_hours || 486,
@@ -96,8 +96,8 @@ const StudentProfilePage = () => {
         position: internship.position || 'Not Assigned',
         department: internship.department || 'Not Assigned',
         supervisor: internship.supervisor_name || 'Not Assigned',
-        supervisorEmail: internship.supervisor_email || 'N/A',
-        supervisorPhone: internship.supervisor_phone || 'N/A',
+        supervisorEmail: internship.supervisor_email || 'Not Provided',
+        supervisorPhone: internship.supervisor_phone || 'Not Provided',
         startDate: internship.start_date ? new Date(internship.start_date).toLocaleDateString() : 'Not Set',
         estimatedEndDate: internship.estimated_end_date ? new Date(internship.estimated_end_date).toLocaleDateString() : 'Not Set',
         
@@ -342,7 +342,7 @@ const StudentProfilePage = () => {
                   <div style={styles.iconBox}><Mail size={18} /></div>
                   <div>
                     <div style={styles.label}>Email Address</div>
-                    <div style={styles.value}>{student.email || 'N/A'}</div>
+                    <div style={styles.value}>{student.email || 'Not Provided'}</div>
                   </div>
                 </div>
               </div>
@@ -391,7 +391,7 @@ const StudentProfilePage = () => {
                     <div style={styles.iconBox}><Globe size={18} /></div>
                     <div>
                       <div style={styles.label}>Industry</div>
-                      <div style={styles.value}>{student.industry || 'N/A'}</div>
+                      <div style={styles.value}>{student.industry || 'Not Specified'}</div>
                     </div>
                   </div>
                 </>

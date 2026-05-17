@@ -79,17 +79,17 @@ const StudentDirectoryPage = () => {
         
         return {
           id: s.id,
-          studentId: profile.student_id || 'N/A',
+          studentId: profile.student_id || 'Not Set',
           name: `${s.first_name} ${s.last_name}`,
-          course: profile.programs?.code || 'N/A',
-          yearLevel: profile.year_level || 'N/A',
+          course: profile.programs?.code || 'Not Assigned',
+          yearLevel: profile.year_level || 'Not Set',
           status: STATUS_MAP[internship.current_stage] || 'Pre-Internship',
-          company: company.name || 'Not Placed',
-          supervisor: internship.supervisor_name || 'N/A',
+          company: company.name || 'Not Applied',
+          supervisor: internship.supervisor_name || 'Not Placed',
           isDeployed: internship.is_deployed || false,
           hoursRendered: internship.rendered_hours || 0,
           hoursRequired: profile.programs?.required_hours || 486,
-          section: profile.program_sections?.name || 'N/A',
+          section: profile.program_sections?.name || 'Not Assigned',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
         };
       });
@@ -97,7 +97,7 @@ const StudentDirectoryPage = () => {
       setStudents(transformed);
       
       // Extract unique sections for filtering
-      const uniqueSections = [...new Set(transformed.map(s => s.section).filter(sec => sec !== 'N/A'))].sort();
+      const uniqueSections = [...new Set(transformed.map(s => s.section).filter(sec => sec !== 'Not Assigned'))].sort();
       setAvailableSections(uniqueSections);
     } catch (err) {
       console.error('Error fetching students:', err);
@@ -364,7 +364,7 @@ const StudentDirectoryPage = () => {
                   </td>
                   <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
                   <td style={commonStyles.dashboardTableTd}>
-                    {student.company && student.company !== 'Not Placed' ? (
+                    {student.company && student.company !== 'Not Applied' ? (
                       <div style={styles.companyInfo}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={styles.companyName}>{student.company}</span>
@@ -386,7 +386,7 @@ const StudentDirectoryPage = () => {
                         <span style={styles.supervisorName}>{student.supervisor}</span>
                       </div>
                     ) : (
-                      <span style={{ color: theme.colors.textMuted }}>Not Placed</span>
+                      <span style={{ color: theme.colors.textMuted }}>Not Applied</span>
                     )}
                   </td>
                   <td style={commonStyles.dashboardTableTd}>

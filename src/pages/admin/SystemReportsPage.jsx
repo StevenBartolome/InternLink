@@ -92,7 +92,7 @@ const SystemReportsPage = () => {
         </div>
         <div style={styles.statCard}>
           <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Avg. Final Grade</div>
-          <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{courseBreakdown[0]?.avgGrade || 'N/A'}</div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{courseBreakdown[0]?.avgGrade || 'No Grades'}</div>
         </div>
       </div>
 

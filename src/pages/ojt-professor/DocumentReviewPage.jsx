@@ -13,6 +13,7 @@ const DOC_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
   PENDING:  { label: 'Pending',  color: '#d97706', bg: '#fef9c3', icon: <Clock size={13} /> },
   REJECTED: { label: 'Rejected', color: '#dc2626', bg: '#fee2e2', icon: <XCircle size={13} /> },
+  NOT_SUBMITTED: { label: 'Not Submitted', color: '#64748b', bg: '#f1f5f9', icon: <AlertCircle size={13} /> },
 };
 
 const MOA_OPTS = ['NOT_STARTED', 'IN_PROGRESS', 'PROCESSED'];
@@ -111,7 +112,7 @@ export default function DocumentReviewPage() {
           id: newDoc.id,
           name: newDoc.document_name,
           status: newDoc.status,
-          submittedAt: 'N/A',
+          submittedAt: 'Not Submitted',
           fileUrl: null,
           comment: null
         }]
@@ -231,7 +232,11 @@ export default function DocumentReviewPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 800, color: theme.colors.textMain, fontSize: '1.05rem' }}>{student.studentName}</div>
                   <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>
-                    {student.company ? `${student.company} • ${student.position}` : 'No company submitted yet'}
+                    {student.company && student.company !== 'Not Applied' && student.company !== 'N/A' ? (
+                      `${student.company}${student.position ? ` • ${student.position}` : ''}`
+                    ) : (
+                      'Not Applied'
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -264,7 +269,7 @@ export default function DocumentReviewPage() {
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
                       {student.docs.map(doc => {
-                        const st = DOC_STATUS[doc.status] || DOC_STATUS.PENDING;
+                        const st = DOC_STATUS[doc.status] || DOC_STATUS.NOT_SUBMITTED;
                         const isSelected = activeDoc?.id === doc.id;
                         return (
                           <div key={doc.id} 
