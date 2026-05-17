@@ -1,6 +1,6 @@
 // src/components/student/stages/PreInternship.jsx
 import React, { useState } from 'react';
-import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Send, Eye, RotateCcw } from 'lucide-react';
+import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Send, Eye, RotateCcw, Download, Wand2, Printer, Calendar } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
@@ -23,6 +23,26 @@ export default function PreInternship({ onDeploy }) {
   const { user } = useAuth();
   const [toast, setToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
+  const [generatorModal, setGeneratorModal] = useState({
+    isOpen: false,
+    type: '', // 'consent' | 'recommendation'
+    formData: {
+      studentName: '',
+      program: '',
+      hours: '',
+      companyName: '',
+      companyAddress: '',
+      position: '',
+      parentName: '',
+      parentContact: '',
+      startDate: '',
+      endDate: '',
+      letterDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      recipientName: '',
+      recipientTitle: '',
+      adviserName: 'Prof. Steven Bartolome'
+    }
+  });
   const [docs, setDocs] = useState([]); // Real docs will be fetched from DB
   const [loading, setLoading] = useState(true);
   const [expandedDoc, setExpandedDoc] = useState(null);
@@ -115,6 +135,347 @@ export default function PreInternship({ onDeploy }) {
     setToast({ message: 'Company information saved!', type: 'success' });
   };
 
+  const openGenerator = (type) => {
+    setGeneratorModal({
+      isOpen: true,
+      type: type,
+      formData: {
+        studentName: (user?.first_name ? `${user.first_name} ${user.last_name}` : '') || user?.name || '',
+        program: user?.program_code || user?.profile?.program?.code || 'Information Technology',
+        hours: user?.required_hours || 486,
+        companyName: companyForm.companyName || '',
+        companyAddress: companyForm.companyAddress || '',
+        position: companyForm.position || '',
+        parentName: '',
+        parentContact: '',
+        startDate: '',
+        endDate: '',
+        letterDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        recipientName: '',
+        recipientTitle: '',
+        adviserName: 'Prof. Steven Bartolome'
+      }
+    });
+  };
+
+  const handleGeneratePrintWindow = (e) => {
+    e.preventDefault();
+    const data = generatorModal.formData;
+    
+    // Validate required fields based on document type
+    if (generatorModal.type === 'consent') {
+      if (!data.parentName || !data.parentContact || !data.startDate || !data.endDate) {
+        setToast({ message: 'Please fill in all parent consent details.', type: 'error' });
+        return;
+      }
+    } else {
+      if (!data.recipientName || !data.recipientTitle || !data.letterDate) {
+        setToast({ message: 'Please fill in all recommendation letter details.', type: 'error' });
+        return;
+      }
+    }
+
+    setGeneratorModal(prev => ({ ...prev, isOpen: false }));
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      setToast({ message: 'Pop-up blocked! Please allow pop-ups to view the print template.', type: 'error' });
+      return;
+    }
+
+    let htmlContent = '';
+
+    if (generatorModal.type === 'consent') {
+      htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CCIT-FO-014 Parent Consent Form - ${data.studentName}</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      color: #0f172a;
+      padding: 40px;
+      line-height: 1.6;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #000000;
+      padding-bottom: 15px;
+    }
+    .header h1 {
+      font-size: 18px;
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+    .header h2 {
+      font-size: 14px;
+      margin: 5px 0 0 0;
+      color: #475569;
+    }
+    .doc-num {
+      text-align: right;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .title {
+      text-align: center;
+      font-size: 16px;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 30px 0;
+      text-decoration: underline;
+    }
+    .content {
+      font-size: 14px;
+      text-align: justify;
+    }
+    .signatures {
+      margin-top: 50px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .sig-block {
+      text-align: center;
+      width: 45%;
+    }
+    .sig-line {
+      margin-top: 50px;
+      border-top: 1px solid #000;
+      padding-top: 5px;
+      font-weight: bold;
+    }
+    .print-header {
+      background-color: #f1f5f9;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+      font-family: Arial, sans-serif;
+      border: 1px solid #e2e8f0;
+    }
+    .print-btn {
+      background-color: #1d4ed8;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    @media print {
+      .print-header {
+        display: none;
+      }
+      body {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <strong>InternLink Document Preview (Parental Consent Form)</strong><br/>
+    Fill out parent details below. Click Print to save as PDF or print on A4 paper.<br/>
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="doc-num">CCIT-FO-014</div>
+  <div class="header">
+    <h1>NATIONAL UNIVERSITY BALIWAG</h1>
+    <h2>School of Computing and Information Technology</h2>
+  </div>
+  
+  <div class="title">LETTER OF PARENT / GUARDIAN CONSENT</div>
+  
+  <div class="content">
+    <p>Date: <strong>${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong></p>
+    
+    <p>To the OJT Program Coordinator,<br/>
+    School of Computing and Information Technology<br/>
+    National University Baliwag</p>
+    
+    <p>I, <strong>${data.parentName}</strong>, hereby declare that I am the parent / legal guardian of <strong>${data.studentName}</strong>, who is currently enrolled as a student in the <strong>${data.program}</strong> program at National University Baliwag.</p>
+    
+    <p>I give my full consent and permission for him/her to undergo the official Internship / On-the-Job Training program consisting of <strong>${data.hours} hours</strong> at <strong>${data.companyName}</strong>, located at <strong>${data.companyAddress}</strong>, starting from <strong>${new Date(data.startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong> to <strong>${new Date(data.endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
+    
+    <p>I understand that while undergoing this training, he/she will be under the direct supervision of the Host Training Establishment (HTE) personnel and must abide by the rules and regulations set forth by both National University Baliwag and the hosting company. I acknowledge that National University Baliwag has taken necessary safeguards for this activity, and I will not hold the institution liable for incidents beyond its reasonable control.</p>
+  </div>
+  
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line">${data.parentName}</div>
+      <div>Parent / Guardian Signature</div>
+      <div style="font-size: 12px; color: #475569; margin-top: 4px;">Contact No: ${data.parentContact}</div>
+    </div>
+    
+    <div class="sig-block">
+      <div class="sig-line">${data.studentName}</div>
+      <div>Student Signature</div>
+    </div>
+  </div>
+  
+  <div class="signatures" style="margin-top: 40px;">
+    <div class="sig-block" style="width: 100%;">
+      <div class="sig-line" style="width: 50%; margin: 50px auto 0 auto;">${data.adviserName}</div>
+      <div>OJT Adviser</div>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+    } else {
+      htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CCIT-FO-013 Recommendation Letter - ${data.studentName}</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      color: #000;
+      padding: 60px 50px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 15px;
+    }
+    .header h1 {
+      font-size: 20px;
+      margin: 0;
+      font-weight: bold;
+    }
+    .header h2 {
+      font-size: 14px;
+      margin: 5px 0 0 0;
+      font-style: italic;
+    }
+    .doc-num {
+      text-align: right;
+      font-size: 11px;
+      font-weight: bold;
+    }
+    .recipient {
+      margin-top: 30px;
+      margin-bottom: 30px;
+    }
+    .subject {
+      font-weight: bold;
+      text-transform: uppercase;
+      margin: 25px 0;
+    }
+    .content {
+      text-align: justify;
+    }
+    .signatures {
+      margin-top: 60px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .sig-block {
+      width: 45%;
+    }
+    .sig-line {
+      margin-top: 60px;
+      border-top: 1px solid #000;
+      padding-top: 5px;
+      font-weight: bold;
+    }
+    .print-header {
+      background-color: #f1f5f9;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 20px;
+      font-family: Arial, sans-serif;
+      border: 1px solid #e2e8f0;
+    }
+    .print-btn {
+      background-color: #1d4ed8;
+      color: #ffffff;
+      border: none;
+      padding: 8px 16px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    @media print {
+      .print-header {
+        display: none;
+      }
+      body {
+        padding: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-header">
+    <strong>InternLink Document Preview (Recommendation Letter)</strong><br/>
+    Verify recipient and student info. Click Print to save as PDF or print on letterhead.<br/>
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+  </div>
+  <div class="doc-num">CCIT-FO-013</div>
+  <div class="header">
+    <h1>NATIONAL UNIVERSITY BALIWAG</h1>
+    <h2 style="font-family: Arial, sans-serif;">School of Computing and Information Technology</h2>
+  </div>
+  
+  <div>Date: <strong>${data.letterDate}</strong></div>
+  
+  <div class="recipient">
+    <strong>${data.recipientName}</strong><br/>
+    ${data.recipientTitle}<br/>
+    <strong>${data.companyName}</strong><br/>
+    ${data.companyAddress}
+  </div>
+  
+  <div class="salutation">Dear ${data.recipientName},</div>
+  
+  <div class="subject">SUBJECT: RECOMMENDATION FOR INTERNSHIP / ON-THE-JOB TRAINING</div>
+  
+  <div class="content">
+    <p>Greetings of Peace!</p>
+    
+    <p>In partial fulfillment of the academic requirements for the degree of <strong>Bachelor of Science in ${data.program}</strong> at National University Baliwag, our students are required to undergo an Internship Program consisting of <strong>${data.hours} hours</strong> of host-company training.</p>
+    
+    <p>In connection with this, we would like to formally recommend <strong>${data.studentName}</strong> to undergo his/her internship training at your prestigious organization, <strong>${data.companyName}</strong>, as a <strong>${data.position}</strong>.</p>
+    
+    <p>We believe that your company provides an excellent environment to nurture our students' technical skills, professional work ethic, and industry-readiness. Throughout this period, our student will remain subject to the academic policies and assessment guidelines set by National University Baliwag.</p>
+    
+    <p>We look forward to a fruitful and mutually beneficial partnership between your organization and our university. Thank you very much for your time and kind consideration.</p>
+  </div>
+  
+  <div style="margin-top: 40px;">Sincerely yours,</div>
+  
+  <div class="signatures">
+    <div class="sig-block">
+      <div class="sig-line">${data.adviserName}</div>
+      <div>OJT Adviser</div>
+      <div style="font-size: 12px; color: #475569;">School of Computing and IT</div>
+    </div>
+    
+    <div class="sig-block">
+      <div class="sig-line">Dr. Renato C. Valencia</div>
+      <div>Dean, School of Computing and IT</div>
+    </div>
+  </div>
+</body>
+</html>
+      `;
+    }
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    setToast({ message: 'Template generated successfully! Printing window opened.', type: 'success' });
+  };
+
   const approvedCount = docs.filter(d => d.status === 'Approved').length;
 
   return (
@@ -171,6 +532,125 @@ export default function PreInternship({ onDeploy }) {
             </button>
           </form>
         )}
+      </div>
+
+      {/* Document Templates & Generation */}
+      <div style={{ ...commonStyles.dashboardCard, padding: '24px', background: 'linear-gradient(to bottom right, #ffffff, #fdfeff)' }}>
+        <h2 style={{ margin: '0 0 8px 0', color: theme.colors.textMain, display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1.1rem', fontWeight: 700 }}>
+          <Wand2 size={22} color={theme.colors.primary} /> Document Templates & Generation
+        </h2>
+        <p style={{ margin: '0 0 20px 0', fontSize: '0.85rem', color: theme.colors.textMuted }}>
+          Download blank school forms or dynamically generate pre-filled recommendation letters and parental consent forms with your student and company details.
+        </p>
+
+        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+          {/* Downloads Card */}
+          <div style={{ flex: 1, minWidth: '280px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '0.9rem', fontWeight: 700, color: theme.colors.textMain, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Download size={16} color={theme.colors.primary} /> 1. Blank Official Forms
+            </h3>
+            <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: theme.colors.textMuted }}>Get the official blank PDF templates provided by CCIT to print or fill manually.</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <a 
+                href="https://drive.google.com/drive/folders/18UGH4K7xJhRbO2HNUAagh9Ex-5_1YozU?usp=drive_link" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ 
+                  ...commonStyles.dashboardBtn, 
+                  backgroundColor: '#ffffff', 
+                  color: theme.colors.textMain, 
+                  border: '1px solid #cbd5e1', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  fontSize: '0.825rem',
+                  fontWeight: 600
+                }}
+              >
+                <FileText size={14} color="#dc2626" /> Parental Consent (CCIT-FO-014)
+              </a>
+              <a 
+                href="https://drive.google.com/drive/folders/18UGH4K7xJhRbO2HNUAagh9Ex-5_1YozU?usp=drive_link" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                style={{ 
+                  ...commonStyles.dashboardBtn, 
+                  backgroundColor: '#ffffff', 
+                  color: theme.colors.textMain, 
+                  border: '1px solid #cbd5e1', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  textDecoration: 'none',
+                  fontSize: '0.825rem',
+                  fontWeight: 600
+                }}
+              >
+                <FileText size={14} color="#2563eb" /> Recommendation Letter (CCIT-FO-013)
+              </a>
+            </div>
+          </div>
+
+          {/* Generator Card */}
+          <div style={{ flex: 1, minWidth: '280px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+            <h3 style={{ margin: '0 0 6px 0', fontSize: '0.9rem', fontWeight: 700, color: theme.colors.textMain, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Wand2 size={16} color="#d97706" /> 2. Pre-Filled Generator
+            </h3>
+            <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: theme.colors.textMuted }}>Compile completed print-ready copies instantly using your internship details.</p>
+            
+            {companySaved ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button 
+                  onClick={() => openGenerator('consent')}
+                  style={{ 
+                    ...commonStyles.dashboardBtn, 
+                    ...commonStyles.dashboardBtnPrimary, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    width: '100%',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Wand2 size={14} /> Generate Parental Consent
+                </button>
+                <button 
+                  onClick={() => openGenerator('recommendation')}
+                  style={{ 
+                    ...commonStyles.dashboardBtn, 
+                    ...commonStyles.dashboardBtnPrimary, 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    width: '100%',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Wand2 size={14} /> Generate Recommendation Letter
+                </button>
+              </div>
+            ) : (
+              <div style={{ padding: '12px', border: '1px dashed #f59e0b', borderRadius: '8px', backgroundColor: '#fffbeb', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertCircle size={14} /> Setup Required
+                </span>
+                <span style={{ fontSize: '0.78rem', color: '#92400e', lineHeight: 1.3 }}>
+                  Please enter and save your **Company Information** above first to unlock the automatic document generator.
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Document Checklist */}
@@ -350,6 +830,211 @@ export default function PreInternship({ onDeploy }) {
         title={confirmModal.title}
         message={confirmModal.message}
       />
+
+      {/* Dynamic Document Generator Modal */}
+      {generatorModal.isOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2000,
+          padding: '20px'
+        }} onClick={() => setGeneratorModal(prev => ({ ...prev, isOpen: false }))}>
+          <div style={{
+            backgroundColor: theme.colors.white,
+            borderRadius: '24px',
+            padding: '32px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            animation: 'modalFadeIn 0.3s ease-out'
+          }} onClick={e => e.stopPropagation()}>
+            
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wand2 size={20} color={theme.colors.primary} />
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: theme.colors.textMain }}>
+                  {generatorModal.type === 'consent' ? 'Parent Consent Form (CCIT-FO-014)' : 'Recommendation Letter (CCIT-FO-013)'}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setGeneratorModal(prev => ({ ...prev, isOpen: false }))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px' }}
+              >
+                <XCircle size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleGeneratePrintWindow} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* Common Pre-filled Information */}
+              <div style={{ backgroundColor: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <span style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                  Student & Company Details (Auto-filled)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.8rem' }}>
+                  <div><strong>Student Name:</strong> {generatorModal.formData.studentName}</div>
+                  <div><strong>Program:</strong> {generatorModal.formData.program}</div>
+                  <div><strong>Training Hours:</strong> {generatorModal.formData.hours} hrs</div>
+                  <div><strong>Company:</strong> {generatorModal.formData.companyName}</div>
+                </div>
+              </div>
+
+              {/* Conditional Inputs */}
+              {generatorModal.type === 'consent' ? (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>Parent / Guardian Full Name</label>
+                    <input 
+                      required 
+                      type="text"
+                      placeholder="e.g. Maria Clara G. Ortiz"
+                      style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                      value={generatorModal.formData.parentName}
+                      onChange={e => setGeneratorModal(prev => ({
+                        ...prev,
+                        formData: { ...prev.formData, parentName: e.target.value }
+                      }))}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>Parent Contact Number</label>
+                      <input 
+                        required 
+                        type="tel"
+                        placeholder="e.g. 0917XXXXXXX"
+                        style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                        value={generatorModal.formData.parentContact}
+                        onChange={e => setGeneratorModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, parentContact: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>OJT Start Date</label>
+                      <input 
+                        required 
+                        type="date"
+                        style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                        value={generatorModal.formData.startDate}
+                        onChange={e => setGeneratorModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, startDate: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>OJT End Date</label>
+                      <input 
+                        required 
+                        type="date"
+                        style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                        value={generatorModal.formData.endDate}
+                        onChange={e => setGeneratorModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, endDate: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>Recipient Name (e.g. Manager/HR)</label>
+                    <input 
+                      required 
+                      type="text"
+                      placeholder="e.g. Engr. Josephine B. Salazar"
+                      style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                      value={generatorModal.formData.recipientName}
+                      onChange={e => setGeneratorModal(prev => ({
+                        ...prev,
+                        formData: { ...prev.formData, recipientName: e.target.value }
+                      }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>Recipient Position / Title</label>
+                    <input 
+                      required 
+                      type="text"
+                      placeholder="e.g. Regional Manager / HR Lead"
+                      style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                      value={generatorModal.formData.recipientTitle}
+                      onChange={e => setGeneratorModal(prev => ({
+                        ...prev,
+                        formData: { ...prev.formData, recipientTitle: e.target.value }
+                      }))}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>Letter Date</label>
+                      <input 
+                        required 
+                        type="text"
+                        style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                        value={generatorModal.formData.letterDate}
+                        onChange={e => setGeneratorModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, letterDate: e.target.value }
+                        }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '0.85rem', color: theme.colors.textSecondary }}>OJT Coordinator</label>
+                      <input 
+                        required 
+                        type="text"
+                        style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                        value={generatorModal.formData.adviserName}
+                        onChange={e => setGeneratorModal(prev => ({
+                          ...prev,
+                          formData: { ...prev.formData, adviserName: e.target.value }
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
+                <button 
+                  type="button"
+                  onClick={() => setGeneratorModal(prev => ({ ...prev, isOpen: false }))}
+                  style={{ ...commonStyles.dashboardBtn, flex: 1, backgroundColor: '#ffffff', color: theme.colors.textMain, border: '1px solid #e2e8f0', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  <Printer size={16} /> Generate & Print
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

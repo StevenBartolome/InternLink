@@ -138,5 +138,30 @@ export const adminService = {
     
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Rename a document across ALL programs and student checklists
+   */
+  async renameGlobalDocument(oldName, newName) {
+    // 1. Rename in program master configurations
+    const { error: programError } = await supabase
+      .from('program_required_documents')
+      .update({ document_name: newName })
+      .eq('document_name', oldName);
+    
+    if (programError) throw programError;
+
+    // 2. Rename in student pre-internship checklists to preserve uploads/reviews
+    const { error: studentError } = await supabase
+      .from('pre_internship_documents')
+      .update({ document_name: newName })
+      .eq('document_name', oldName);
+    
+    if (studentError) {
+      console.warn('Could not update document name in student checklists:', studentError.message);
+    }
+    
+    return true;
   }
 };

@@ -99,4 +99,18 @@ export const commonStyles = {
     backgroundColor: theme.colors.bgPrimary,
     color: theme.colors.textMain,
   },
+  input: {
+    padding: '12px 16px',
+    borderRadius: '10px',
+    border: `1.5px solid ${theme.colors.border}`,
+    backgroundColor: '#ffffff',
+    color: theme.colors.textMain,
+    fontSize: '0.925rem',
+    fontWeight: '500',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
+    width: '100%',
+    fontFamily: 'inherit',
+  },
 };

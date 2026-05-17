@@ -9,7 +9,8 @@ import {
   Clock, 
   ClipboardList, 
   Briefcase,
-  Lock
+  Lock,
+  Wand2
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
@@ -59,6 +60,7 @@ const StudentSidebar = () => {
       items: [
         { label: 'Company info', path: '/company-info', icon: Building2, status: getStatus(1) },
         { label: 'Documents', path: '/documents', icon: FileText, status: getStatus(1) },
+        { label: 'Docs generator', path: '/templates', icon: Wand2, status: getStatus(1) },
       ]
     },
     {

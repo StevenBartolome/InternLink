@@ -228,7 +228,6 @@ const Documents = () => {
           {documents.filter(d => d.status === 'Approved').length} of {documents.length} completed
         </div>
       </div>
-
       <div style={styles.docList}>
         {loading ? (
           <div style={{ 

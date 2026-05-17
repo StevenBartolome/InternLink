@@ -14,6 +14,7 @@ import LoadingScreen from './components/common/LoadingScreen';
 import StudentLayout from './components/layout/student/StudentLayout';
 import Dashboard from './pages/students/redesign/Dashboard';
 import Documents from './pages/students/redesign/Documents';
+import Templates from './pages/students/redesign/Templates';
 import Attendance from './pages/students/redesign/Attendance';
 import WeeklyReports from './pages/students/redesign/WeeklyReports';
 import CompanyInfo from './pages/students/redesign/CompanyInfo';
@@ -92,6 +93,17 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <style>{`
+        input:focus, textarea:focus, select:focus {
+          border-color: #1E40AF !important;
+          box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.12) !important;
+          outline: none !important;
+          background-color: #ffffff !important;
+        }
+        input, textarea, select {
+          transition: all 0.2s ease-in-out !important;
+        }
+      `}</style>
       <BrowserRouter>
         <Routes>
           {/* ── Auth & Landing ── */}
@@ -106,6 +118,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/company-info" element={<CompanyInfo />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/templates" element={<Templates />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/weekly-reports" element={<WeeklyReports />} />
             <Route path="/portfolio" element={<Portfolio />} />

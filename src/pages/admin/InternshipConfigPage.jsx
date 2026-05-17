@@ -17,7 +17,8 @@ import {
   FileCheck,
   X,
   Users,
-  FilePlus2
+  FilePlus2,
+  Edit2
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -94,13 +95,24 @@ export default function InternshipConfigPage() {
   // Modal states
   const [isAddingDoc, setIsAddingDoc] = useState(false);
   const [assigningDoc, setAssigningDoc] = useState(null);
+  const [tempSelectedPrograms, setTempSelectedPrograms] = useState([]);
+  const [editingDoc, setEditingDoc] = useState(null);
   
-  // Form states for new doc
+  // Form states for new/edit doc
   const [newDocForm, setNewDocForm] = useState({ name: '', selectedPrograms: [] });
+  const [editDocForm, setEditDocForm] = useState({ name: '' });
   
   // Track custom/added/deleted documents in the session so they do not instantly vanish when unassigned
   const [addedDocuments, setAddedDocuments] = useState([]);
   const [deletedDocuments, setDeletedDocuments] = useState([]);
+  const [defaultDocs, setDefaultDocs] = useState([
+    'Resume / CV',
+    'Medical Certificate',
+    'Parental Consent Form',
+    'Endorsement Letter',
+    'Acceptance Letter / Company Confirmation',
+    'Insurance / HMO Card'
+  ]);
 
   useEffect(() => {
     fetchConfigs();
@@ -119,14 +131,7 @@ export default function InternshipConfigPage() {
     }
   };
 
-  const defaultDocs = [
-    'Resume / CV',
-    'Medical Certificate',
-    'Parental Consent Form',
-    'Endorsement Letter',
-    'Acceptance Letter / Company Confirmation',
-    'Insurance / HMO Card'
-  ];
+
 
   const globalDocuments = Array.from(new Set([
     ...defaultDocs,
@@ -136,21 +141,7 @@ export default function InternshipConfigPage() {
     .filter(name => !deletedDocuments.includes(name))
     .sort();
 
-  const handleToggleDoc = async (programId, docName, isEnabled) => {
-    try {
-      await adminService.toggleProgramDocument(programId, docName, isEnabled);
-      setConfigs(prev => prev.map(c => {
-        if (c.id !== programId) return c;
-        const updatedDocs = isEnabled 
-          ? [...c.requiredDocuments, { id: Date.now(), name: docName }] 
-          : c.requiredDocuments.filter(d => d.name !== docName);
-        return { ...c, requiredDocuments: updatedDocs };
-      }));
-    } catch (err) {
-      console.error('Toggle failed:', err);
-      setToast({ message: 'Failed to update requirement.', type: 'error' });
-    }
-  };
+
 
   const handleCreateDoc = async () => {
     if (!newDocForm.name.trim()) {
@@ -210,6 +201,99 @@ export default function InternshipConfigPage() {
     });
   };
 
+  const handleRenameDoc = async () => {
+    if (!editDocForm.name.trim()) {
+      setToast({ message: 'Please enter a document name.', type: 'warning' });
+      return;
+    }
+    if (editDocForm.name.trim() === editingDoc) {
+      setEditingDoc(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await adminService.renameGlobalDocument(editingDoc, editDocForm.name.trim());
+      
+      // Update local configs state to reflect the new document name
+      setConfigs(prev => prev.map(c => ({
+        ...c,
+        requiredDocuments: c.requiredDocuments.map(d => 
+          d.name === editingDoc ? { ...d, name: editDocForm.name.trim() } : d
+        )
+      })));
+
+      // Update local session arrays
+      setAddedDocuments(prev => prev.map(name => name === editingDoc ? editDocForm.name.trim() : name));
+      setDefaultDocs(prev => prev.map(name => name === editingDoc ? editDocForm.name.trim() : name));
+      
+      setEditingDoc(null);
+      setToast({ message: `Document renamed to "${editDocForm.name.trim()}".`, type: 'success' });
+    } catch (err) {
+      console.error('Rename failed:', err);
+      setToast({ message: 'Failed to rename document requirement.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAssignments = async () => {
+    if (!assigningDoc) return;
+
+    // Get the original list of program IDs for this document
+    const originalProgramIds = configs
+      .filter(c => c.requiredDocuments.some(d => d.name === assigningDoc))
+      .map(c => c.id);
+
+    // Determine which ones to add and which ones to remove
+    const toAdd = tempSelectedPrograms.filter(id => !originalProgramIds.includes(id));
+    const toRemove = originalProgramIds.filter(id => !tempSelectedPrograms.includes(id));
+
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      setAssigningDoc(null);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1. Perform database updates
+      for (const programId of toAdd) {
+        await adminService.toggleProgramDocument(programId, assigningDoc, true);
+      }
+      for (const programId of toRemove) {
+        await adminService.toggleProgramDocument(programId, assigningDoc, false);
+      }
+
+      // 2. Update local state
+      setConfigs(prev => prev.map(c => {
+        const shouldBeRequired = tempSelectedPrograms.includes(c.id);
+        const isCurrentlyRequired = c.requiredDocuments.some(d => d.name === assigningDoc);
+
+        if (shouldBeRequired && !isCurrentlyRequired) {
+          return {
+            ...c,
+            requiredDocuments: [...c.requiredDocuments, { id: Date.now() + Math.random(), name: assigningDoc }]
+          };
+        } else if (!shouldBeRequired && isCurrentlyRequired) {
+          return {
+            ...c,
+            requiredDocuments: c.requiredDocuments.filter(d => d.name !== assigningDoc)
+          };
+        }
+        return c;
+      }));
+
+      setAssigningDoc(null);
+      setToast({ message: 'Assignments updated successfully.', type: 'success' });
+    } catch (err) {
+      console.error('Failed to save assignments:', err);
+      setToast({ message: 'Failed to save document assignments.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveProgram = async (program) => {
     try {
       await adminService.updateProgramConfig(program.id, program);
@@ -266,25 +350,68 @@ export default function InternshipConfigPage() {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* MODAL: Assign Programs to Existing Doc */}
-      {assigningDoc && (
-        <Modal 
-          title={`Assign "${assigningDoc}" to Programs`} 
-          onClose={() => setAssigningDoc(null)}
-          onConfirm={() => setAssigningDoc(null)}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {configs.map(program => {
-              const isRequired = program.requiredDocuments.some(d => d.name === assigningDoc);
-              return (
-                <div key={program.id} style={styles.programCard(isRequired)} onClick={() => handleToggleDoc(program.id, assigningDoc, !isRequired)}>
-                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isRequired ? theme.colors.primary : theme.colors.textMain }}>{program.course}</div>
-                  {isRequired ? <CheckSquare size={18} color={theme.colors.primary} /> : <Square size={18} color={theme.colors.border} />}
-                </div>
-              );
-            })}
-          </div>
-        </Modal>
-      )}
+      {assigningDoc && (() => {
+        const allSelected = tempSelectedPrograms.length === configs.length;
+        return (
+          <Modal 
+            title={`Assign "${assigningDoc}" to Programs`} 
+            onClose={() => setAssigningDoc(null)}
+            onConfirm={handleSaveAssignments}
+            confirmText="Done"
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                paddingBottom: '10px', 
+                borderBottom: `1px solid ${theme.colors.border}`,
+                marginBottom: '4px'
+              }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.colors.textMuted, textTransform: 'uppercase' }}>Select/Deselect All Programs</span>
+                <button 
+                  type="button"
+                  onClick={() => setTempSelectedPrograms(allSelected ? [] : configs.map(c => c.id))}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.colors.primary,
+                    fontWeight: 700,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: theme.colors.bgAccent,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+
+              {configs.map(program => {
+                const isSelected = tempSelectedPrograms.includes(program.id);
+                return (
+                  <div 
+                    key={program.id} 
+                    style={styles.programCard(isSelected)} 
+                    onClick={() => {
+                      setTempSelectedPrograms(prev => 
+                        isSelected 
+                          ? prev.filter(id => id !== program.id)
+                          : [...prev, program.id]
+                      );
+                    }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: isSelected ? theme.colors.primary : theme.colors.textMain }}>{program.course}</div>
+                    {isSelected ? <CheckSquare size={18} color={theme.colors.primary} /> : <Square size={18} color={theme.colors.border} />}
+                  </div>
+                );
+              })}
+            </div>
+          </Modal>
+        );
+      })()}
 
       {/* MODAL: Add New Document Type */}
       {isAddingDoc && (
@@ -308,7 +435,32 @@ export default function InternshipConfigPage() {
             </div>
             
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: theme.colors.textMuted, marginBottom: '8px', textTransform: 'uppercase' }}>Assign to Programs</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: theme.colors.textMuted, textTransform: 'uppercase', margin: 0 }}>Assign to Programs</label>
+                <button 
+                  type="button"
+                  onClick={() => {
+                    const allSelected = newDocForm.selectedPrograms.length === configs.length;
+                    setNewDocForm(p => ({
+                      ...p,
+                      selectedPrograms: allSelected ? [] : configs.map(c => c.id)
+                    }));
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: theme.colors.primary,
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: theme.colors.bgAccent
+                  }}
+                >
+                  {newDocForm.selectedPrograms.length === configs.length ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto', paddingRight: '4px' }}>
                 {configs.map(program => {
                   const isSelected = newDocForm.selectedPrograms.includes(program.id);
@@ -331,6 +483,30 @@ export default function InternshipConfigPage() {
                   );
                 })}
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: Edit/Rename Document Type */}
+      {editingDoc && (
+        <Modal 
+          title="Edit Document Name" 
+          onClose={() => setEditingDoc(null)}
+          onConfirm={handleRenameDoc}
+          confirmText="Save Rename"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 800, color: theme.colors.textMuted, marginBottom: '8px', textTransform: 'uppercase' }}>Document Name</label>
+              <input 
+                autoFocus
+                type="text" 
+                placeholder="e.g. Parental Consent..." 
+                value={editDocForm.name}
+                onChange={e => setEditDocForm({ name: e.target.value })}
+                style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+              />
             </div>
           </div>
         </Modal>
@@ -460,10 +636,28 @@ export default function InternshipConfigPage() {
                     <td style={{ ...styles.td, textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
                         <button 
-                          onClick={() => setAssigningDoc(docName)}
+                          onClick={() => {
+                            setAssigningDoc(docName);
+                            const currentProgramIds = configs
+                              .filter(c => c.requiredDocuments.some(d => d.name === docName))
+                              .map(c => c.id);
+                            setTempSelectedPrograms(currentProgramIds);
+                          }}
                           style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '6px 14px', fontSize: '0.8rem' }}
                         >
                           Assign Programs
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingDoc(docName);
+                            setEditDocForm({ name: docName });
+                          }}
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '6px', color: theme.colors.textMuted }}
+                          onMouseEnter={e => e.currentTarget.style.color = theme.colors.primary}
+                          onMouseLeave={e => e.currentTarget.style.color = theme.colors.textMuted}
+                          title="Rename Document"
+                        >
+                          <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => handleDeleteGlobalDoc(docName)}
