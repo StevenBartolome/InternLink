@@ -4,12 +4,14 @@ import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { supabase } from '../../services/supabaseClient';
 import Toast from '../../components/common/Toast';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const DepartmentProgramPage = () => {
   const [departments, setDepartments] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   const [expandedDept, setExpandedDept] = useState(null);
   
   // Modals / Editing state
@@ -77,16 +79,23 @@ const DepartmentProgramPage = () => {
     }
   };
 
-  const handleDeleteDepartment = async (id) => {
-    if (!window.confirm('Are you sure? This will also delete all programs under this department.')) return;
-    try {
-      const { error } = await supabase.from('departments').delete().eq('id', id);
-      if (error) throw error;
-      showToast('Department deleted');
-      fetchData();
-    } catch (error) {
-      showToast(error.message, 'error');
-    }
+  const handleDeleteDepartment = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Department',
+      message: 'Are you sure? This will also delete all programs under this department.',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          const { error } = await supabase.from('departments').delete().eq('id', id);
+          if (error) throw error;
+          showToast('Department deleted');
+          fetchData();
+        } catch (error) {
+          showToast(error.message, 'error');
+        }
+      }
+    });
   };
 
   const handleSaveProgram = async () => {
@@ -145,16 +154,23 @@ const DepartmentProgramPage = () => {
     }
   };
 
-  const handleDeleteSection = async (id) => {
-    if (!window.confirm('Delete this section?')) return;
-    try {
-      const { error } = await supabase.from('program_sections').delete().eq('id', id);
-      if (error) throw error;
-      fetchData();
-      showToast('Section deleted');
-    } catch (error) {
-      showToast(error.message, 'error');
-    }
+  const handleDeleteSection = (id) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Section',
+      message: 'Are you sure you want to delete this section?',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          const { error } = await supabase.from('program_sections').delete().eq('id', id);
+          if (error) throw error;
+          fetchData();
+          showToast('Section deleted');
+        } catch (error) {
+          showToast(error.message, 'error');
+        }
+      }
+    });
   };
 
   const styles = {
@@ -237,7 +253,31 @@ const DepartmentProgramPage = () => {
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: theme.colors.textMuted }}>Loading academic structure...</div>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '100px 20px',
+          width: '100%'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: `3px solid ${theme.colors.primary}20`,
+            borderTop: `3px solid ${theme.colors.primary}`,
+            borderRadius: '50%',
+            animation: 'spin-loader 0.8s linear infinite',
+            marginBottom: '12px'
+          }} />
+          <style>{`
+            @keyframes spin-loader {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading academic structure...</span>
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {departments.map(dept => {
@@ -296,15 +336,23 @@ const DepartmentProgramPage = () => {
                               <Edit2 size={14} />
                             </button>
                             <button 
-                              onClick={async () => {
-                                if (!window.confirm('Delete this program?')) return;
-                                try {
-                                  await supabase.from('programs').delete().eq('id', prog.id);
-                                  showToast('Program deleted');
-                                  fetchData();
-                                } catch (error) {
-                                  showToast(error.message, 'error');
-                                }
+                              onClick={() => {
+                                setConfirmModal({
+                                  isOpen: true,
+                                  title: 'Delete Program',
+                                  message: 'Are you sure you want to delete this program?',
+                                  onConfirm: async () => {
+                                    setConfirmModal(p => ({ ...p, isOpen: false }));
+                                    try {
+                                      const { error } = await supabase.from('programs').delete().eq('id', prog.id);
+                                      if (error) throw error;
+                                      showToast('Program deleted');
+                                      fetchData();
+                                    } catch (error) {
+                                      showToast(error.message, 'error');
+                                    }
+                                  }
+                                });
                               }}
                               style={{ background: 'none', border: 'none', color: theme.colors.danger, cursor: 'pointer', padding: '6px' }}
                             >
@@ -489,6 +537,13 @@ const DepartmentProgramPage = () => {
           </div>
         </div>
       )}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { theme } from '../styles/theme';
-import { commonStyles } from '../styles/commonStyles';
+import { theme } from '../../styles/theme';
+import { commonStyles } from '../../styles/commonStyles';
 
 const ConfirmModal = ({ 
   isOpen, 

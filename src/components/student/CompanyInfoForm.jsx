@@ -4,11 +4,13 @@ import { studentDesign } from '../../styles/StudentDesign';
 import GoogleMapPicker from '../common/GoogleMapPicker';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
+import Toast from '../common/Toast';
 
 const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
   const { user } = useAuth();
   const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
   const [formData, setFormData] = useState({
     company_name: initialData?.company_name || '',
     position: initialData?.position || '',
@@ -90,7 +92,7 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
       onClose();
     } catch (err) {
       console.error('Error saving company info:', err);
-      alert('Failed to save company information: ' + err.message);
+      setToast({ message: 'Failed to save company information: ' + err.message, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -147,6 +149,7 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
 
   return (
     <div style={styles.overlay} onClick={onClose}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       <div style={styles.modal} onClick={e => e.stopPropagation()}>
         <div style={styles.header}>
           <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Company Details</h2>

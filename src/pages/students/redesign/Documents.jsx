@@ -16,12 +16,16 @@ import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
 import { studentService } from '../../../services/studentService';
 import { adminService } from '../../../services/adminService';
+import ConfirmModal from '../../../components/common/ConfirmModal';
+import Toast from '../../../components/common/Toast';
 
 const Documents = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [uploading, setUploading] = React.useState(null); // ID of document being uploaded
+  const [toast, setToast] = React.useState(null);
+  const [confirmModal, setConfirmModal] = React.useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
   React.useEffect(() => {
     if (user?.internship_id) {
@@ -73,26 +77,35 @@ const Documents = () => {
       const doc = documents.find(d => d.id === docId);
       await studentService.uploadDocument(docId, file, doc?.isAdditional);
       await fetchDocuments();
+      setToast({ message: 'File uploaded successfully!', type: 'success' });
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('Upload failed. Please try again.');
+      setToast({ message: 'Upload failed. Please try again.', type: 'error' });
     } finally {
       setUploading(null);
     }
   };
 
-  const handleUndoSubmission = async (docId, isAdditional) => {
-    if (!window.confirm('Are you sure you want to undo this submission? This will recall your file.')) return;
-    try {
-      setUploading(docId);
-      await studentService.undoSubmission(docId, isAdditional);
-      await fetchDocuments();
-    } catch (err) {
-      console.error('Failed to undo submission:', err);
-      alert('Failed to undo submission. Please try again.');
-    } finally {
-      setUploading(null);
-    }
+  const handleUndoSubmission = (docId, isAdditional) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Recall Submission',
+      message: 'Are you sure you want to undo this submission? This will recall your file.',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          setUploading(docId);
+          await studentService.undoSubmission(docId, isAdditional);
+          await fetchDocuments();
+          setToast({ message: 'Submission undone successfully.', type: 'success' });
+        } catch (err) {
+          console.error('Failed to undo submission:', err);
+          setToast({ message: 'Failed to undo submission. Please try again.', type: 'error' });
+        } finally {
+          setUploading(null);
+        }
+      }
+    });
   };
 
   const getStatusStyle = (status) => {
@@ -386,6 +399,15 @@ const Documents = () => {
           </div>
         </div>
       </div>
+      
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </motion.div>
   );
 };

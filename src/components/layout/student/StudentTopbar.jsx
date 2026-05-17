@@ -147,7 +147,7 @@ const StudentTopbar = () => {
         onConfirm={handleLogout}
         title="Confirm Logout" 
         message="Are you sure you want to sign out of InternLink?" 
-        type="warning" 
+        type="danger" 
       />
     </>
   );

@@ -583,8 +583,25 @@ export default function UserManagementPage() {
             <tbody>
               {isFetching && students.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
-                    <Loader2 className="animate-spin mx-auto" size={24} color={theme.colors.primary} />
+                  <td colSpan="7" style={{ padding: '80px 20px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        border: `3px solid ${theme.colors.primary}20`,
+                        borderTop: `3px solid ${theme.colors.primary}`,
+                        borderRadius: '50%',
+                        animation: 'spin-loader 0.8s linear infinite',
+                        marginBottom: '12px'
+                      }} />
+                      <style>{`
+                        @keyframes spin-loader {
+                          0% { transform: rotate(0deg); }
+                          100% { transform: rotate(360deg); }
+                        }
+                      `}</style>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading students list...</span>
+                    </div>
                   </td>
                 </tr>
               ) : filteredStudents.length === 0 ? (
@@ -659,7 +676,28 @@ export default function UserManagementPage() {
             </thead>
             <tbody>
               {isFetching && heads.length === 0 ? (
-                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}><Loader2 className="animate-spin mx-auto" size={24} color={theme.colors.primary} /></td></tr>
+                <tr>
+                  <td colSpan="7" style={{ padding: '80px 20px', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{
+                        width: '28px',
+                        height: '28px',
+                        border: `3px solid ${theme.colors.primary}20`,
+                        borderTop: `3px solid ${theme.colors.primary}`,
+                        borderRadius: '50%',
+                        animation: 'spin-loader 0.8s linear infinite',
+                        marginBottom: '12px'
+                      }} />
+                      <style>{`
+                        @keyframes spin-loader {
+                          0% { transform: rotate(0deg); }
+                          100% { transform: rotate(360deg); }
+                        }
+                      `}</style>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading advisers list...</span>
+                    </div>
+                  </td>
+                </tr>
               ) : filteredHeads.length === 0 ? (
                 <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: theme.colors.textMuted }}>No OJT Advisers found.</td></tr>
               ) : filteredHeads.map(head => (

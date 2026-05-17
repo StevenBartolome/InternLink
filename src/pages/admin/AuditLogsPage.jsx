@@ -175,7 +175,28 @@ const AuditLogsPage = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>Loading real-time logs...</td></tr>
+              <tr>
+                <td colSpan="6" style={{ padding: '80px 20px', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{
+                      width: '28px',
+                      height: '28px',
+                      border: `3px solid ${theme.colors.primary}20`,
+                      borderTop: `3px solid ${theme.colors.primary}`,
+                      borderRadius: '50%',
+                      animation: 'spin-loader 0.8s linear infinite',
+                      marginBottom: '12px'
+                    }} />
+                    <style>{`
+                      @keyframes spin-loader {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                      }
+                    `}</style>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading real-time logs...</span>
+                  </div>
+                </td>
+              </tr>
             ) : filteredLogs.length === 0 ? (
               <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>No logs found.</td></tr>
             ) : filteredLogs.map(log => (

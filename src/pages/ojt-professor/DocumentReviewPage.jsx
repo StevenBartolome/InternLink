@@ -8,6 +8,7 @@ import { ojtProfessorService } from '../../services/ojtProfessorService';
 import { adminService } from '../../services/adminService';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../../components/common/Toast';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const DOC_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
@@ -29,6 +30,7 @@ export default function DocumentReviewPage() {
   const [activeDoc, setActiveDoc] = useState(null); // For the side panel review
   const [rejectComment, setRejectComment] = useState({});
   const [localToast, setLocalToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
   const [selectedSection, setSelectedSection] = useState('All');
   const [availableSections, setAvailableSections] = useState([]);
@@ -140,21 +142,27 @@ export default function DocumentReviewPage() {
     }
   };
 
-  const handleDeleteRequirement = async (studentId, docId) => {
-    if (!window.confirm('Are you sure you want to remove this document requirement?')) return;
-
-    try {
-      await ojtProfessorService.deleteDocumentRequirement(docId);
-      setQueue(prev => prev.map(s => s.studentId !== studentId ? s : {
-        ...s,
-        docs: s.docs.filter(d => d.id !== docId)
-      }));
-      if (activeDoc?.id === docId) setActiveDoc(null);
-      notify('Document requirement removed.', 'info');
-    } catch (err) {
-      console.error('Error deleting document requirement:', err);
-      notify('Failed to remove requirement.', 'error');
-    }
+  const handleDeleteRequirement = (studentId, docId) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Document Requirement',
+      message: 'Are you sure you want to remove this document requirement?',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          await ojtProfessorService.deleteDocumentRequirement(docId);
+          setQueue(prev => prev.map(s => s.studentId !== studentId ? s : {
+            ...s,
+            docs: s.docs.filter(d => d.id !== docId)
+          }));
+          if (activeDoc?.id === docId) setActiveDoc(null);
+          notify('Document requirement removed.', 'info');
+        } catch (err) {
+          console.error('Error deleting document requirement:', err);
+          notify('Failed to remove requirement.', 'error');
+        }
+      }
+    });
   };
 
   const handleSyncChecklist = async (studentId, internshipId) => {
@@ -683,6 +691,14 @@ export default function DocumentReviewPage() {
       )}
         </>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </div>
   );
 }

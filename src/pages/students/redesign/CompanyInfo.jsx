@@ -18,12 +18,16 @@ import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../services/supabaseClient';
 import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
+import Toast from '../../../components/common/Toast';
+import ConfirmModal from '../../../components/common/ConfirmModal';
 
 const CompanyInfo = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [internship, setInternship] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
 
   const fetchInternship = async () => {
     if (!user?.id) return;
@@ -61,43 +65,50 @@ const CompanyInfo = () => {
     fetchInternship();
   }, [user?.id]);
 
-  const handleRemove = async () => {
-    if (!window.confirm('Are you sure you want to remove your company information? This will clear all hired details.')) return;
-    
-    try {
-      setLoading(true);
-      const { error } = await supabase
-        .from('student_internships')
-        .update({
-          company_id: null,
-          position: null,
-          department: null,
-          supervisor_name: null,
-          supervisor_email: null,
-          supervisor_phone: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('student_id', user.id);
+  const handleRemove = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Remove Company Details',
+      message: 'Are you sure you want to remove your company information? This will clear all hired details.',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          setLoading(true);
+          const { error } = await supabase
+            .from('student_internships')
+            .update({
+              company_id: null,
+              position: null,
+              department: null,
+              supervisor_name: null,
+              supervisor_email: null,
+              supervisor_phone: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq('student_id', user.id);
 
-      if (error) throw error;
-      setInternship(prev => ({ 
-        ...prev, 
-        company_id: null,
-        company_name: null, 
-        company_address: null,
-        position: null,
-        department: null,
-        supervisor_name: null,
-        supervisor_email: null,
-        supervisor_phone: null,
-        industry: null
-      }));
-    } catch (err) {
-      console.error('Error removing company info:', err);
-      alert('Failed to remove company information.');
-    } finally {
-      setLoading(false);
-    }
+          if (error) throw error;
+          setInternship(prev => ({ 
+            ...prev, 
+            company_id: null,
+            company_name: null, 
+            company_address: null,
+            position: null,
+            department: null,
+            supervisor_name: null,
+            supervisor_email: null,
+            supervisor_phone: null,
+            industry: null
+          }));
+          setToast({ message: 'Company information removed successfully.', type: 'success' });
+        } catch (err) {
+          console.error('Error removing company info:', err);
+          setToast({ message: 'Failed to remove company information.', type: 'error' });
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const hasCompany = !!internship?.company_name;
@@ -384,6 +395,15 @@ const CompanyInfo = () => {
           onSave={(newData) => setInternship(prev => ({ ...prev, ...newData }))}
         />
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </motion.div>
   );
 };

@@ -41,8 +41,8 @@ const Modal = ({ isOpen, onClose, title, message, type = 'success', isConfirm = 
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: '20px',
-      backgroundColor: type === 'success' ? '#ECFDF5' : type === 'error' ? '#FEF2F2' : '#FFFBEB',
-      color: type === 'success' ? theme.colors.success : type === 'error' ? theme.colors.danger : theme.colors.warning,
+      backgroundColor: type === 'success' ? '#ECFDF5' : (type === 'error' || type === 'danger') ? '#FEF2F2' : '#FFFBEB',
+      color: type === 'success' ? theme.colors.success : (type === 'error' || type === 'danger') ? theme.colors.danger : theme.colors.warning,
     },
     title: {
       fontSize: '1.5rem',
@@ -70,7 +70,7 @@ const Modal = ({ isOpen, onClose, title, message, type = 'success', isConfirm = 
       cursor: 'pointer',
       transition: theme.transitions.default,
       border: isPrimary ? 'none' : `1px solid ${theme.colors.border}`,
-      backgroundColor: isPrimary ? (type === 'warning' ? theme.colors.warning : (type === 'error' ? theme.colors.danger : theme.colors.primary)) : theme.colors.white,
+      backgroundColor: isPrimary ? (type === 'warning' ? theme.colors.warning : ((type === 'error' || type === 'danger') ? theme.colors.danger : theme.colors.primary)) : theme.colors.white,
       color: isPrimary ? theme.colors.white : theme.colors.textMain,
     })
   };
@@ -89,7 +89,7 @@ const Modal = ({ isOpen, onClose, title, message, type = 'success', isConfirm = 
         <div style={styles.iconWrapper}>
           {type === 'success' && <CheckCircle2 size={32} />}
           {type === 'error' && <XCircle size={32} />}
-          {type === 'warning' && <AlertCircle size={32} />}
+          {(type === 'warning' || type === 'danger') && <AlertCircle size={32} />}
           {type === 'info' && <HelpCircle size={32} />}
         </div>
         <h3 style={styles.title}>{title}</h3>

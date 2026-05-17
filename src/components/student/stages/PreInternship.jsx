@@ -4,6 +4,7 @@ import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, Aler
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
+import ConfirmModal from '../../common/ConfirmModal';
 import { useAuth } from '../../../context/AuthContext';
 import { studentService } from '../../../services/studentService';
 import { adminService } from '../../../services/adminService';
@@ -21,6 +22,7 @@ const MOA_LABELS = { NOT_STARTED: 'Not Started', IN_PROGRESS: 'In Progress', PRO
 export default function PreInternship({ onDeploy }) {
   const { user } = useAuth();
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   const [docs, setDocs] = useState([]); // Real docs will be fetched from DB
   const [loading, setLoading] = useState(true);
   const [expandedDoc, setExpandedDoc] = useState(null);
@@ -87,17 +89,24 @@ export default function PreInternship({ onDeploy }) {
     }
   };
 
-  const handleUndoSubmission = async (docId, isAdditional) => {
-    if (!window.confirm('Are you sure you want to undo this submission? This will recall your file.')) return;
-    try {
-      setToast({ message: 'Recalling document...', type: 'info' });
-      await studentService.undoSubmission(docId, isAdditional);
-      await fetchDocs();
-      setToast({ message: 'Document submission recalled.', type: 'success' });
-    } catch (err) {
-      console.error('Undo failed:', err);
-      setToast({ message: 'Failed to undo submission.', type: 'error' });
-    }
+  const handleUndoSubmission = (docId, isAdditional) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Recall Submission',
+      message: 'Are you sure you want to undo this submission? This will recall your file.',
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          setToast({ message: 'Recalling document...', type: 'info' });
+          await studentService.undoSubmission(docId, isAdditional);
+          await fetchDocs();
+          setToast({ message: 'Document submission recalled.', type: 'success' });
+        } catch (err) {
+          console.error('Undo failed:', err);
+          setToast({ message: 'Failed to undo submission.', type: 'error' });
+        }
+      }
+    });
   };
 
   const handleCompanySave = (e) => {
@@ -333,6 +342,14 @@ export default function PreInternship({ onDeploy }) {
           </p>
         </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </div>
   );
 }

@@ -147,7 +147,7 @@ const Topbar = () => {
         onConfirm={handleLogout}
         title="Confirm Logout" 
         message="Are you sure you want to sign out of the Admin panel?" 
-        type="warning" 
+        type="danger" 
       />
     </>
   );

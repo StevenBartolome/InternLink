@@ -23,6 +23,7 @@ import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { adminService } from '../../services/adminService';
 import Toast from '../../components/common/Toast';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const Modal = ({ title, onClose, onConfirm, confirmText = "Done", children }) => (
   <div style={{
@@ -88,6 +89,7 @@ export default function InternshipConfigPage() {
   const [activeTab, setActiveTab] = useState('documents');
   const [expanded, setExpanded] = useState(null);
   const [toast, setToast] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
   
   // Modal states
   const [isAddingDoc, setIsAddingDoc] = useState(false);
@@ -184,21 +186,28 @@ export default function InternshipConfigPage() {
     }
   };
 
-  const handleDeleteGlobalDoc = async (docName) => {
-    if (!window.confirm(`Are you sure you want to remove "${docName}" from ALL programs?`)) return;
-    try {
-      await adminService.deleteGlobalDocument(docName);
-      setConfigs(prev => prev.map(c => ({
-        ...c,
-        requiredDocuments: c.requiredDocuments.filter(d => d.name !== docName)
-      })));
-      setDeletedDocuments(prev => [...prev, docName]);
-      setAddedDocuments(prev => prev.filter(name => name !== docName));
-      setToast({ message: `"${docName}" deleted.`, type: 'success' });
-    } catch (err) {
-      console.error('Delete failed:', err);
-      setToast({ message: 'Delete failed.', type: 'error' });
-    }
+  const handleDeleteGlobalDoc = (docName) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Global Document',
+      message: `Are you sure you want to remove "${docName}" from ALL programs?`,
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        try {
+          await adminService.deleteGlobalDocument(docName);
+          setConfigs(prev => prev.map(c => ({
+            ...c,
+            requiredDocuments: c.requiredDocuments.filter(d => d.name !== docName)
+          })));
+          setDeletedDocuments(prev => [...prev, docName]);
+          setAddedDocuments(prev => prev.filter(name => name !== docName));
+          setToast({ message: `"${docName}" deleted.`, type: 'success' });
+        } catch (err) {
+          console.error('Delete failed:', err);
+          setToast({ message: 'Delete failed.', type: 'error' });
+        }
+      }
+    });
   };
 
   const handleSaveProgram = async (program) => {
@@ -364,8 +373,30 @@ export default function InternshipConfigPage() {
       </div>
 
       {loading && !isAddingDoc ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
-          <Loader2 size={40} className="animate-spin" color={theme.colors.primary} />
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '100px 20px',
+          width: '100%'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            border: `3px solid ${theme.colors.primary}20`,
+            borderTop: `3px solid ${theme.colors.primary}`,
+            borderRadius: '50%',
+            animation: 'spin-loader 0.8s linear infinite',
+            marginBottom: '12px'
+          }} />
+          <style>{`
+            @keyframes spin-loader {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading configurations...</span>
         </div>
       ) : activeTab === 'documents' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -547,6 +578,13 @@ export default function InternshipConfigPage() {
           })}
         </div>
       )}
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
     </div>
   );
 }
