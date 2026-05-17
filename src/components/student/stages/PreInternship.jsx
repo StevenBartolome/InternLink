@@ -1,6 +1,6 @@
 // src/components/student/stages/PreInternship.jsx
 import React, { useState } from 'react';
-import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Send } from 'lucide-react';
+import { Building2, MapPin, Briefcase, Upload, CheckCircle, XCircle, Clock, AlertCircle, FileText, ChevronDown, ChevronUp, Send, Eye, RotateCcw } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
@@ -40,18 +40,32 @@ export default function PreInternship({ onDeploy }) {
   }, [user]);
 
   const fetchDocs = async () => {
+    const hasExistingDocs = docs.length > 0;
     try {
-      setLoading(true);
-      const programId = user?.program_id || user?.profile?.program_id;
-      
-      // AUTO-SYNC: Always sync the student checklist with the program template to fetch any newly added required documents
-      if (user?.internship_id && programId) {
-        console.log('Syncing student checklist with program requirements template...');
-        await adminService.syncStudentChecklist(user.internship_id, programId);
+      if (!hasExistingDocs) {
+        setLoading(true);
       }
       
-      const data = await studentService.getPreInternshipDocuments(user.internship_id);
+      // 1. Fetch current documents first for INSTANT render!
+      const data = await studentService.getPreInternshipDocuments(user?.internship_id);
       setDocs(data);
+      
+      // 2. Hide loading spinner immediately so the UI is active and responsive
+      setLoading(false);
+
+      // 3. Sync in the background silently to fetch new templates without blocking the UI
+      const programId = user?.program_id || user?.profile?.program_id;
+      if (user?.internship_id && programId) {
+        await adminService.syncStudentChecklist(user.internship_id, programId);
+        
+        // Quietly fetch again in case new templates were synced
+        const syncedData = await studentService.getPreInternshipDocuments(user.internship_id);
+        
+        // Only update state if count or content changed to prevent unnecessary re-renders
+        if (syncedData.length !== data.length || JSON.stringify(syncedData) !== JSON.stringify(data)) {
+          setDocs(syncedData);
+        }
+      }
     } catch (err) {
       console.error('Error fetching docs:', err);
     } finally {
@@ -63,12 +77,26 @@ export default function PreInternship({ onDeploy }) {
     if (!file) return;
     try {
       setToast({ message: 'Uploading document...', type: 'info' });
-      await studentService.uploadDocument(docId, file);
+      const doc = docs.find(d => d.id === docId);
+      await studentService.uploadDocument(docId, file, doc?.isAdditional);
       await fetchDocs();
       setToast({ message: 'Document uploaded — pending review.', type: 'success' });
     } catch (err) {
       console.error('Upload failed:', err);
       setToast({ message: 'Upload failed. Please try again.', type: 'error' });
+    }
+  };
+
+  const handleUndoSubmission = async (docId, isAdditional) => {
+    if (!window.confirm('Are you sure you want to undo this submission? This will recall your file.')) return;
+    try {
+      setToast({ message: 'Recalling document...', type: 'info' });
+      await studentService.undoSubmission(docId, isAdditional);
+      await fetchDocs();
+      setToast({ message: 'Document submission recalled.', type: 'success' });
+    } catch (err) {
+      console.error('Undo failed:', err);
+      setToast({ message: 'Failed to undo submission.', type: 'error' });
     }
   };
 
@@ -149,7 +177,31 @@ export default function PreInternship({ onDeploy }) {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {loading ? (
-             <div style={{ padding: '20px', textAlign: 'center', color: theme.colors.textMuted }}>Loading checklist...</div>
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              padding: '40px 20px',
+              width: '100%'
+            }}>
+              <div style={{
+                width: '28px',
+                height: '28px',
+                border: `3px solid ${theme.colors.primary}20`,
+                borderTop: `3px solid ${theme.colors.primary}`,
+                borderRadius: '50%',
+                animation: 'spin-loader 0.8s linear infinite',
+                marginBottom: '12px'
+              }} />
+              <style>{`
+                @keyframes spin-loader {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}</style>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading checklist...</span>
+            </div>
           ) : docs.length === 0 ? (
              <div style={{ padding: '20px', textAlign: 'center', color: theme.colors.textMuted }}>No documents required yet.</div>
           ) : docs.map(doc => {
@@ -166,26 +218,90 @@ export default function PreInternship({ onDeploy }) {
                   {isOpen ? <ChevronUp size={16} color={theme.colors.textMuted} /> : <ChevronDown size={16} color={theme.colors.textMuted} />}
                 </div>
                 {isOpen && (
-                  <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${theme.colors.border}` }}>
+                  <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${theme.colors.border}`, display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '16px' }}>
                     {doc.status.includes('Rejected') && doc.comment && (
-                      <div style={{ padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444', margin: '12px 0' }}>
+                      <div style={{ padding: '10px 14px', backgroundColor: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
                         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#dc2626', marginBottom: '4px' }}>OJT Adviser Comment:</div>
                         <p style={{ margin: 0, fontSize: '0.875rem', color: '#991b1b' }}>{doc.comment}</p>
                       </div>
                     )}
-                    {doc.status !== 'Approved' && (
-                      <div style={{ marginTop: '12px' }}>
-                        <input type="file" id={`file-${doc.id}`} accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} onChange={e => handleFileUpload(doc.id, e.target.files[0])} />
-                        <label htmlFor={`file-${doc.id}`} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, cursor: 'pointer', display: 'inline-flex', gap: '8px' }}>
-                          <Upload size={16} /> {doc.status.includes('Rejected') ? 'Re-upload' : 'Upload Document'}
-                        </label>
+
+                    {doc.status === 'Pending review' && (
+                      <div style={{ padding: '12px 14px', backgroundColor: '#fef9c3', borderRadius: '8px', borderLeft: '4px solid #d97706', fontSize: '0.825rem', color: '#854d0e', fontWeight: 600 }}>
+                        Your document is submitted and pending review. You can undo submission to recall and modify it.
                       </div>
                     )}
-                    {doc.fileUrl && (
-                       <div style={{ marginTop: '12px' }}>
-                         <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.85rem', color: theme.colors.primary, fontWeight: 600 }}>View Submitted File</a>
-                       </div>
-                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                      {/* View Button */}
+                      {doc.fileUrl && (
+                        <a 
+                          href={doc.fileUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          style={{ 
+                            ...commonStyles.dashboardBtn, 
+                            backgroundColor: doc.status === 'Approved' ? '#dcfce7' : '#eff6ff', 
+                            color: doc.status === 'Approved' ? '#16a34a' : '#1d4ed8', 
+                            border: `1px solid ${doc.status === 'Approved' ? '#bbf7d0' : '#bfdbfe'}`,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            textDecoration: 'none',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          <Eye size={16} /> View Submitted File
+                        </a>
+                      )}
+
+                      {/* Undo Submission button */}
+                      {doc.status === 'Pending review' && (
+                        <button
+                          onClick={() => handleUndoSubmission(doc.id, doc.isAdditional)}
+                          style={{
+                            ...commonStyles.dashboardBtn,
+                            backgroundColor: '#fee2e2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          <RotateCcw size={16} /> Undo Submission
+                        </button>
+                      )}
+
+                      {/* File Uploader for Not Submitted or Rejected states */}
+                      {(doc.status === 'Not submitted' || doc.status.includes('Rejected')) && (
+                        <div>
+                          <input 
+                            type="file" 
+                            id={`file-${doc.id}`} 
+                            accept=".pdf,.jpg,.jpeg,.png" 
+                            style={{ display: 'none' }} 
+                            onChange={e => handleFileUpload(doc.id, e.target.files[0])} 
+                          />
+                          <label 
+                            htmlFor={`file-${doc.id}`} 
+                            style={{ 
+                              ...commonStyles.dashboardBtn, 
+                              ...commonStyles.dashboardBtnPrimary, 
+                              cursor: 'pointer', 
+                              display: 'inline-flex', 
+                              gap: '8px',
+                              fontSize: '0.85rem'
+                            }}
+                          >
+                            <Upload size={16} /> {doc.status.includes('Rejected') ? 'Re-upload File' : 'Upload Document'}
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

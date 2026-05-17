@@ -159,9 +159,30 @@ const StudentProfilePage = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '100px', gap: '16px' }}>
-        <Loader2 className="animate-spin" size={48} color={theme.colors.primary} />
-        <p style={{ color: theme.colors.textMuted, fontWeight: 500 }}>Loading student profile...</p>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        padding: '100px 20px',
+        width: '100%'
+      }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          border: `3px solid ${theme.colors.primary}20`,
+          borderTop: `3px solid ${theme.colors.primary}`,
+          borderRadius: '50%',
+          animation: 'spin-loader 0.8s linear infinite',
+          marginBottom: '12px'
+        }} />
+        <style>{`
+          @keyframes spin-loader {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: theme.colors.textMuted }}>Loading student profile...</span>
       </div>
     );
   }

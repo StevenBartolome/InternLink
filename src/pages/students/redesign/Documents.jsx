@@ -7,7 +7,10 @@ import {
   Clock, 
   AlertCircle,
   FileQuestion,
-  Loader2
+  Loader2,
+  Eye,
+  RotateCcw,
+  ExternalLink
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -27,18 +30,33 @@ const Documents = () => {
   }, [user]);
 
   const fetchDocuments = async () => {
+    const hasExistingDocs = documents.length > 0;
     try {
-      setLoading(true);
-      const programId = user.program_id || user.profile?.program_id;
-      
-      // AUTO-SYNC: Always sync the student checklist with the program template to fetch any newly added required documents
-      if (user.internship_id && programId) {
-        console.log('Syncing student checklist with program requirements template...');
-        await adminService.syncStudentChecklist(user.internship_id, programId);
+      if (!hasExistingDocs) {
+        setLoading(true);
       }
       
+      const programId = user.program_id || user.profile?.program_id;
+      
+      // 1. Fetch current documents first for INSTANT render!
       const docs = await studentService.getPreInternshipDocuments(user.internship_id);
       setDocuments(docs);
+      
+      // 2. Hide loading spinner immediately so the UI is active and responsive
+      setLoading(false);
+
+      // 3. Sync in the background silently to fetch new templates without blocking the UI
+      if (user.internship_id && programId) {
+        await adminService.syncStudentChecklist(user.internship_id, programId);
+        
+        // Quietly fetch again in case new templates were synced
+        const syncedDocs = await studentService.getPreInternshipDocuments(user.internship_id);
+        
+        // Only update state if count or content changed to prevent unnecessary re-renders
+        if (syncedDocs.length !== docs.length || JSON.stringify(syncedDocs) !== JSON.stringify(docs)) {
+          setDocuments(syncedDocs);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch documents:', err);
     } finally {
@@ -52,11 +70,26 @@ const Documents = () => {
 
     try {
       setUploading(docId);
-      await studentService.uploadDocument(docId, file);
+      const doc = documents.find(d => d.id === docId);
+      await studentService.uploadDocument(docId, file, doc?.isAdditional);
       await fetchDocuments();
     } catch (err) {
       console.error('Upload failed:', err);
       alert('Upload failed. Please try again.');
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const handleUndoSubmission = async (docId, isAdditional) => {
+    if (!window.confirm('Are you sure you want to undo this submission? This will recall your file.')) return;
+    try {
+      setUploading(docId);
+      await studentService.undoSubmission(docId, isAdditional);
+      await fetchDocuments();
+    } catch (err) {
+      console.error('Failed to undo submission:', err);
+      alert('Failed to undo submission. Please try again.');
     } finally {
       setUploading(null);
     }
@@ -185,9 +218,30 @@ const Documents = () => {
 
       <div style={styles.docList}>
         {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: studentDesign.colors.textMuted }}>
-            <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 12px' }} />
-            Loading checklist...
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '40px 20px',
+            width: '100%'
+          }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              border: `3px solid ${studentDesign.colors.primary}20`,
+              borderTop: `3px solid ${studentDesign.colors.primary}`,
+              borderRadius: '50%',
+              animation: 'spin-loader 0.8s linear infinite',
+              marginBottom: '12px'
+            }} />
+            <style>{`
+              @keyframes spin-loader {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+            `}</style>
+            <span style={{ fontSize: '13px', fontWeight: studentDesign.typography.weights.semibold, color: studentDesign.colors.textMuted }}>Loading checklist...</span>
           </div>
         ) : documents.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: studentDesign.colors.textMuted }}>
@@ -213,7 +267,59 @@ const Documents = () => {
                   {getStatusIcon(doc.status, doc.id)}
                   {doc.status}
                 </div>
-                {doc.status !== 'Approved' && (
+
+                {/* View Submitted File Link */}
+                {doc.fileUrl && (
+                  <motion.a
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    href={doc.fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      padding: '8px',
+                      cursor: 'pointer',
+                      color: doc.status === 'Approved' ? studentDesign.colors.success : studentDesign.colors.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '8px',
+                      backgroundColor: doc.status === 'Approved' ? '#dcfce7' : studentDesign.colors.primaryLight,
+                      textDecoration: 'none'
+                    }}
+                    title="View File"
+                  >
+                    <Eye size={16} />
+                  </motion.a>
+                )}
+
+                {/* Undo Submission for Pending Review Documents */}
+                {doc.status === 'Pending review' && (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleUndoSubmission(doc.id, doc.isAdditional)}
+                    disabled={uploading === doc.id}
+                    style={{
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      color: '#dc2626',
+                      backgroundColor: '#fee2e2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: studentDesign.typography.weights.semibold,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <RotateCcw size={13} /> Undo Submit
+                  </motion.button>
+                )}
+
+                {/* Upload / Resubmit for Not Submitted or Rejected Documents */}
+                {(doc.status === 'Not submitted' || doc.status.includes('Rejected')) && (
                   <>
                     <input 
                       type="file" 
@@ -228,19 +334,20 @@ const Documents = () => {
                       onClick={() => document.getElementById(`file-${doc.id}`).click()}
                       disabled={uploading === doc.id}
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '8px',
+                        padding: '6px 12px',
                         cursor: 'pointer',
                         color: studentDesign.colors.primary,
+                        backgroundColor: studentDesign.colors.primaryLight,
+                        border: `1px solid ${studentDesign.colors.primary}40`,
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        fontWeight: studentDesign.typography.weights.semibold,
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: '8px',
-                        backgroundColor: studentDesign.colors.primaryLight,
+                        gap: '6px'
                       }}
                     >
-                      <Upload size={16} />
+                      <Upload size={14} /> Upload File
                     </motion.button>
                   </>
                 )}

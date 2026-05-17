@@ -30,6 +30,21 @@ export default function DocumentReviewPage() {
   const [rejectComment, setRejectComment] = useState({});
   const [localToast, setLocalToast] = useState(null);
 
+  const [selectedSection, setSelectedSection] = useState('All');
+  const [availableSections, setAvailableSections] = useState([]);
+
+  useEffect(() => {
+    const profSections = user?.professor_sections?.map(ps => ps.program_sections?.name).filter(Boolean) || [];
+    const queueSections = queue.map(s => s.sectionName).filter(name => name && name !== 'Not Assigned');
+    const unique = [...new Set([...profSections, ...queueSections])].sort();
+    setAvailableSections(unique);
+  }, [user, queue]);
+
+  const filteredQueue = queue.filter(student => {
+    if (selectedSection === 'All') return true;
+    return student.sectionName === selectedSection;
+  });
+
   const notify = (msg, type) => {
     if (showOutletToast) showOutletToast(msg, type);
     else if (showToast) showToast(msg, type);
@@ -173,8 +188,32 @@ export default function DocumentReviewPage() {
       {localToast && <Toast message={localToast.message} type={localToast.type} onClose={() => setLocalToast(null)} />}
 
       {loading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', width: '100%' }}>
-          <div style={{ fontSize: '1.2rem', color: theme.colors.primary, fontWeight: 700 }}>Loading Queue...</div>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          padding: '100px 20px',
+          width: '100%',
+          height: '100%',
+          minHeight: '300px'
+        }}>
+          <div style={{
+            width: '36px',
+            height: '36px',
+            border: `3px solid ${theme.colors.primary}20`,
+            borderTop: `3px solid ${theme.colors.primary}`,
+            borderRadius: '50%',
+            animation: 'spin-loader 0.8s linear infinite',
+            marginBottom: '16px'
+          }} />
+          <style>{`
+            @keyframes spin-loader {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <span style={{ fontSize: '14px', fontWeight: 700, color: theme.colors.textMuted }}>Loading review queue...</span>
         </div>
       ) : (
         <>
@@ -194,12 +233,93 @@ export default function DocumentReviewPage() {
           </div>
         </div>
 
+        {/* Section Filter Tabs */}
+        {availableSections.length > 0 && (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: '8px',
+            overflowX: 'auto', 
+            paddingBottom: '4px',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}>
+            <div style={{
+              display: 'flex',
+              backgroundColor: theme.colors.bgSecondary,
+              padding: '4px',
+              borderRadius: '12px',
+              border: `1px solid ${theme.colors.border}`,
+              boxShadow: theme.shadows.sm,
+              gap: '4px',
+            }}>
+              {['All', ...availableSections].map((section) => {
+                const isActive = selectedSection === section;
+                return (
+                  <button
+                    key={section}
+                    onClick={() => setSelectedSection(section)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      backgroundColor: isActive ? theme.colors.primary : 'transparent',
+                      color: isActive ? '#fff' : theme.colors.textMuted,
+                      boxShadow: isActive ? '0 4px 12px rgba(30, 64, 175, 0.2)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      whiteSpace: 'nowrap',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'rgba(30, 64, 175, 0.05)';
+                        e.currentTarget.style.color = theme.colors.primary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = theme.colors.textMuted;
+                      }
+                    }}
+                  >
+                    {section}
+                    <span style={{
+                      fontSize: '0.7rem',
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.2)' : theme.colors.bgAccent,
+                      color: isActive ? '#fff' : theme.colors.primary,
+                      fontWeight: 800,
+                      transition: 'all 0.25s ease'
+                    }}>
+                      {section === 'All' 
+                        ? queue.length 
+                        : queue.filter(s => s.sectionName === section).length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {queue.length === 0 ? (
           <div style={{ ...commonStyles.dashboardCard, padding: '60px', textAlign: 'center', color: theme.colors.textMuted }}>
             <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
             <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>No students in the pre-internship queue.</p>
           </div>
-        ) : queue.map(student => {
+        ) : filteredQueue.length === 0 ? (
+          <div style={{ ...commonStyles.dashboardCard, padding: '60px', textAlign: 'center', color: theme.colors.textMuted }}>
+            <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
+            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>No students in {selectedSection} pending review.</p>
+          </div>
+        ) : filteredQueue.map(student => {
           const isOpen = expanded === student.studentId;
           const pendingCount = student.docs.filter(d => d.status === 'PENDING').length;
           const approvedCount = student.docs.filter(d => d.status === 'APPROVED').length;
@@ -230,7 +350,21 @@ export default function DocumentReviewPage() {
                   <User size={24} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: theme.colors.textMain, fontSize: '1.05rem' }}>{student.studentName}</div>
+                  <div style={{ fontWeight: 800, color: theme.colors.textMain, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {student.studentName}
+                    <span style={{ 
+                      fontSize: '0.72rem', 
+                      fontWeight: 700, 
+                      color: theme.colors.primary, 
+                      backgroundColor: theme.colors.bgAccent, 
+                      padding: '2px 8px', 
+                      borderRadius: '6px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.3px'
+                    }}>
+                      {student.sectionName}
+                    </span>
+                  </div>
                   <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>
                     {student.company && student.company !== 'Not Applied' && student.company !== 'N/A' ? (
                       `${student.company}${student.position ? ` • ${student.position}` : ''}`
@@ -293,6 +427,20 @@ export default function DocumentReviewPage() {
                               <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{doc.submittedAt}</div>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {doc.isAdditional && (
+                                <span style={{ 
+                                  padding: '2px 6px', 
+                                  borderRadius: '6px', 
+                                  backgroundColor: '#eff6ff', 
+                                  color: '#1d4ed8', 
+                                  fontSize: '0.65rem', 
+                                  fontWeight: 800,
+                                  textTransform: 'uppercase',
+                                  border: '1px solid #bfdbfe'
+                                }}>
+                                  Custom
+                                </span>
+                              )}
                               <span style={{ 
                                 padding: '4px 10px', 
                                 borderRadius: '12px', 
@@ -304,14 +452,16 @@ export default function DocumentReviewPage() {
                               }}>
                                 {st.label}
                               </span>
-                              <button 
-                                onClick={(e) => { e.stopPropagation(); handleDeleteRequirement(student.studentId, doc.id); }}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', padding: '4px', borderRadius: '4px' }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
-                              >
-                                <Trash2 size={14} />
-                              </button>
+                              {doc.isAdditional && (
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteRequirement(student.studentId, doc.id); }}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', padding: '4px', borderRadius: '4px' }}
+                                  onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
+                                  onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           </div>
                         );
@@ -417,31 +567,74 @@ export default function DocumentReviewPage() {
 
           <div style={{ flex: 1, padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <div style={{ 
-              height: '300px', 
-              backgroundColor: activeDoc.status === 'NOT_SUBMITTED' ? '#f8fafc' : theme.colors.bgAccent, 
+              display: 'flex',
+              flexDirection: 'column',
+              backgroundColor: activeDoc.status === 'NOT_SUBMITTED' ? '#f8fafc' : '#fff', 
               borderRadius: '20px', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              border: `2px dashed ${activeDoc.status === 'NOT_SUBMITTED' ? '#cbd5e1' : theme.colors.primary + '40'}`,
-              gap: '16px'
+              border: `1px solid ${theme.colors.border}`,
+              overflow: 'hidden',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.03)'
             }}>
               {activeDoc.status === 'NOT_SUBMITTED' ? (
-                <>
+                <div style={{
+                  height: '300px', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '16px'
+                }}>
                   <AlertCircle size={64} color="#94a3b8" opacity={0.5} />
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontWeight: 700, color: '#475569' }}>No File Uploaded</div>
                   </div>
-                </>
+                </div>
               ) : (
-                <>
-                  <FileText size={64} color={theme.colors.primary} opacity={0.5} />
-                  <a href={activeDoc.fileUrl} target="_blank" rel="noopener noreferrer" 
-                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, textDecoration: 'none' }}>
-                    <ExternalLink size={18} /> Open Document
-                  </a>
-                </>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {/* Premium Review Toolbar */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '12px 16px', 
+                    backgroundColor: theme.colors.bgSecondary,
+                    borderBottom: `1px solid ${theme.colors.border}` 
+                  }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.colors.textMuted, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileText size={14} color={theme.colors.primary} /> File Preview
+                    </span>
+                    <a href={activeDoc.fileUrl} target="_blank" rel="noopener noreferrer" 
+                      style={{ 
+                        fontSize: '0.8rem', 
+                        fontWeight: 700, 
+                        color: theme.colors.primary, 
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: '#fff',
+                        border: `1px solid ${theme.colors.border}`,
+                        transition: 'all 0.2s',
+                        cursor: 'pointer'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = theme.colors.primary; e.currentTarget.style.color = '#fff'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#fff'; e.currentTarget.style.color = theme.colors.primary; }}
+                    >
+                      <ExternalLink size={12} /> Open in New Tab
+                    </a>
+                  </div>
+
+                  {/* Native scrollable file iframe */}
+                  <div style={{ height: '400px', width: '100%', overflow: 'hidden', position: 'relative', backgroundColor: '#f1f5f9' }}>
+                    <iframe 
+                      src={activeDoc.fileUrl} 
+                      title="Document Preview"
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
