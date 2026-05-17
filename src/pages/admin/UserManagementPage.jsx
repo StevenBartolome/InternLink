@@ -94,30 +94,20 @@ export default function UserManagementPage() {
     if (!editingHead) return;
     try {
       setLoading(true);
-      // 1. Update basic info in users table
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          first_name: editingHead.firstName,
-          last_name: editingHead.lastName,
-          program_id: editingHead.programId || null
-        })
-        .eq('id', editingHead.id);
-
-      if (userError) throw userError;
-
-      // 2. Update sections assigned via backend route
-      const response = await fetch('/api/admin/update-professor-sections', {
+      const response = await fetch('/api/admin/update-ojt-head', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          professorId: editingHead.id,
+          id: editingHead.id,
+          firstName: editingHead.firstName,
+          lastName: editingHead.lastName,
+          programId: editingHead.programId,
           sectionIds: editingHead.sectionIds
         })
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to update sections');
+      if (!response.ok) throw new Error(data.error || 'Failed to update OJT Adviser');
 
       showToast(`OJT Adviser details updated successfully!`, 'success');
       setEditingHead(null);
@@ -141,40 +131,22 @@ export default function UserManagementPage() {
 
     try {
       setLoading(true);
-      // 1. Update user first_name, last_name, program_id, and section_id in users table
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ 
-          first_name: editingStudent.firstName, 
-          last_name: editingStudent.lastName,
-          program_id: editingStudent.programId || null,
-          section_id: editingStudent.sectionId || null
-        })
-        .eq('id', editingStudent.id);
-      
-      if (userError) throw userError;
-
-      // 2. Upsert student_profiles (student_id, program_id, section_id)
-      const { error: profileError } = await supabase
-        .from('student_profiles')
-        .upsert({
+      const response = await fetch('/api/admin/update-student', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           id: editingStudent.id,
-          student_id: cleanStudentId,
-          program_id: editingStudent.programId || null,
-          section_id: editingStudent.sectionId || null
-        });
+          firstName: editingStudent.firstName,
+          lastName: editingStudent.lastName,
+          studentId: cleanStudentId,
+          programId: editingStudent.programId || null,
+          sectionId: editingStudent.sectionId || null,
+          currentStage: editingStudent.currentStage
+        })
+      });
 
-      if (profileError) throw profileError;
-
-      // 3. Upsert student_internships (current_stage)
-      const { error: internshipError } = await supabase
-        .from('student_internships')
-        .upsert({
-          student_id: editingStudent.id,
-          current_stage: editingStudent.currentStage
-        }, { onConflict: 'student_id' });
-
-      if (internshipError) throw internshipError;
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to update Student');
 
       showToast('Student details updated successfully!', 'success');
       setEditingStudent(null);

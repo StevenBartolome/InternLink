@@ -438,6 +438,139 @@ app.post('/admin/update-professor-sections', async (req, res) => {
     }
 });
 
+// Admin Route: Update Student Details
+app.post('/admin/update-student', async (req, res) => {
+    const { 
+        id, 
+        firstName, 
+        lastName, 
+        studentId, 
+        programId, 
+        sectionId, 
+        currentStage 
+    } = req.body;
+
+    if (!id || !firstName || !lastName || !studentId) {
+        return res.status(400).json({ error: 'Missing required fields: id, firstName, lastName, studentId' });
+    }
+
+    try {
+        console.log(`[Backend] Updating student ${id} (${studentId})`);
+
+        // 1. Update basic info in users table
+        const { error: userError } = await supabaseAdmin
+            .from('users')
+            .update({ 
+                first_name: firstName, 
+                last_name: lastName,
+                program_id: programId || null,
+                section_id: sectionId || null
+            })
+            .eq('id', id);
+      
+        if (userError) throw userError;
+
+        // 2. Upsert student_profiles
+        const { error: profileError } = await supabaseAdmin
+            .from('student_profiles')
+            .upsert({
+                id: id,
+                student_id: studentId,
+                program_id: programId || null,
+                section_id: sectionId || null
+            });
+
+        if (profileError) throw profileError;
+
+        // 3. Upsert student_internships
+        const { error: internshipError } = await supabaseAdmin
+            .from('student_internships')
+            .upsert({
+                student_id: id,
+                current_stage: currentStage
+            }, { onConflict: 'student_id' });
+
+        if (internshipError) throw internshipError;
+
+        // 4. Update Auth User Metadata so it is instantly synced on their next interaction/session
+        await supabaseAdmin.auth.admin.updateUserById(id, {
+            user_metadata: {
+                first_name: firstName,
+                last_name: lastName
+            }
+        });
+
+        res.json({ success: true, message: 'Student details updated successfully.' });
+    } catch (error) {
+        console.error('Update student error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Admin Route: Update OJT Adviser Details
+app.post('/admin/update-ojt-head', async (req, res) => {
+    const { 
+        id, 
+        firstName, 
+        lastName, 
+        programId, 
+        sectionIds 
+    } = req.body;
+
+    if (!id || !firstName || !lastName) {
+        return res.status(400).json({ error: 'Missing required fields: id, firstName, lastName' });
+    }
+
+    try {
+        console.log(`[Backend] Updating OJT Adviser ${id}`);
+
+        // 1. Update basic info in users table
+        const { error: userError } = await supabaseAdmin
+            .from('users')
+            .update({
+                first_name: firstName,
+                last_name: lastName,
+                program_id: programId || null
+            })
+            .eq('id', id);
+
+        if (userError) throw userError;
+
+        // 2. Remove existing section assignments
+        await supabaseAdmin
+            .from('professor_sections')
+            .delete()
+            .eq('professor_id', id);
+
+        // 3. Insert new section assignments
+        if (sectionIds && sectionIds.length > 0) {
+            const sectionInserts = sectionIds.map(sid => ({
+                professor_id: id,
+                section_id: sid
+            }));
+            const { error: sectionError } = await supabaseAdmin
+                .from('professor_sections')
+                .insert(sectionInserts);
+            if (sectionError) throw sectionError;
+        }
+
+        // 4. Update Auth User Metadata
+        await supabaseAdmin.auth.admin.updateUserById(id, {
+            user_metadata: {
+                first_name: firstName,
+                last_name: lastName,
+                program_id: programId
+            }
+        });
+
+        res.json({ success: true, message: 'OJT Adviser details updated successfully.' });
+    } catch (error) {
+        console.error('Update OJT Adviser error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Student Route: Sync Checklist (Runs with Admin/Service Role privileges to bypass student RLS limitations)
 app.post(['/api/student/sync-checklist', '/student/sync-checklist'], async (req, res) => {
     const { internshipId, programId } = req.body;
