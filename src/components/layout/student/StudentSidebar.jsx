@@ -7,7 +7,8 @@ import {
   Building2, 
   FileText, 
   Clock, 
-  ClipboardList, 
+  ClipboardList,
+  ListChecks,
   Briefcase,
   Lock,
   Wand2
@@ -68,6 +69,7 @@ const StudentSidebar = () => {
       level: 2,
       items: [
         { label: 'Attendance', path: '/attendance', icon: Clock, status: getStatus(2) },
+        { label: 'Activities', path: '/activities', icon: ListChecks, status: getStatus(2) },
         { label: 'Weekly reports', path: '/weekly-reports', icon: ClipboardList, status: getStatus(2) },
       ]
     },

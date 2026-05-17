@@ -103,7 +103,7 @@ export function AuthProvider({ children }) {
         console.log('fetchProfile: Fetching public.users for', authUser.id);
         const { data: baseUser, error: baseError } = await supabase
             .from('users')
-            .select('*, programs(id, code, name), professor_sections(section_id, program_sections(id, name))')
+            .select('*, programs(id, code, name, required_hours), professor_sections(section_id, program_sections(id, name))')
             .eq('id', authUser.id)
             .single();
 
@@ -160,6 +160,7 @@ export function AuthProvider({ children }) {
           ...baseUser,
           course_code: baseUser.programs?.code,
           course_name: baseUser.programs?.name,
+          required_hours: baseUser.programs?.required_hours || 486,
           name: `${baseUser.first_name} ${baseUser.last_name}`,
           ...internshipData,
           ...specificProfile,

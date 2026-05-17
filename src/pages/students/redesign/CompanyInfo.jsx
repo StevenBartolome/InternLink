@@ -15,6 +15,7 @@ import {
   Globe
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
+import PageLoader from '../../../components/common/PageLoader';
 import { useAuth } from '../../../context/AuthContext';
 import { supabase } from '../../../services/supabaseClient';
 import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
@@ -247,35 +248,7 @@ const CompanyInfo = () => {
     }
   };
 
-  if (loading && !internship) {
-    return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        padding: '100px 20px',
-        width: '100%'
-      }}>
-        <div style={{
-          width: '32px',
-          height: '32px',
-          border: `3px solid ${studentDesign.colors.primary}20`,
-          borderTop: `3px solid ${studentDesign.colors.primary}`,
-          borderRadius: '50%',
-          animation: 'spin-loader 0.8s linear infinite',
-          marginBottom: '12px'
-        }} />
-        <style>{`
-          @keyframes spin-loader {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-        <span style={{ fontSize: '13px', fontWeight: studentDesign.typography.weights.semibold, color: studentDesign.colors.textMuted }}>Loading company details...</span>
-      </div>
-    );
-  }
+  if (loading && !internship) return <PageLoader message="Loading company details..." />;
 
   return (
     <motion.div 

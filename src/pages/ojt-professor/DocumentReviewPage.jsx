@@ -9,6 +9,7 @@ import { adminService } from '../../services/adminService';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../../components/common/Toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import PageLoader from '../../components/common/PageLoader';
 
 const DOC_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
@@ -207,33 +208,7 @@ export default function DocumentReviewPage() {
       {localToast && <Toast message={localToast.message} type={localToast.type} onClose={() => setLocalToast(null)} />}
 
       {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          flexDirection: 'column', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          padding: '100px 20px',
-          width: '100%',
-          height: '100%',
-          minHeight: '300px'
-        }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            border: `3px solid ${theme.colors.primary}20`,
-            borderTop: `3px solid ${theme.colors.primary}`,
-            borderRadius: '50%',
-            animation: 'spin-loader 0.8s linear infinite',
-            marginBottom: '16px'
-          }} />
-          <style>{`
-            @keyframes spin-loader {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: theme.colors.textMuted }}>Loading review queue...</span>
-        </div>
+        <PageLoader message="Loading review queue..." />
       ) : (
         <>
       {/* Left Side: Student Queue */}

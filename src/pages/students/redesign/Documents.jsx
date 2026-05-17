@@ -18,6 +18,7 @@ import { studentService } from '../../../services/studentService';
 import { adminService } from '../../../services/adminService';
 import ConfirmModal from '../../../components/common/ConfirmModal';
 import Toast from '../../../components/common/Toast';
+import PageLoader from '../../../components/common/PageLoader';
 
 const Documents = () => {
   const { user } = useAuth();
@@ -230,31 +231,7 @@ const Documents = () => {
       </div>
       <div style={styles.docList}>
         {loading ? (
-          <div style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            padding: '40px 20px',
-            width: '100%'
-          }}>
-            <div style={{
-              width: '28px',
-              height: '28px',
-              border: `3px solid ${studentDesign.colors.primary}20`,
-              borderTop: `3px solid ${studentDesign.colors.primary}`,
-              borderRadius: '50%',
-              animation: 'spin-loader 0.8s linear infinite',
-              marginBottom: '12px'
-            }} />
-            <style>{`
-              @keyframes spin-loader {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-              }
-            `}</style>
-            <span style={{ fontSize: '13px', fontWeight: studentDesign.typography.weights.semibold, color: studentDesign.colors.textMuted }}>Loading checklist...</span>
-          </div>
+          <PageLoader message="Loading checklist..." />
         ) : documents.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center', color: studentDesign.colors.textMuted }}>
             <AlertCircle size={32} style={{ margin: '0 auto 12px', opacity: 0.5 }} />

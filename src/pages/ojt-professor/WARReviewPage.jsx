@@ -1,10 +1,12 @@
 // src/pages/ojt-professor/WARReviewPage.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, MessageSquare, User, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { mockWARQueue } from '../../services/mocks/ojtProfessorMockData';
+import { ojtProfessorService } from '../../services/ojtProfessorService';
+import { useAuth } from '../../context/AuthContext';
+import PageLoader from '../../components/common/PageLoader';
 import Toast from '../../components/common/Toast';
 
 const STATUS_CONFIG = {
@@ -14,8 +16,10 @@ const STATUS_CONFIG = {
 };
 
 export default function WARReviewPage() {
+  const { user } = useAuth();
   const { showToast } = useOutletContext() || {};
-  const [wars, setWars] = useState(mockWARQueue);
+  const [wars, setWars] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('PENDING');
   const [expanded, setExpanded] = useState(null);
   const [comments, setComments] = useState({});
@@ -26,19 +30,51 @@ export default function WARReviewPage() {
     else setLocalToast({ message: msg, type });
   };
 
-  const handleAction = (id, action) => {
+  const fetchWARs = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      setLoading(true);
+      const data = await ojtProfessorService.getWARQueue(user.id);
+      setWars(data);
+    } catch (err) {
+      console.error('Error fetching weekly reports:', err);
+      notify('Failed to load Weekly Activity Reports.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchWARs();
+  }, [fetchWARs]);
+
+  const handleAction = async (id, action) => {
     if (action === 'REJECTED' && !comments[id]?.trim()) {
-      notify('Please provide a comment before rejecting.', 'error');
+      notify('Please provide a comment/feedback before rejecting.', 'error');
       return;
     }
-    setWars(prev => prev.map(w => w.id !== id ? w : { ...w, status: action, comment: comments[id] || '' }));
-    setComments(prev => ({ ...prev, [id]: '' }));
-    setExpanded(null);
-    notify(`WAR ${action === 'APPROVED' ? 'approved' : 'rejected'}. Student has been notified.`, action === 'APPROVED' ? 'success' : 'info');
+    
+    try {
+      setLoading(true);
+      const commentText = comments[id] || '';
+      await ojtProfessorService.updateWARStatus(id, action, commentText, user.id);
+      
+      setComments(prev => ({ ...prev, [id]: '' }));
+      setExpanded(null);
+      notify(`WAR ${action === 'APPROVED' ? 'approved' : 'rejected'} successfully.`, action === 'APPROVED' ? 'success' : 'info');
+      await fetchWARs();
+    } catch (err) {
+      console.error('Error updating weekly report:', err);
+      notify('Failed to update report status.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filtered = wars.filter(w => filter === 'ALL' || w.status === filter);
   const pendingCount = wars.filter(w => w.status === 'PENDING').length;
+
+  if (loading && wars.length === 0) return <PageLoader message="Loading weekly activity reports..." />;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -108,11 +144,21 @@ export default function WARReviewPage() {
                     { label: 'Skills Learned', value: war.skillsLearned },
                     { label: 'Challenges', value: war.challenges },
                   ].map(f => (
-                    <div key={f.label} style={{ marginTop: '14px' }}>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: theme.colors.textMuted, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{f.label}</div>
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: theme.colors.textMain, lineHeight: 1.65, backgroundColor: theme.colors.bgSecondary, padding: '10px 14px', borderRadius: '8px' }}>{f.value}</p>
+                    <div key={f.label} style={{ marginTop: '16px' }}>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.colors.textMuted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{f.label}</div>
+                      <p style={{ margin: 0, fontSize: '1.05rem', color: theme.colors.textMain, lineHeight: 1.75, backgroundColor: theme.colors.bgSecondary, padding: '14px 18px', borderRadius: '10px', whiteSpace: 'pre-wrap', border: `1px solid ${theme.colors.border}50` }}>{f.value}</p>
                     </div>
                   ))}
+
+                  {war.fileUrl && (
+                    <div style={{ marginTop: '14px' }}>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 700, color: theme.colors.textMuted, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Attachment</div>
+                      <button onClick={() => window.open(war.fileUrl, '_blank')}
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.85rem', width: '100%', justifyContent: 'center' }}>
+                        <FileText size={16} /> View Uploaded Signed WAR (PDF/Image)
+                      </button>
+                    </div>
+                  )}
 
                   {war.status === 'PENDING' && (
                     <div style={{ marginTop: '18px' }}>
@@ -124,11 +170,11 @@ export default function WARReviewPage() {
                         style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box', minHeight: '80px', resize: 'vertical', marginBottom: '12px' }} />
                       <div style={{ display: 'flex', gap: '12px' }}>
                         <button onClick={() => handleAction(war.id, 'APPROVED')}
-                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: '#16a34a' }}>
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1, backgroundColor: '#16a34a', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                           <CheckCircle size={16} /> Approve WAR
                         </button>
                         <button onClick={() => handleAction(war.id, 'REJECTED')}
-                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: '#dc2626' }}>
+                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1, color: '#dc2626', border: '1px solid #dc2626', backgroundColor: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                           <XCircle size={16} /> Reject WAR
                         </button>
                       </div>
@@ -137,7 +183,7 @@ export default function WARReviewPage() {
 
                   {war.comment && war.status !== 'PENDING' && (
                     <div style={{ marginTop: '14px', padding: '12px 14px', backgroundColor: war.status === 'APPROVED' ? '#f0fdf4' : '#fef2f2', borderRadius: '8px', borderLeft: `4px solid ${war.status === 'APPROVED' ? '#16a34a' : '#ef4444'}` }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: war.status === 'APPROVED' ? '#15803d' : '#dc2626', marginBottom: '4px' }}>Your Feedback:</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: war.status === 'APPROVED' ? '#15803d' : '#dc2626', marginBottom: '4px' }}>Coordinator Feedback:</div>
                       <p style={{ margin: 0, fontSize: '0.875rem', color: war.status === 'APPROVED' ? '#166534' : '#991b1b' }}>{war.comment}</p>
                     </div>
                   )}

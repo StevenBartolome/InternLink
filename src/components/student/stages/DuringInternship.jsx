@@ -1,12 +1,12 @@
 // src/components/student/stages/DuringInternship.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, CheckCircle, Upload, ChevronDown, ChevronUp, XCircle, Plus, Send } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
 import { useAuth } from '../../../context/AuthContext';
 import CompanyInfoForm from '../CompanyInfoForm';
-// import { attendanceLogs, warSubmissions, studentInternship, completionDocs } from '../../../services/mocks/mockData';
+import { supabase } from '../../../services/supabaseClient';
 
 const WAR_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
@@ -33,19 +33,104 @@ export default function DuringInternship({ onComplete }) {
   const [expandedWAR, setExpandedWAR] = useState(null);
   const [compDocs, setCompDocs] = useState({}); // Real docs will be fetched from DB
 
-  const totalHours = logs.reduce((acc, l) => acc + (l.hours || 0), 0);
+  const internshipId = user?.internship_id;
   const requiredHours = user?.required_hours || 486;
+
+  useEffect(() => {
+    if (internshipId) {
+      fetchLogs();
+    }
+  }, [internshipId]);
+
+  const fetchLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('*')
+        .eq('internship_id', internshipId)
+        .order('log_date', { ascending: false });
+
+      if (error) throw error;
+      
+      // Map database logs to the UI format
+      const mapped = (data || []).map(l => ({
+        id: l.id,
+        date: new Date(l.log_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        timeIn: l.time_in ? new Date(l.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+        timeOut: l.time_out ? new Date(l.time_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--',
+        hours: l.hours_rendered,
+        status: l.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'PRESENT',
+        activities: l.activities
+      }));
+      setLogs(mapped);
+    } catch (err) {
+      console.error('Error loading attendance logs in dashboard:', err);
+    }
+  };
+
+  const totalHours = logs.reduce((acc, l) => acc + (l.hours || 0), 0);
   const hoursProgress = Math.min((totalHours / requiredHours) * 100, 100);
 
-  const handleAddLog = (e) => {
+  const handleAddLog = async (e) => {
     e.preventDefault();
-    if (!newLog.date || !newLog.timeIn || !newLog.timeOut) return;
-    const [h1, m1] = newLog.timeIn.split(':').map(Number);
-    const [h2, m2] = newLog.timeOut.split(':').map(Number);
-    const hrs = parseFloat(((h2 * 60 + m2 - h1 * 60 - m1) / 60).toFixed(2));
-    setLogs(prev => [{ id: `a${Date.now()}`, ...newLog, hours: hrs, status: 'PRESENT' }, ...prev]);
-    setNewLog({ date: '', timeIn: '', timeOut: '', activities: '' });
-    setToast({ message: `Attendance logged — ${hrs} hours recorded.`, type: 'success' });
+    if (!newLog.date || !newLog.timeIn || !newLog.timeOut || !internshipId) return;
+
+    try {
+      const [h1, m1] = newLog.timeIn.split(':').map(Number);
+      const [h2, m2] = newLog.timeOut.split(':').map(Number);
+      const hrs = parseFloat(((h2 * 60 + m2 - h1 * 60 - m1) / 60).toFixed(2));
+      const hoursRendered = Math.max(0, hrs);
+
+      // Create timezone-safe ISO strings for start and end
+      const startIso = new Date(`${newLog.date}T${newLog.timeIn}:00`).toISOString();
+      const endIso = new Date(`${newLog.date}T${newLog.timeOut}:00`).toISOString();
+
+      const { data: newEntry, error: insertError } = await supabase
+        .from('attendance_logs')
+        .insert({
+          internship_id: internshipId,
+          log_date: newLog.date,
+          time_in: startIso,
+          time_out: endIso,
+          hours_rendered: hoursRendered,
+          activities: newLog.activities,
+          status: 'LOGGED'
+        })
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Now query and update total rendered_hours
+      const { data: allLogs, error: fetchError } = await supabase
+        .from('attendance_logs')
+        .select('hours_rendered')
+        .eq('internship_id', internshipId)
+        .eq('status', 'LOGGED');
+
+      if (fetchError) throw fetchError;
+
+      const totalHoursSum = allLogs.reduce((sum, log) => sum + (log.hours_rendered || 0), 0);
+      const roundedHours = Math.round(totalHoursSum);
+
+      // Update student_internships
+      const { error: internError } = await supabase
+        .from('student_internships')
+        .update({
+          rendered_hours: roundedHours,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', internshipId);
+
+      if (internError) throw internError;
+
+      setNewLog({ date: '', timeIn: '', timeOut: '', activities: '' });
+      setToast({ message: `Attendance logged — ${hoursRendered} hours recorded and synced!`, type: 'success' });
+      await fetchLogs();
+    } catch (err) {
+      console.error('Error logging attendance manually:', err);
+      setToast({ message: 'Failed to log attendance: ' + err.message, type: 'error' });
+    }
   };
 
   const handleSubmitWAR = (e) => {

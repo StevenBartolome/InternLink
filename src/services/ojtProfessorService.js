@@ -99,7 +99,7 @@ export const ojtProfessorService = {
    */
   async updateDocumentStatus(docId, status, comment, reviewerId) {
     // 1. Try updating pre_internship_documents first
-    const { data: stdData, error: stdError } = await supabase
+    const { data: stdData } = await supabase
       .from('pre_internship_documents')
       .update({
         status,
@@ -196,5 +196,79 @@ export const ojtProfessorService = {
 
     if (error) throw error;
     return true;
+  },
+
+  /**
+   * Fetch all Weekly Activity Reports (WAR) for review
+   */
+  async getWARQueue(professorId) {
+    if (!professorId) return [];
+
+    const { data, error } = await supabase
+      .from('weekly_activity_reports')
+      .select(`
+        id,
+        week_number,
+        week_label,
+        summary,
+        skills_learned,
+        challenges,
+        status,
+        file_url,
+        reviewer_comment,
+        submitted_at,
+        reviewed_at,
+        student_internships!internship_id (
+          id,
+          student:users!student_id (
+            first_name,
+            last_name
+          )
+        )
+      `)
+      .order('submitted_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching WAR queue:', error);
+      throw error;
+    }
+
+    return (data || []).map(war => ({
+      id: war.id,
+      weekNumber: war.week_number,
+      weekLabel: war.week_label,
+      summary: war.summary,
+      skillsLearned: war.skills_learned,
+      challenges: war.challenges,
+      status: war.status,
+      fileUrl: war.file_url || null,
+      comment: war.reviewer_comment || '',
+      submittedAt: new Date(war.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      studentName: war.student_internships ? `${war.student_internships.student?.first_name} ${war.student_internships.student?.last_name}` : 'Unknown Student'
+    }));
+  },
+
+  /**
+   * Update Weekly Activity Report status and feedback comment
+   */
+  async updateWARStatus(warId, status, comment, reviewerId) {
+    const { data, error } = await supabase
+      .from('weekly_activity_reports')
+      .update({
+        status,
+        reviewer_comment: comment,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: reviewerId
+      })
+      .eq('id', warId)
+      .select();
+
+    if (error) {
+      console.error('Error updating WAR status:', error);
+      throw error;
+    }
+
+    return data[0];
   }
 };
+

@@ -16,6 +16,7 @@ import Dashboard from './pages/students/redesign/Dashboard';
 import Documents from './pages/students/redesign/Documents';
 import Templates from './pages/students/redesign/Templates';
 import Attendance from './pages/students/redesign/Attendance';
+import Activities from './pages/students/redesign/Activities';
 import WeeklyReports from './pages/students/redesign/WeeklyReports';
 import CompanyInfo from './pages/students/redesign/CompanyInfo';
 import Portfolio from './pages/students/redesign/Portfolio';
@@ -120,6 +121,7 @@ function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/templates" element={<Templates />} />
             <Route path="/attendance" element={<Attendance />} />
+            <Route path="/activities" element={<Activities />} />
             <Route path="/weekly-reports" element={<WeeklyReports />} />
             <Route path="/portfolio" element={<Portfolio />} />
             <Route path="/notifications" element={<Notifications />} />
