@@ -438,6 +438,113 @@ app.post('/admin/update-professor-sections', async (req, res) => {
     }
 });
 
+// Student Route: Sync Checklist (Runs with Admin/Service Role privileges to bypass student RLS limitations)
+app.post(['/api/student/sync-checklist', '/student/sync-checklist'], async (req, res) => {
+    const { internshipId, programId } = req.body;
+    
+    if (!internshipId || !programId) {
+        return res.status(400).json({ error: 'Missing required parameters: internshipId, programId' });
+    }
+
+    try {
+        console.log(`[Sync Backend] Syncing internship checklist for internshipId: ${internshipId}, programId: ${programId}`);
+
+        // 1. Get master documents for the program
+        const { data: masterDocs, error: masterError } = await supabaseAdmin
+            .from('program_required_documents')
+            .select('document_name')
+            .eq('program_id', programId);
+
+        if (masterError) throw masterError;
+        const currentProgramDocs = masterDocs || [];
+
+        // 2. Get existing documents for the student
+        const { data: existingDocs, error: existingError } = await supabaseAdmin
+            .from('pre_internship_documents')
+            .select('document_name')
+            .eq('internship_id', internshipId);
+
+        if (existingError) throw existingError;
+        const existingNames = new Set((existingDocs || []).map(d => d.document_name));
+
+        // 3. Filter out documents already in the student's checklist
+        const newDocs = currentProgramDocs
+            .filter(md => !existingNames.has(md.document_name))
+            .map(md => ({
+                internship_id: internshipId,
+                document_name: md.document_name,
+                status: 'NOT_SUBMITTED'
+            }));
+
+        // 4. Find program documents that are no longer in this program's required list
+        // To protect custom professor-added student requirements, we only delete documents
+        // that are known program-level documents (either in program_required_documents for SOME program
+        // or are one of the system-wide default document templates).
+        const { data: allMasterDocs, error: allMasterError } = await supabaseAdmin
+            .from('program_required_documents')
+            .select('document_name');
+
+        if (allMasterError) throw allMasterError;
+
+        const defaultDocs = [
+            'Resume / CV',
+            'Medical Certificate',
+            'Parental Consent Form',
+            'Endorsement Letter',
+            'Acceptance Letter / Company Confirmation',
+            'Insurance / HMO Card'
+        ];
+
+        const allMasterNames = new Set([
+            ...defaultDocs,
+            ...(allMasterDocs || []).map(d => d.document_name)
+        ]);
+
+        const currentProgramNames = new Set(currentProgramDocs.map(d => d.document_name));
+
+        const docsToRemove = (existingDocs || [])
+            .filter(ed => !currentProgramNames.has(ed.document_name) && allMasterNames.has(ed.document_name))
+            .map(ed => ed.document_name);
+
+        console.log('[Sync Backend] Docs to add:', newDocs.map(d => d.document_name));
+        console.log('[Sync Backend] Docs to remove:', docsToRemove);
+
+        // 5. Batch delete unassigned program documents from this student's checklist
+        if (docsToRemove.length > 0) {
+            const { error: deleteError } = await supabaseAdmin
+                .from('pre_internship_documents')
+                .delete()
+                .eq('internship_id', internshipId)
+                .in('document_name', docsToRemove);
+
+            if (deleteError) throw deleteError;
+        }
+
+        // 6. Batch insert into pre_internship_documents
+        let insertedData = [];
+        if (newDocs.length > 0) {
+            const { data, error: insertError } = await supabaseAdmin
+                .from('pre_internship_documents')
+                .insert(newDocs)
+                .select();
+
+            if (insertError) throw insertError;
+            insertedData = data || [];
+        }
+
+        res.json({
+            success: true,
+            insertedCount: newDocs.length,
+            deletedCount: docsToRemove.length,
+            insertedData
+        });
+
+    } catch (error) {
+        console.error('[Sync Backend] Critical error during sync:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Serve static assets from the React build folder
 const buildPath = path.join(__dirname, '../build');
 app.use(express.static(buildPath));

@@ -1,6 +1,7 @@
 // src/context/AuthContext.js
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
+import { adminService } from '../services/adminService';
 
 const AuthContext = createContext(null);
 
@@ -359,6 +360,21 @@ export function AuthProvider({ children }) {
         console.warn('Warning: Failed to initialize internship record:', internshipError.message);
         // We don't throw here to avoid failing the whole registration, 
         // but it's better if we do or handle it in the dashboard.
+      } else {
+        // 5. AUTO-POPULATE CHECKLIST from master list
+        try {
+          const { data: internship } = await supabase
+            .from('student_internships')
+            .select('id')
+            .eq('student_id', authData.user.id)
+            .single();
+
+          if (internship) {
+            await adminService.syncStudentChecklist(internship.id, studentData.programId || studentData.program_id);
+          }
+        } catch (syncErr) {
+          console.error('Failed to sync master checklist:', syncErr);
+        }
       }
 
       console.log('Registration complete for:', authData.user.id);
