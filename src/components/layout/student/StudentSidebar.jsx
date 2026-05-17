@@ -185,9 +185,9 @@ const StudentSidebar = () => {
       fontSize: '13px',
       fontWeight: studentDesign.typography.weights.semibold,
       color: studentDesign.colors.textMain,
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
+      whiteSpace: 'normal',
+      wordBreak: 'break-word',
+      lineHeight: '1.2',
     },
     userDetails: {
       fontSize: '11px',

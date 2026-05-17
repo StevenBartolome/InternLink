@@ -416,7 +416,7 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                 <span>The password will be auto-generated and emailed via <strong>EmailJS</strong> immediately.</span>
               </div>
 
-              <button type="submit" disabled={loading} style={{ ...commonStyles.dashboardBtnPrimary, width: '100%', padding: '0.875rem' }}>
+              <button type="submit" disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '100%', padding: '0.875rem' }}>
                 {loading ? <><Loader2 size={18} className="animate-spin" /> Creating Account...</> : <>Create Account</>}
               </button>
             </form>
@@ -447,7 +447,7 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
                   </div>
                   <button
                     onClick={handleBulkSubmit} disabled={loading}
-                    style={{ ...commonStyles.dashboardBtnPrimary, width: '100%', padding: '0.875rem', marginTop: '1.5rem' }}
+                    style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, width: '100%', padding: '0.875rem', marginTop: '1.5rem' }}
                   >
                     {loading ? <><Loader2 size={18} className="animate-spin" /> Creating {bulkPreview.length} Accounts...</> : <>Create {bulkPreview.length} Accounts</>}
                   </button>

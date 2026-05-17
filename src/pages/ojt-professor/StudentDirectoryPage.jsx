@@ -143,10 +143,8 @@ const StudentDirectoryPage = () => {
       flexWrap: 'wrap',
     },
     createBtn: {
+      ...commonStyles.dashboardBtn,
       ...commonStyles.dashboardBtnPrimary,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
       padding: '0.625rem 1.25rem',
       fontSize: '0.875rem',
     },
