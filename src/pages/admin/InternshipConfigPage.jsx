@@ -105,14 +105,7 @@ export default function InternshipConfigPage() {
   // Track custom/added/deleted documents in the session so they do not instantly vanish when unassigned
   const [addedDocuments, setAddedDocuments] = useState([]);
   const [deletedDocuments, setDeletedDocuments] = useState([]);
-  const [defaultDocs, setDefaultDocs] = useState([
-    'Resume / CV',
-    'Medical Certificate',
-    'Parental Consent Form',
-    'Endorsement Letter',
-    'Acceptance Letter / Company Confirmation',
-    'Insurance / HMO Card'
-  ]);
+  const [defaultDocs, setDefaultDocs] = useState([]);
 
   useEffect(() => {
     fetchConfigs();

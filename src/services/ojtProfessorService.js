@@ -28,7 +28,7 @@ export const ojtProfessorService = {
         ),
         docs:pre_internship_documents(*)
       `)
-      .eq('current_stage', 'PRE_INTERNSHIP')
+      .in('current_stage', ['PRE_INTERNSHIP', 'DURING_INTERNSHIP'])
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
@@ -152,19 +152,20 @@ export const ojtProfessorService = {
    * Approve deployment (Stage 1 -> Stage 2)
    */
   async approveDeployment(internshipId) {
-    const { data, error } = await supabase
-      .from('student_internships')
-      .update({
-        is_deployed: true,
-        current_stage: 'DURING_INTERNSHIP',
-        deployment_approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', internshipId)
-      .select();
+    const response = await fetch('/api/professor/approve-deployment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ internshipId })
+    });
 
-    if (error) throw error;
-    return data[0];
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to approve deployment on server');
+    }
+
+    return data.data;
   },
 
   /**

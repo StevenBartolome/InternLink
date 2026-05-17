@@ -34,6 +34,7 @@ export default function DocumentReviewPage() {
 
   const [selectedSection, setSelectedSection] = useState('All');
   const [availableSections, setAvailableSections] = useState([]);
+  const [deploymentFilter, setDeploymentFilter] = useState('ALL'); // 'ALL', 'PENDING', 'DEPLOYED'
 
   useEffect(() => {
     const profSections = user?.professor_sections?.map(ps => ps.program_sections?.name).filter(Boolean) || [];
@@ -43,8 +44,18 @@ export default function DocumentReviewPage() {
   }, [user, queue]);
 
   const filteredQueue = queue.filter(student => {
-    if (selectedSection === 'All') return true;
-    return student.sectionName === selectedSection;
+    // 1. Section Filter
+    if (selectedSection !== 'All' && student.sectionName !== selectedSection) {
+      return false;
+    }
+    // 2. Deployment Filter
+    if (deploymentFilter === 'PENDING' && student.deploymentApproved) {
+      return false;
+    }
+    if (deploymentFilter === 'DEPLOYED' && !student.deploymentApproved) {
+      return false;
+    }
+    return true;
   });
 
   const notify = (msg, type) => {
@@ -241,6 +252,72 @@ export default function DocumentReviewPage() {
           </div>
         </div>
 
+        {/* Deployment Status Filter */}
+        <div style={{
+          display: 'flex',
+          backgroundColor: theme.colors.bgSecondary,
+          padding: '4px',
+          borderRadius: '12px',
+          border: `1px solid ${theme.colors.border}`,
+          boxShadow: theme.shadows.sm,
+          gap: '4px',
+          alignSelf: 'flex-start'
+        }}>
+          {[
+            { id: 'ALL', label: 'All Students', count: queue.length },
+            { id: 'PENDING', label: 'Pending Deployment', count: queue.filter(s => !s.deploymentApproved).length },
+            { id: 'DEPLOYED', label: 'Deployed', count: queue.filter(s => s.deploymentApproved).length }
+          ].map((opt) => {
+            const isActive = deploymentFilter === opt.id;
+            return (
+              <button
+                key={opt.id}
+                onClick={() => setDeploymentFilter(opt.id)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backgroundColor: isActive ? theme.colors.primary : 'transparent',
+                  color: isActive ? '#fff' : theme.colors.textMuted,
+                  boxShadow: isActive ? '0 4px 12px rgba(30, 64, 175, 0.2)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'rgba(30, 64, 175, 0.05)';
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = theme.colors.textMuted;
+                  }
+                }}
+              >
+                {opt.label}
+                <span style={{
+                  fontSize: '0.7rem',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  backgroundColor: isActive ? 'rgba(255, 255, 255, 0.2)' : theme.colors.bgAccent,
+                  color: isActive ? '#fff' : theme.colors.primary,
+                  fontWeight: 800,
+                }}>
+                  {opt.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Section Filter Tabs */}
         {availableSections.length > 0 && (
           <div style={{ 
@@ -307,8 +384,17 @@ export default function DocumentReviewPage() {
                       transition: 'all 0.25s ease'
                     }}>
                       {section === 'All' 
-                        ? queue.length 
-                        : queue.filter(s => s.sectionName === section).length}
+                        ? queue.filter(s => {
+                            if (deploymentFilter === 'PENDING' && s.deploymentApproved) return false;
+                            if (deploymentFilter === 'DEPLOYED' && !s.deploymentApproved) return false;
+                            return true;
+                          }).length 
+                        : queue.filter(s => {
+                            if (s.sectionName !== section) return false;
+                            if (deploymentFilter === 'PENDING' && s.deploymentApproved) return false;
+                            if (deploymentFilter === 'DEPLOYED' && !s.deploymentApproved) return false;
+                            return true;
+                          }).length}
                     </span>
                   </button>
                 );
@@ -372,6 +458,21 @@ export default function DocumentReviewPage() {
                     }}>
                       {student.sectionName}
                     </span>
+                    {student.deploymentApproved && (
+                      <span style={{ 
+                        fontSize: '0.72rem', 
+                        fontWeight: 800, 
+                        color: '#16a34a', 
+                        backgroundColor: '#dcfce7', 
+                        padding: '2px 8px', 
+                        borderRadius: '6px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.3px',
+                        border: '1px solid #bbf7d0'
+                      }}>
+                        Deployed
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>
                     {student.company && student.company !== 'Not Applied' && student.company !== 'N/A' ? (
@@ -409,7 +510,15 @@ export default function DocumentReviewPage() {
                       </button>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '20px' }}>
+                    <div style={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: '12px', 
+                      marginTop: '20px',
+                      maxHeight: '335px',
+                      overflowY: 'auto',
+                      paddingRight: '6px'
+                    }}>
                       {student.docs.map(doc => {
                         const st = DOC_STATUS[doc.status] || DOC_STATUS.NOT_SUBMITTED;
                         const isSelected = activeDoc?.id === doc.id;

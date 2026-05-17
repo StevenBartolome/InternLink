@@ -256,6 +256,7 @@ export function AuthProvider({ children }) {
     // This ensures the UI updates and ProtectedRoutes kick the user out instantly
     currentFetchPromise.current = null;
     setUser(null);
+    sessionStorage.removeItem('dismissedSupervisorPrompt');
 
     try {
       // 2. Clear Supabase storage manually as a backup

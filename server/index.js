@@ -582,6 +582,24 @@ app.post(['/api/student/sync-checklist', '/student/sync-checklist'], async (req,
     try {
         console.log(`[Sync Backend] Syncing internship checklist for internshipId: ${internshipId}, programId: ${programId}`);
 
+        // 0. Check if student is already deployed or beyond pre-internship
+        const { data: internship, error: internFetchError } = await supabaseAdmin
+            .from('student_internships')
+            .select('current_stage, is_deployed')
+            .eq('id', internshipId)
+            .maybeSingle();
+
+        if (internFetchError) throw internFetchError;
+
+        if (internship && (internship.is_deployed || internship.current_stage !== 'PRE_INTERNSHIP')) {
+            console.log(`[Sync Backend] Student ${internshipId} is already deployed or beyond pre-internship. Freezing checklist sync.`);
+            return res.json({ 
+                success: true, 
+                message: 'Checklist is frozen for deployed students.', 
+                insertedCount: 0 
+            });
+        }
+
         // 1. Get master documents for the program
         const { data: masterDocs, error: masterError } = await supabaseAdmin
             .from('program_required_documents')
@@ -619,24 +637,12 @@ app.post(['/api/student/sync-checklist', '/student/sync-checklist'], async (req,
 
         if (allMasterError) throw allMasterError;
 
-        const defaultDocs = [
-            'Resume / CV',
-            'Medical Certificate',
-            'Parental Consent Form',
-            'Endorsement Letter',
-            'Acceptance Letter / Company Confirmation',
-            'Insurance / HMO Card'
-        ];
-
-        const allMasterNames = new Set([
-            ...defaultDocs,
-            ...(allMasterDocs || []).map(d => d.document_name)
-        ]);
+        const allMasterNames = new Set((allMasterDocs || []).map(d => d.document_name));
 
         const currentProgramNames = new Set(currentProgramDocs.map(d => d.document_name));
 
         const docsToRemove = (existingDocs || [])
-            .filter(ed => !currentProgramNames.has(ed.document_name) && allMasterNames.has(ed.document_name))
+            .filter(ed => !currentProgramNames.has(ed.document_name))
             .map(ed => ed.document_name);
 
         console.log('[Sync Backend] Docs to add:', newDocs.map(d => d.document_name));
@@ -674,6 +680,44 @@ app.post(['/api/student/sync-checklist', '/student/sync-checklist'], async (req,
 
     } catch (error) {
         console.error('[Sync Backend] Critical error during sync:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Professor Route: Approve Deployment (Bypasses RLS using Admin client)
+app.post(['/api/professor/approve-deployment', '/professor/approve-deployment'], async (req, res) => {
+    const { internshipId } = req.body;
+    
+    if (!internshipId) {
+        return res.status(400).json({ error: 'Missing required parameter: internshipId' });
+    }
+
+    try {
+        console.log(`[Deploy Backend] Approving deployment for internshipId: ${internshipId}`);
+
+        const { data, error } = await supabaseAdmin
+            .from('student_internships')
+            .update({
+                is_deployed: true,
+                current_stage: 'DURING_INTERNSHIP',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', internshipId)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: 'Internship record not found or not updated' });
+        }
+
+        res.json({
+            success: true,
+            data: data[0]
+        });
+
+    } catch (error) {
+        console.error('[Deploy Backend] Critical error during deployment approval:', error);
         res.status(500).json({ error: error.message });
     }
 });

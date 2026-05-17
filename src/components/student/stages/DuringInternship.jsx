@@ -5,6 +5,7 @@ import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
 import { useAuth } from '../../../context/AuthContext';
+import CompanyInfoForm from '../CompanyInfoForm';
 // import { attendanceLogs, warSubmissions, studentInternship, completionDocs } from '../../../services/mocks/mockData';
 
 const WAR_STATUS = {
@@ -22,6 +23,7 @@ const ATT_STATUS = {
 export default function DuringInternship({ onComplete }) {
   const { user } = useAuth();
   const [toast, setToast] = useState(null);
+  const [showSupervisorModal, setShowSupervisorModal] = useState(false);
   const [logs, setLogs] = useState([]); // Real logs will be fetched from DB
   const [wars, setWars] = useState([]); // Real reports will be fetched from DB
   const [newLog, setNewLog] = useState({ date: '', timeIn: '', timeOut: '', activities: '' });
@@ -71,6 +73,67 @@ export default function DuringInternship({ onComplete }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      {/* Supervisor Details Warning Banner */}
+      {!user?.supervisor_name && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '20px 24px',
+          background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+          border: '1px solid #FDE68A',
+          borderRadius: '16px',
+          boxShadow: '0 4px 15px rgba(245, 158, 11, 0.08)',
+          gap: '16px',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '280px', flex: 1 }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '10px',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #FCD34D',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#D97706',
+              flexShrink: 0
+            }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+            </div>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '0.95rem', fontWeight: 800, color: '#92400E' }}>Supervisor Setup Required</h4>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#B45309', lineHeight: 1.4 }}>
+                Please fill up your Industry Supervisor details (Name, Email, Phone) to fully activate your daily logs and weekly activity tracking.
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setShowSupervisorModal(true)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '10px',
+              backgroundColor: '#D97706',
+              color: '#FFFFFF',
+              border: 'none',
+              fontWeight: 700,
+              fontSize: '0.85rem',
+              cursor: 'pointer',
+              boxShadow: '0 4px 10px rgba(217, 119, 6, 0.2)',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#B45309'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#D97706'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            Fill Up Supervisor Info
+          </button>
+        </div>
+      )}
 
       {/* Hours Progress */}
       <div style={{ ...commonStyles.dashboardCard, padding: '24px' }}>
@@ -289,6 +352,18 @@ export default function DuringInternship({ onComplete }) {
             </div>
           ))}
         </div>
+      )}
+
+      {showSupervisorModal && (
+        <CompanyInfoForm 
+          userId={user.id}
+          initialData={user}
+          onClose={() => setShowSupervisorModal(false)}
+          onSave={(newData) => {
+            setShowSupervisorModal(false);
+            window.location.reload();
+          }}
+        />
       )}
     </div>
   );

@@ -9,6 +9,7 @@ import Toast from '../common/Toast';
 const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
   const { user } = useAuth();
   const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
+  const isDeployed = initialData?.is_deployed || user?.is_deployed || false;
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [formData, setFormData] = useState({
@@ -53,23 +54,25 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
         industry: formData.industry
       };
 
-      if (companyId) {
-        // Update existing company details
-        const { error: updateCompErr } = await supabase
-          .from('companies')
-          .update(companyPayload)
-          .eq('id', companyId);
-        if (updateCompErr) throw updateCompErr;
-      } else {
-        // Create new company entry
-        const { data: newComp, error: insertCompErr } = await supabase
-          .from('companies')
-          .insert(companyPayload)
-          .select()
-          .single();
-        
-        if (insertCompErr) throw insertCompErr;
-        companyId = newComp.id;
+      if (!isDeployed) {
+        if (companyId) {
+          // Update existing company details
+          const { error: updateCompErr } = await supabase
+            .from('companies')
+            .update(companyPayload)
+            .eq('id', companyId);
+          if (updateCompErr) throw updateCompErr;
+        } else {
+          // Create new company entry
+          const { data: newComp, error: insertCompErr } = await supabase
+            .from('companies')
+            .insert(companyPayload)
+            .select()
+            .single();
+          
+          if (insertCompErr) throw insertCompErr;
+          companyId = newComp.id;
+        }
       }
 
       // 2. Update Student Internship record with the link and specific placement details
@@ -129,6 +132,12 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
       border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none',
       transition: 'border-color 0.2s', boxSizing: 'border-box'
     },
+    inputDisabled: {
+      backgroundColor: '#f1f5f9',
+      color: '#64748B',
+      cursor: 'not-allowed',
+      borderColor: '#e2e8f0'
+    },
     footer: {
       padding: '20px 24px', borderTop: '1px solid #f1f5f9',
       display: 'flex', justifyContent: 'flex-end', gap: '12px',
@@ -165,7 +174,8 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                 <label style={styles.label}>Company Name</label>
                 <input 
                   name="company_name" required value={formData.company_name} onChange={handleChange}
-                  placeholder="e.g. TechNova Solutions Inc." style={styles.input} 
+                  placeholder="e.g. TechNova Solutions Inc." style={{ ...styles.input, ...(isDeployed ? styles.inputDisabled : {}) }} 
+                  disabled={isDeployed}
                 />
               </div>
 
@@ -173,7 +183,8 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                 <label style={styles.label}>Position / Role</label>
                 <input 
                   name="position" required value={formData.position} onChange={handleChange}
-                  placeholder="e.g. Software Engineer Intern" style={styles.input} 
+                  placeholder="e.g. Software Engineer Intern" style={{ ...styles.input, ...(isDeployed ? styles.inputDisabled : {}) }} 
+                  disabled={isDeployed}
                 />
               </div>
 
@@ -181,7 +192,8 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                 <label style={styles.label}>Department</label>
                 <input 
                   name="department" value={formData.department} onChange={handleChange}
-                  placeholder="e.g. Product Development" style={styles.input} 
+                  placeholder="e.g. Product Development" style={{ ...styles.input, ...(isDeployed ? styles.inputDisabled : {}) }} 
+                  disabled={isDeployed}
                 />
               </div>
 
@@ -217,16 +229,25 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                 <label style={styles.label}>Industry</label>
                 <input 
                   name="industry" value={formData.industry} onChange={handleChange}
-                  placeholder="e.g. Information Technology" style={styles.input} 
+                  placeholder="e.g. Information Technology" style={{ ...styles.input, ...(isDeployed ? styles.inputDisabled : {}) }} 
+                  disabled={isDeployed}
                 />
               </div>
 
               <div style={{ ...styles.formGroup, ...styles.fullRow }}>
                 <label style={styles.label}>Company Address & Location</label>
-                <GoogleMapPicker 
-                  initialLocation={formData.company_latitude ? { lat: formData.company_latitude, lng: formData.company_longitude } : null}
-                  onLocationSelect={handleLocationSelect}
-                />
+                {isDeployed ? (
+                  <input 
+                    disabled 
+                    value={formData.company_address || 'No Address Set'} 
+                    style={{ ...styles.input, ...styles.inputDisabled }} 
+                  />
+                ) : (
+                  <GoogleMapPicker 
+                    initialLocation={formData.company_latitude ? { lat: formData.company_latitude, lng: formData.company_longitude } : null}
+                    onLocationSelect={handleLocationSelect}
+                  />
+                )}
               </div>
             </div>
           </div>

@@ -131,12 +131,21 @@ export const adminService = {
    * Remove a document name from ALL programs
    */
   async deleteGlobalDocument(documentName) {
-    const { error } = await supabase
+    // 1. Delete from program master configurations
+    const { error: programError } = await supabase
       .from('program_required_documents')
       .delete()
       .eq('document_name', documentName);
     
-    if (error) throw error;
+    if (programError) throw programError;
+
+    // 2. Delete from student checklists so it instantly disappears from students and professors
+    const { error: studentError } = await supabase
+      .from('pre_internship_documents')
+      .delete()
+      .eq('document_name', documentName);
+
+    if (studentError) throw studentError;
     return true;
   },
 

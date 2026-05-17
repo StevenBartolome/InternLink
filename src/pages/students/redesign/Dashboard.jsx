@@ -1,18 +1,29 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
   CheckCircle2, 
   Circle,
   Calendar,
   ChevronRight,
-  Lock
+  Lock,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
+import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  
+  const [showPromptModal, setShowPromptModal] = React.useState(false);
+  const [showForm, setShowForm] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user && user.current_stage === 'DURING_INTERNSHIP' && !user.supervisor_name && !sessionStorage.getItem('dismissedSupervisorPrompt')) {
+      setShowPromptModal(true);
+    }
+  }, [user]);
   
   const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
   const STAGE_LEVELS = {
@@ -323,6 +334,141 @@ const Dashboard = () => {
           </motion.button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showPromptModal && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+          }}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              style={{
+                width: '100%',
+                maxWidth: '480px',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '24px',
+                padding: '32px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 40px rgba(37, 99, 235, 0.05)',
+                border: '1px solid rgba(226, 232, 240, 0.8)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '24px'
+              }}
+            >
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '20px',
+                backgroundColor: '#FFFBEB',
+                border: '1.5px solid #FCD34D',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#D97706',
+              }}>
+                <AlertTriangle size={32} />
+              </div>
+
+              <div>
+                <h3 style={{
+                  margin: '0 0 10px 0',
+                  fontSize: '1.25rem',
+                  fontWeight: 800,
+                  color: '#1E293B'
+                }}>
+                  Supervisor Details Needed
+                </h3>
+                <p style={{
+                  margin: 0,
+                  fontSize: '0.9rem',
+                  color: '#64748B',
+                  lineHeight: 1.6
+                }}>
+                  You are currently in the <strong>During Internship</strong> stage, but your industry supervisor details are not yet set up. 
+                  Please add them to enable daily logs and weekly activity tracking.
+                </p>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+                width: '100%'
+              }}>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setShowPromptModal(false);
+                    setShowForm(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    borderRadius: '12px',
+                    backgroundColor: studentDesign.colors.primary,
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(37, 99, 235, 0.2)',
+                  }}
+                >
+                  Add Supervisor Details Now
+                </motion.button>
+                
+                <button
+                  onClick={() => {
+                    setShowPromptModal(false);
+                    sessionStorage.setItem('dismissedSupervisorPrompt', 'true');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    border: '1px solid #E2E8F0',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.color = '#334155'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#64748B'; }}
+                >
+                  Maybe Later
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {showForm && (
+        <CompanyInfoForm 
+          userId={user.id}
+          initialData={user}
+          onClose={() => setShowForm(false)}
+          onSave={(newData) => {
+            setShowForm(false);
+            window.location.reload();
+          }}
+        />
+      )}
     </motion.div>
   );
 };
