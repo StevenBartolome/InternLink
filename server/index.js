@@ -439,7 +439,7 @@ app.post('/admin/update-professor-sections', async (req, res) => {
 });
 
 // Admin Route: Update Student Details
-app.post('/admin/update-student', async (req, res) => {
+app.post(['/api/admin/update-student', '/admin/update-student'], async (req, res) => {
     const { 
         id, 
         firstName, 
@@ -508,7 +508,7 @@ app.post('/admin/update-student', async (req, res) => {
 });
 
 // Admin Route: Update OJT Adviser Details
-app.post('/admin/update-ojt-head', async (req, res) => {
+app.post(['/api/admin/update-ojt-head', '/admin/update-ojt-head'], async (req, res) => {
     const { 
         id, 
         firstName, 
