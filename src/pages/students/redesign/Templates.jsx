@@ -1868,7 +1868,7 @@ const Templates = () => {
       </div>
 
       {/* Central Smart Generator Card */}
-      <div style={{ maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+      <div style={{ width: '100%' }}>
         <div style={{ ...styles.card, background: 'linear-gradient(135deg, #ffffff 0%, #fcfdfd 100%)', minHeight: '300px', padding: '32px', boxSizing: 'border-box' }}>
           <div>
             <div style={{ width: '56px', height: '56px', borderRadius: '14px', backgroundColor: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
