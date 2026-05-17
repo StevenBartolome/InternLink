@@ -31,6 +31,7 @@ export default function UserManagementPage() {
   const [programs, setPrograms] = useState([]);
   const [allSections, setAllSections] = useState([]);
   const [editingHead, setEditingHead] = useState(null); // { id, name, programId, sectionIds }
+  const [editingStudent, setEditingStudent] = useState(null);
   const [expandedHeadId, setExpandedHeadId] = useState(null);
   const [expandedSectionId, setExpandedSectionId] = useState(null);
 
@@ -89,10 +90,23 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleUpdateSections = async () => {
+  const handleUpdateOJTHead = async () => {
     if (!editingHead) return;
     try {
       setLoading(true);
+      // 1. Update basic info in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          first_name: editingHead.firstName,
+          last_name: editingHead.lastName,
+          program_id: editingHead.programId || null
+        })
+        .eq('id', editingHead.id);
+
+      if (userError) throw userError;
+
+      // 2. Update sections assigned via backend route
       const response = await fetch('/api/admin/update-professor-sections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,8 +119,65 @@ export default function UserManagementPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to update sections');
 
-      showToast(`Sections updated for ${editingHead.name}!`, 'success');
+      showToast(`OJT Adviser details updated successfully!`, 'success');
       setEditingHead(null);
+      fetchUsers();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!editingStudent) return;
+    
+    // Validation
+    const cleanStudentId = editingStudent.studentId?.trim();
+    if (!cleanStudentId || cleanStudentId === 'Not Set' || cleanStudentId === 'N/A' || cleanStudentId === 'Not Provided') {
+      showToast('A valid, unique Student ID is required.', 'error');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // 1. Update user first_name, last_name, program_id, and section_id in users table
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ 
+          first_name: editingStudent.firstName, 
+          last_name: editingStudent.lastName,
+          program_id: editingStudent.programId || null,
+          section_id: editingStudent.sectionId || null
+        })
+        .eq('id', editingStudent.id);
+      
+      if (userError) throw userError;
+
+      // 2. Upsert student_profiles (student_id, program_id, section_id)
+      const { error: profileError } = await supabase
+        .from('student_profiles')
+        .upsert({
+          id: editingStudent.id,
+          student_id: cleanStudentId,
+          program_id: editingStudent.programId || null,
+          section_id: editingStudent.sectionId || null
+        });
+
+      if (profileError) throw profileError;
+
+      // 3. Upsert student_internships (current_stage)
+      const { error: internshipError } = await supabase
+        .from('student_internships')
+        .upsert({
+          student_id: editingStudent.id,
+          current_stage: editingStudent.currentStage
+        }, { onConflict: 'student_id' });
+
+      if (internshipError) throw internshipError;
+
+      showToast('Student details updated successfully!', 'success');
+      setEditingStudent(null);
       fetchUsers();
     } catch (err) {
       showToast(err.message, 'error');
@@ -160,9 +231,13 @@ export default function UserManagementPage() {
         return {
           id: s.id,
           name: `${s.first_name} ${s.last_name}`,
+          firstName: s.first_name,
+          lastName: s.last_name,
           email: emailsMap[s.id] || 'Not Provided', // Pulled from backend endpoint
           studentId: profile.student_id || 'Not Set',
           course: profile.programs?.code || 'Not Assigned',
+          programId: profile.program_id,
+          sectionId: profile.section_id,
           section: profile.program_sections?.name || 'Not Assigned',
           currentStage: internship.current_stage || 'PRE_INTERNSHIP',
           status: s.is_active ? 'Active' : 'Inactive',
@@ -182,18 +257,6 @@ export default function UserManagementPage() {
         `)
         .eq('role', 'ojt_head');
 
-      // Fetch Programs and Sections for the modal
-      const { data: progData } = await supabase.from('programs').select('*').order('code');
-      const { data: sectData } = await supabase.from('program_sections').select('*').eq('is_active', true).order('name');
-
-      if (progData) {
-        setPrograms(progData);
-        if (!newHead.programId && progData.length > 0) {
-          setNewHead(p => ({ ...p, programId: progData[0].id, assignedCourse: progData[0].code }));
-        }
-      }
-      if (sectData) setAllSections(sectData);
-
       if (headError) throw headError;
 
       // We might want to count students per head, but for now we will just put N/A or calculate if we fetched all students
@@ -209,6 +272,8 @@ export default function UserManagementPage() {
         return {
           id: h.id,
           name: `${h.first_name} ${h.last_name}`,
+          firstName: h.first_name,
+          lastName: h.last_name,
           email: emailsMap[h.id] || 'Not Provided',
           assignedCourse: h.programs?.code || 'Not Assigned',
           programId: h.programs?.id || '',
@@ -231,11 +296,34 @@ export default function UserManagementPage() {
     } finally {
       setIsFetching(false);
     }
-  }, [newHead.programId]);
+  }, []);
 
   React.useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  React.useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const { data: progData } = await supabase.from('programs').select('*').order('code');
+        const { data: sectData } = await supabase.from('program_sections').select('*').eq('is_active', true).order('name');
+
+        if (progData) {
+          setPrograms(progData);
+          setNewHead(p => {
+            if (!p.programId && progData.length > 0) {
+              return { ...p, programId: progData[0].id, assignedCourse: progData[0].code };
+            }
+            return p;
+          });
+        }
+        if (sectData) setAllSections(sectData);
+      } catch (err) {
+        console.error('Error fetching metadata:', err);
+      }
+    };
+    fetchMetadata();
+  }, []);
 
   const filteredStudents = students.filter(s =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -338,18 +426,39 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* Edit Sections Modal */}
+      {/* Edit OJT Adviser Modal */}
       {editingHead && (
         <div style={s.overlay} onClick={() => setEditingHead(null)}>
           <div style={s.modal} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.1rem', color: theme.colors.textMain }}>Edit Sections: {editingHead.name}</h3>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.1rem', color: theme.colors.textMain }}>Edit OJT Adviser Details</h3>
               <button style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setEditingHead(null)}><X size={20} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>First Name</label>
+                  <input style={s.input} value={editingHead.firstName || ''} onChange={e => setEditingHead(p => ({ ...p, firstName: e.target.value }))} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Last Name</label>
+                  <input style={s.input} value={editingHead.lastName || ''} onChange={e => setEditingHead(p => ({ ...p, lastName: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Assigned Program</label>
+                <select 
+                  style={s.input} 
+                  value={editingHead.programId || ''} 
+                  onChange={e => setEditingHead(p => ({ ...p, programId: e.target.value, sectionIds: [] }))}
+                >
+                  <option value="">Select Program...</option>
+                  {programs.map(p => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
+                </select>
+              </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Assigned Sections</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', border: `1px solid ${theme.colors.border}`, borderRadius: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '10px', border: `1px solid ${theme.colors.border}`, borderRadius: '8px', maxHeight: '150px', overflowY: 'auto' }}>
                   {allSections.filter(sec => sec.program_id === editingHead.programId).map(sec => (
                     <label key={sec.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '4px 8px', backgroundColor: '#f8fafc', borderRadius: '4px', cursor: 'pointer' }}>
                       <input 
@@ -374,7 +483,78 @@ export default function UserManagementPage() {
             </div>
             <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
               <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }} onClick={() => setEditingHead(null)}>Cancel</button>
-              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }} onClick={handleUpdateSections}>
+              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }} onClick={handleUpdateOJTHead}>
+                <Check size={15} /> {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Student Modal */}
+      {editingStudent && (
+        <div style={s.overlay} onClick={() => setEditingStudent(null)}>
+          <div style={s.modal} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.1rem', color: theme.colors.textMain }}>Edit Student Details</h3>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer' }} onClick={() => setEditingStudent(null)}><X size={20} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>First Name</label>
+                  <input style={s.input} value={editingStudent.firstName || ''} onChange={e => setEditingStudent(p => ({ ...p, firstName: e.target.value }))} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Last Name</label>
+                  <input style={s.input} value={editingStudent.lastName || ''} onChange={e => setEditingStudent(p => ({ ...p, lastName: e.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Official Student ID</label>
+                <input style={s.input} value={editingStudent.studentId || ''} onChange={e => setEditingStudent(p => ({ ...p, studentId: e.target.value }))} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Academic Program</label>
+                <select 
+                  style={s.input} 
+                  value={editingStudent.programId || ''} 
+                  onChange={e => setEditingStudent(p => ({ ...p, programId: e.target.value, sectionId: '' }))}
+                >
+                  <option value="">Select Program...</option>
+                  {programs.map(p => <option key={p.id} value={p.id}>{p.code} - {p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Assigned Section</label>
+                <select 
+                  style={s.input} 
+                  value={editingStudent.sectionId || ''} 
+                  onChange={e => setEditingStudent(p => ({ ...p, sectionId: e.target.value }))}
+                >
+                  <option value="">Select Section...</option>
+                  {allSections.filter(sec => sec.program_id === editingStudent.programId).map(sec => (
+                    <option key={sec.id} value={sec.id}>{sec.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: theme.colors.textSecondary, marginBottom: '4px' }}>Internship Stage</label>
+                <select 
+                  style={s.input} 
+                  value={editingStudent.currentStage || ''} 
+                  onChange={e => setEditingStudent(p => ({ ...p, currentStage: e.target.value }))}
+                >
+                  <option value="PRE_INTERNSHIP">Pre-Internship</option>
+                  <option value="DURING_INTERNSHIP">During Internship</option>
+                  <option value="POST_INTERNSHIP">Post-Internship</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
+              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, flex: 1 }} onClick={() => setEditingStudent(null)}>Cancel</button>
+              <button disabled={loading} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, flex: 1 }} onClick={handleUpdateStudent}>
                 <Check size={15} /> {loading ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
@@ -429,7 +609,7 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {isFetching ? (
+              {isFetching && students.length === 0 ? (
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>
                     <Loader2 className="animate-spin mx-auto" size={24} color={theme.colors.primary} />
@@ -462,11 +642,26 @@ export default function UserManagementPage() {
                       <span style={s.badge(student.status === 'Active' ? '#dcfce7' : '#fee2e2', student.status === 'Active' ? '#15803d' : '#dc2626')}>{student.status}</span>
                     </td>
                     <td style={s.td}>
-                      <button title={student.status === 'Active' ? 'Deactivate' : 'Reactivate'}
-                        style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.danger }}
-                        onClick={() => handleToggleStudent(student.id, student.name, student.status)}>
-                        <ShieldAlert size={16} />
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button title="Edit Student"
+                          style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.primary }}
+                          onClick={() => setEditingStudent({
+                            id: student.id,
+                            firstName: student.firstName,
+                            lastName: student.lastName,
+                            studentId: student.studentId,
+                            programId: student.programId,
+                            sectionId: student.sectionId,
+                            currentStage: student.currentStage
+                          })}>
+                          <Edit size={16} />
+                        </button>
+                        <button title={student.status === 'Active' ? 'Deactivate' : 'Reactivate'}
+                          style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.danger }}
+                          onClick={() => handleToggleStudent(student.id, student.name, student.status)}>
+                          <ShieldAlert size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -491,7 +686,7 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody>
-              {isFetching ? (
+              {isFetching && heads.length === 0 ? (
                 <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}><Loader2 className="animate-spin mx-auto" size={24} color={theme.colors.primary} /></td></tr>
               ) : filteredHeads.length === 0 ? (
                 <tr><td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: theme.colors.textMuted }}>No OJT Advisers found.</td></tr>
@@ -516,9 +711,15 @@ export default function UserManagementPage() {
                     </td>
                     <td style={s.td}>
                       <div style={{ display: 'flex', gap: '8px' }} onClick={e => e.stopPropagation()}>
-                        <button title="Edit Sections"
+                        <button title="Edit OJT Adviser"
                           style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.primary }}
-                          onClick={() => setEditingHead({ id: head.id, name: head.name, programId: head.programId, sectionIds: head.sectionIds })}>
+                          onClick={() => setEditingHead({
+                            id: head.id,
+                            firstName: head.firstName,
+                            lastName: head.lastName,
+                            programId: head.programId,
+                            sectionIds: head.sectionIds
+                          })}>
                           <Edit size={16} />
                         </button>
                         <button title={head.status === 'Active' ? 'Deactivate' : 'Reactivate'}
