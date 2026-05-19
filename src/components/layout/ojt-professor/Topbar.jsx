@@ -24,8 +24,6 @@ const Topbar = () => {
       '/ojt-professor/students': 'Student Directory',
       '/ojt-professor/document-review': 'Document Review',
       '/ojt-professor/war-review': 'WAR Review',
-      '/ojt-professor/monitoring': 'Progress Monitoring',
-      '/ojt-professor/completion-validation': 'Completion Validation',
       '/ojt-professor/visit-itinerary': 'Visit Itinerary',
       '/ojt-professor/grades': 'Grade Management',
       '/ojt-professor/reports': 'Reports Dashboard',

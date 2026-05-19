@@ -25,13 +25,11 @@ const Sidebar = () => {
         { label: 'Student Directory', path: '/ojt-professor/students', icon: Users },
         { label: 'Document Review', path: '/ojt-professor/document-review', icon: FileCheck },
         { label: 'WAR Review', path: '/ojt-professor/war-review', icon: BookOpen },
-        { label: 'Progress Monitoring', path: '/ojt-professor/monitoring', icon: Activity },
       ]
     },
     {
       title: 'EVALUATION',
       items: [
-        { label: 'Completion Validation', path: '/ojt-professor/completion-validation', icon: Unlock },
         { label: 'Visit Itinerary', path: '/ojt-professor/visit-itinerary', icon: Map },
         { label: 'Grade Management', path: '/ojt-professor/grades', icon: ClipboardCheck },
       ]

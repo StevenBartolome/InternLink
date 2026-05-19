@@ -1013,7 +1013,13 @@ const runAttendanceReminderEngine = async () => {
                 const hasTodayLog = logs && logs.length > 0;
                 const activeSession = logs && logs.find(l => l.status === 'IN_PROGRESS');
 
-                console.log(`⏰ [Attendance Reminder Engine] Student: ${student.email} | Deployed: true | Shift: ${timeInStr}-${timeOutStr} | Today Logged: ${hasTodayLog} | Clock In Reminded: ${metadata.last_clock_in_reminder_sent === todayStr} | Clock Out Reminded: ${metadata.last_clock_out_reminder_sent === todayStr}`);
+                // Guard: skip if time-in >= time-out (invalid/mis-configured shift)
+                if (timeInStr >= timeOutStr) {
+                    console.warn(`⚠️ [Attendance Reminder Engine] Student ${student.email} has invalid shift times: IN=${timeInStr} OUT=${timeOutStr}. Skipping.`);
+                    continue;
+                }
+
+                console.log(`⏰ [Attendance Reminder Engine] Student: ${student.email} | Shift: ${timeInStr}-${timeOutStr} | Current: ${currentTimeStr} | Today Logged: ${hasTodayLog} | Active Session: ${!!activeSession} | Clock In Reminded Today: ${metadata.last_clock_in_reminder_sent === todayStr} | Clock Out Reminded Today: ${metadata.last_clock_out_reminder_sent === todayStr}`);
 
                 // ── CASE 1: CLOCK-IN REMINDER ──
                 if (!hasTodayLog && currentTimeStr >= timeInStr && currentTimeStr < timeOutStr && metadata.last_clock_in_reminder_sent !== todayStr) {
