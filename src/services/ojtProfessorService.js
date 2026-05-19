@@ -11,11 +11,13 @@ export const ojtProfessorService = {
       .select(`
         id,
         student_id,
-        company:companies(name),
         position,
+        supervisor_name,
+        supervisor_email,
         moa_status,
         is_deployed,
         current_stage,
+        company:companies(id, name, address),
         student:users!student_id (
           first_name,
           last_name,
@@ -23,6 +25,11 @@ export const ojtProfessorService = {
             student_id, 
             program_id,
             section_id,
+            year_level,
+            academic_year,
+            semester,
+            ojt_subject_name,
+            programs(id, name, code),
             program_sections(id, name)
           )
         ),
@@ -77,21 +84,156 @@ export const ojtProfessorService = {
 
       const additionalDocs = additionalMap[item.id] || [];
 
+      // Determine company details from companies relation
+      const companyName = item.company?.name || 'Not Applied';
+      const companyAddress = item.company?.address || 'Not Provided';
+
+      // Determine program / course details from programs relation
+      const course = profileData?.programs?.code || 'Not Set';
+      const courseFullName = profileData?.programs?.name || 'Not Set';
+
       return {
         internshipId: item.id,
         studentId: item.student_id,
         programId: profileData?.program_id,
         studentNo: profileData?.student_id || 'Not Set',
         studentName: `${item.student?.first_name} ${item.student?.last_name}`,
-        company: item.company?.name || 'Not Applied',
-        position: item.position,
+        firstName: item.student?.first_name,
+        lastName: item.student?.last_name,
+        company: companyName,
+        companyName: companyName,
+        companyAddress: companyAddress,
+        position: item.position || 'Not Assigned',
+        supervisorName: item.supervisor_name || 'Not Assigned',
+        supervisorEmail: item.supervisor_email || 'Not Provided',
         moaStatus: item.moa_status,
         deploymentApproved: item.is_deployed,
         sectionId: profileData?.section_id,
         sectionName: profileData?.program_sections?.name || 'Not Assigned',
+        course: course,
+        courseFullName: courseFullName,
+        yearLevel: profileData?.year_level || 'Not Set',
+        academicYear: profileData?.academic_year || 'Not Set',
+        semester: profileData?.semester || 'Not Set',
+        ojtSubjectName: profileData?.ojt_subject_name || 'Not Set',
+        contactNumber: 'Not Set',
         docs: [...standardDocs, ...additionalDocs]
       };
     });
+  },
+
+  /**
+   * Upload and attach the generated MOA PDF to the student, then update MOA status to PROCESSED
+   */
+  async attachMOAPDF(internshipId, fileUrl, reviewerId) {
+    // 1. Check if there's an existing pre_internship_documents entry with "moa" in the name
+    const { data: existingDocs, error: fetchError } = await supabase
+      .from('pre_internship_documents')
+      .select('*')
+      .eq('internship_id', internshipId);
+
+    if (fetchError) throw fetchError;
+
+    const moaDoc = (existingDocs || []).find(d => 
+      d.document_name.toLowerCase().includes('moa') || 
+      d.document_name.toLowerCase().includes('memorandum of agreement')
+    );
+
+    let docRecord;
+    if (moaDoc) {
+      // Update existing document
+      const { data, error } = await supabase
+        .from('pre_internship_documents')
+        .update({
+          file_url: fileUrl,
+          status: 'APPROVED',
+          submitted_at: new Date().toISOString(),
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: reviewerId,
+          reviewer_comment: 'MOA dynamically generated and signed by OJT Adviser.'
+        })
+        .eq('id', moaDoc.id)
+        .select();
+
+      if (error) throw error;
+      docRecord = data[0];
+    } else {
+      // Check additional requirements
+      const { data: existingAdd } = await supabase
+        .from('additional_requirements')
+        .select('*')
+        .eq('internship_id', internshipId);
+
+      const addMoaDoc = (existingAdd || []).find(d => 
+        d.document_name.toLowerCase().includes('moa') || 
+        d.document_name.toLowerCase().includes('memorandum of agreement')
+      );
+
+      if (addMoaDoc) {
+        // Update existing additional requirement
+        const { data, error } = await supabase
+          .from('additional_requirements')
+          .update({
+            file_url: fileUrl,
+            status: 'APPROVED',
+            submitted_at: new Date().toISOString(),
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: reviewerId,
+            reviewer_comment: 'MOA dynamically generated and signed by OJT Adviser.'
+          })
+          .eq('id', addMoaDoc.id)
+          .select();
+
+        if (error) throw error;
+        docRecord = data[0];
+      } else {
+        // Create new standard requirement
+        const { data, error } = await supabase
+          .from('pre_internship_documents')
+          .insert({
+            internship_id: internshipId,
+            document_name: 'Memorandum of Agreement (MOA)',
+            file_url: fileUrl,
+            status: 'APPROVED',
+            submitted_at: new Date().toISOString(),
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: reviewerId,
+            reviewer_comment: 'MOA dynamically generated and signed by OJT Adviser.'
+          })
+          .select();
+
+        if (error) throw error;
+        docRecord = data[0];
+      }
+    }
+
+    // 2. Automatically update MOA Status to PROCESSED
+    await this.updateMOAStatus(internshipId, 'PROCESSED');
+
+    // 3. Save to the new student_moas database table
+    try {
+      const { data: studentInfo } = await supabase
+        .from('student_internships')
+        .select('student_id')
+        .eq('id', internshipId)
+        .single();
+      
+      if (studentInfo) {
+        await supabase
+          .from('student_moas')
+          .upsert({
+            internship_id: internshipId,
+            student_id: studentInfo.student_id,
+            file_url: fileUrl,
+            uploaded_by: reviewerId,
+            uploaded_at: new Date().toISOString()
+          }, { onConflict: 'internship_id' });
+      }
+    } catch (dbErr) {
+      console.error('Failed to write to student_moas database table:', dbErr);
+    }
+
+    return docRecord;
   },
 
   /**
@@ -221,8 +363,13 @@ export const ojtProfessorService = {
         student_internships!internship_id (
           id,
           student:users!student_id (
+            id,
             first_name,
-            last_name
+            last_name,
+            student_profiles (
+              section_id,
+              program_sections ( id, name )
+            )
           )
         )
       `)
@@ -233,19 +380,27 @@ export const ojtProfessorService = {
       throw error;
     }
 
-    return (data || []).map(war => ({
-      id: war.id,
-      weekNumber: war.week_number,
-      weekLabel: war.week_label,
-      summary: war.summary,
-      skillsLearned: war.skills_learned,
-      challenges: war.challenges,
-      status: war.status,
-      fileUrl: war.file_url || null,
-      comment: war.reviewer_comment || '',
-      submittedAt: new Date(war.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      studentName: war.student_internships ? `${war.student_internships.student?.first_name} ${war.student_internships.student?.last_name}` : 'Unknown Student'
-    }));
+    return (data || []).map(war => {
+      const student = war.student_internships?.student || {};
+      const profile = Array.isArray(student.student_profiles) ? student.student_profiles[0] : student.student_profiles || {};
+
+      return {
+        id: war.id,
+        weekNumber: war.week_number,
+        weekLabel: war.week_label,
+        summary: war.summary,
+        skillsLearned: war.skills_learned,
+        challenges: war.challenges,
+        status: war.status,
+        fileUrl: war.file_url || null,
+        comment: war.reviewer_comment || '',
+        submittedAt: new Date(war.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        studentId: student.id || 'unknown',
+        studentName: student.first_name ? `${student.first_name} ${student.last_name}` : 'Unknown Student',
+        sectionId: profile?.section_id || 'unassigned',
+        sectionName: profile?.program_sections?.name || 'Not Assigned'
+      };
+    });
   },
 
   /**

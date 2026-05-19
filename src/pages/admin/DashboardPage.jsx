@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText, Bell } from 'lucide-react';
+import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText } from 'lucide-react';
 import { dashboardStats, auditLogs, systemReports } from '../../services/mocks/adminMockData';
 import StatCard from '../../components/common/StatCard';
 import { theme } from '../../styles/theme';
@@ -111,7 +111,7 @@ const DashboardPage = () => {
 
   const handleVerifyAccounts = () => navigate('/admin/users');
   const handleViewReports = () => navigate('/admin/reports');
-  const handleBroadcast = () => navigate('/admin/notifications');
+
 
   const handleViewAllActivity = () => navigate('/admin/audit-logs');
 
@@ -365,16 +365,7 @@ const DashboardPage = () => {
           >
             <FileText size={18} /> View Reports
           </motion.button>
-          <motion.button 
-            whileHover={{ scale: 1.03, y: -2 }}
-            whileTap={{ scale: 0.98 }}
-            style={styles.actionBtn('broadcast', 'primary')}
-            onMouseEnter={() => setHoveredAction('broadcast')}
-            onMouseLeave={() => setHoveredAction(null)}
-            onClick={handleBroadcast}
-          >
-            <Bell size={18} /> Broadcast Announcement
-          </motion.button>
+
         </div>
       </motion.div>
 

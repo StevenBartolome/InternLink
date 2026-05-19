@@ -1,7 +1,7 @@
 // src/pages/ojt-professor/DocumentReviewPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { ojtProfessorService } from '../../services/ojtProfessorService';
@@ -10,6 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import Toast from '../../components/common/Toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import PageLoader from '../../components/common/PageLoader';
+import { jsPDF } from 'jspdf';
+import { supabase } from '../../services/supabaseClient';
 
 const DOC_STATUS = {
   APPROVED: { label: 'Approved', color: '#16a34a', bg: '#dcfce7', icon: <CheckCircle size={13} /> },
@@ -32,6 +34,189 @@ export default function DocumentReviewPage() {
   const [rejectComment, setRejectComment] = useState({});
   const [localToast, setLocalToast] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, onConfirm: null, title: '', message: '' });
+
+  const [moaModal, setMoaModal] = useState({
+    isOpen: false,
+    student: null,
+    details: {
+      universityName: 'National University Baliwag',
+      adviserName: '',
+      studentName: '',
+      studentNo: '',
+      courseFullName: '',
+      companyName: '',
+      companyAddress: '',
+      supervisorName: '',
+      position: '',
+      dateString: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    }
+  });
+  const [generatingMOA, setGeneratingMOA] = useState(false);
+  const [logoBase64, setLogoBase64] = useState('');
+  
+  // AI Signature Checker State
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiReport, setAiReport] = useState(null);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [pendingMOA, setPendingMOA] = useState(null); // { student, file }
+  const [scanProgress, setScanProgress] = useState(0);
+  const [scanLog, setScanLog] = useState('');
+
+  useEffect(() => {
+    // Pre-fetch NU Logo and convert to base64 for jsPDF rendering
+    const loadLogo = async () => {
+      try {
+        const response = await fetch('/nu-logo.png');
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoBase64(reader.result);
+        };
+        reader.readAsDataURL(blob);
+      } catch (err) {
+        console.error('Failed to pre-fetch logo for PDF:', err);
+      }
+    };
+    loadLogo();
+  }, []);
+
+  const handleOpenMOAGenerator = (student) => {
+    setMoaModal({
+      isOpen: true,
+      student: student,
+      details: {
+        universityName: 'National University Baliwag',
+        adviserName: user ? `${user.first_name} ${user.last_name}` : '',
+        studentName: student.studentName || '',
+        studentNo: student.studentNo || '',
+        courseFullName: student.courseFullName && student.courseFullName !== 'Not Set' ? student.courseFullName : (student.course || ''),
+        companyName: student.company && student.company !== 'Not Applied' ? student.company : '',
+        companyAddress: student.companyAddress && student.companyAddress !== 'Not Provided' ? student.companyAddress : '',
+        supervisorName: student.supervisorName && student.supervisorName !== 'Not Assigned' ? student.supervisorName : '',
+        position: student.position && student.position !== 'Not Assigned' ? student.position : '',
+        dateString: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      }
+    });
+  };
+
+  const generatePDFInstance = (details) => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'letter'
+    });
+
+    // 1. Draw CCIT Premium Letterhead
+    // Top-right Document Code
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(0, 0, 0);
+    doc.text('CCIT-FO-015', 195, 18, { align: 'right' });
+
+    // Draw Logo on the header
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 20, 7, 55.8, 18);
+      } catch (e) {
+        console.error('Error drawing image on PDF:', e);
+      }
+    }
+
+    // Gold separator line
+    doc.setFillColor(253, 200, 47); // Gold
+    doc.rect(20, 28, 175, 1.2, 'F');
+
+    // Document Title
+    doc.setFont('Times', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('MEMORANDUM OF AGREEMENT', 107.95, 42, { align: 'center' });
+    
+    doc.setFontSize(11);
+    doc.text('STUDENT INTERNSHIP PROGRAM', 107.95, 48, { align: 'center' });
+
+    doc.setFont('Times', 'normal');
+    doc.setFontSize(10.5);
+
+    const introText = `KNOWN ALL MEN BY THESE PRESENTS:\n\n` +
+      `This Memorandum of Agreement is made and entered into this ${details.dateString || '_______'}, by and between:\n\n` +
+      `The FIRST PARTY: ${details.universityName || '_______'}, an educational institution, represented by its OJT Adviser / Coordinator, ${details.adviserName || '_______'};\n\n` +
+      `The SECOND PARTY: ${details.companyName || 'Host Training Establishment'}, a company organized under laws, with office address at ${details.companyAddress || 'N/A'}, represented by its Supervisor / Representative, ${details.supervisorName || 'N/A'};\n\n` +
+      `and\n\n` +
+      `The STUDENT INTERN: ${details.studentName || '_______'}, a student currently enrolled in ${details.courseFullName || '_______'} (Student ID: ${details.studentNo || 'N/A'}).\n\n` +
+      `WITNESSETH THAT:\n\n` +
+      `WHEREAS, the FIRST PARTY has established a Student Internship Program designed to provide students with practical, hands-on training to supplement their academic curriculum;\n\n` +
+      `WHEREAS, the SECOND PARTY is willing to admit the STUDENT INTERN into their establishment as a ${details.position || 'Intern'} to undergo training under supervised conditions;\n\n` +
+      `NOW, THEREFORE, for and in consideration of the foregoing premises, the parties hereto agree as follows:\n\n` +
+      `1. DURATION: The internship training shall commence on the date of deployment and shall continue until the required internship hours are fully rendered.\n` +
+      `2. ROLES AND RESPONSIBILITIES: The FIRST PARTY shall provide academic direction, evaluate the student's reports, and assign grades. The SECOND PARTY shall provide safe working conditions, relevant tasks matching the student's program, and designated supervisor guidance. The STUDENT INTERN shall adhere to all company regulations, maintain absolute confidentiality, and complete the tasks assigned with due diligence.\n` +
+      `3. COMPLIANCE: The student and parties shall follow all guidelines of the Commission on Higher Education (CHED) regarding student internship programs.\n\n` +
+      `IN WITNESS WHEREOF, the parties hereunto set their hands on this agreement.`;
+
+    const splitText = doc.splitTextToSize(introText, 175);
+    doc.text(splitText, 20, 58);
+
+    const ySignatures = 212;
+    doc.setFont('Times', 'bold');
+    doc.text('FIRST PARTY (University):', 20, ySignatures);
+    doc.text('SECOND PARTY (Company):', 120, ySignatures);
+
+    doc.setLineWidth(0.25);
+    doc.line(20, ySignatures + 14, 80, ySignatures + 14);
+    doc.line(120, ySignatures + 14, 180, ySignatures + 14);
+
+    doc.setFont('Times', 'normal');
+    doc.text(details.adviserName || '_______', 20, ySignatures + 18);
+    doc.setFontSize(8.5);
+    doc.text('OJT Adviser / Coordinator', 20, ySignatures + 22);
+
+    doc.setFont('Times', 'normal');
+    doc.setFontSize(10.5);
+    doc.text(details.supervisorName || 'Representative', 120, ySignatures + 18);
+    doc.setFontSize(8.5);
+    doc.text('Host Supervisor / Representative', 120, ySignatures + 22);
+
+    doc.setFont('Times', 'bold');
+    doc.setFontSize(10.5);
+    doc.text('STUDENT INTERN:', 70, ySignatures + 32);
+    doc.line(70, ySignatures + 44, 140, ySignatures + 44);
+    doc.setFont('Times', 'normal');
+    doc.text(details.studentName || '_______', 70, ySignatures + 48);
+    doc.setFontSize(8.5);
+    doc.text('Student Intern', 70, ySignatures + 52);
+
+    // 2. Draw CCIT Premium Footer
+    doc.setFillColor(253, 200, 47); // Gold
+    doc.rect(20, 258, 175, 1.2, 'F');
+
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text('SM Baliwag Complex, Dona Remedios Trinidad Highway, Brgy. Pagala, Baliuag, Bulacan.', 20, 263);
+    doc.text('Tel: +639190814635 | Website: www.national-u.edu.ph/nu-baliwag', 20, 266);
+
+    doc.setFont('Georgia', 'italic');
+    doc.setFontSize(11);
+    doc.setTextColor(29, 45, 91);
+    doc.text('Education that works.', 195, 264, { align: 'right' });
+
+    return doc;
+  };
+
+  const handleDownloadMOAPDF = () => {
+    const { student, details } = moaModal;
+    if (!student) return;
+    try {
+      const doc = generatePDFInstance(details);
+      doc.save(`MOA_${details.studentName.replace(/\s+/g, '_')}.pdf`);
+      notify('MOA exported as PDF successfully!', 'success');
+    } catch (err) {
+      console.error('Error downloading MOA:', err);
+      notify('Failed to export PDF locally.', 'error');
+    }
+  };
+
+
 
   const [selectedSection, setSelectedSection] = useState('All');
   const [availableSections, setAvailableSections] = useState([]);
@@ -69,16 +254,16 @@ export default function DocumentReviewPage() {
     fetchQueue();
   }, []);
 
-  const fetchQueue = async () => {
+  const fetchQueue = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await ojtProfessorService.getDocumentQueue();
       setQueue(data);
     } catch (err) {
       console.error('Error fetching document queue:', err);
       notify('Failed to load document queue.', 'error');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -116,6 +301,96 @@ export default function DocumentReviewPage() {
       console.error('Error updating MOA status:', err);
       notify('Failed to update MOA status.', 'error');
     }
+  };
+
+  // Direct MOA upload method (no AI signature check)
+  const handleMOAUpload = async (student, file) => {
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      notify('Please select a valid PDF document.', 'error');
+      return;
+    }
+
+    try {
+      notify(`Uploading Signed MOA for ${student.studentName}...`, 'info');
+      const fileName = `moa-${student.studentId}-${Date.now()}.pdf`;
+
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result.split(',')[1];
+
+          const response = await fetch('/api/professor/upload-signed-moa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              internshipId: student.internshipId,
+              fileName,
+              fileBase64: base64Data,
+              reviewerId: user?.id
+            })
+          });
+
+          const resData = await response.json();
+          if (!response.ok) {
+            throw new Error(resData.error || 'Server upload failed');
+          }
+
+          // Refresh document queue silently to update the view without flickering
+          await fetchQueue(true);
+          notify(`✅ Signed MOA successfully uploaded and processed!`, 'success');
+        } catch (uploadErr) {
+          console.error('Upload request error:', uploadErr);
+          notify('Failed to upload signed MOA: ' + uploadErr.message, 'error');
+        }
+      };
+      reader.onerror = (readErr) => {
+        console.error('FileReader error:', readErr);
+        notify('Failed to read signed MOA file.', 'error');
+      };
+    } catch (err) {
+      console.error('Error initiating upload:', err);
+      notify('Failed to upload signed MOA.', 'error');
+    }
+  };
+
+  // Unsubmit MOA trigger
+  const handleUnsubmitMOA = (student) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Unsubmit Student MOA',
+      message: `Are you sure you want to unsubmit the MOA for ${student.studentName}? This will reset their MOA status to PENDING and clear their pre-internship checklist document record, allowing you to upload a new signed copy.`,
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          notify(`Resetting MOA status for ${student.studentName}...`, 'info');
+          
+          const response = await fetch('/api/professor/unsubmit-moa', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              internshipId: student.internshipId
+            })
+          });
+
+          const resData = await response.json();
+          if (!response.ok) {
+            throw new Error(resData.error || 'Unsubmit failed');
+          }
+
+          await fetchQueue(true);
+          notify(`✅ MOA unsubmitted successfully! The status has been reset.`, 'success');
+        } catch (err) {
+          console.error('Error unsubmitting MOA:', err);
+          notify('Failed to unsubmit MOA: ' + err.message, 'error');
+        }
+      }
+    });
   };
 
   const handleDeploy = async (studentId, internshipId, studentName) => {
@@ -393,6 +668,7 @@ export default function DocumentReviewPage() {
           const pendingCount = student.docs.filter(d => d.status === 'PENDING').length;
           const approvedCount = student.docs.filter(d => d.status === 'APPROVED').length;
           const allApproved = student.docs.length > 0 && approvedCount === student.docs.length;
+          const hasCompletedPreInternship = student.docs.length > 0 && student.docs.filter(d => !d.name.toLowerCase().includes('moa') && !d.name.toLowerCase().includes('memorandum of agreement')).every(d => d.status === 'APPROVED');
           const canDeploy = allApproved && student.moaStatus === 'PROCESSED' && !student.deploymentApproved;
 
           return (
@@ -595,12 +871,130 @@ export default function DocumentReviewPage() {
 
                   {/* MOA + Deploy section */}
                   <div style={{ display: 'flex', gap: '16px', marginTop: '24px', flexWrap: 'wrap' }}>
-                    <div style={{ ...commonStyles.dashboardCard, padding: '16px', flex: 1, minWidth: '200px', backgroundColor: '#fff' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.colors.textMuted, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>MOA Status</div>
-                      <select value={student.moaStatus} onChange={e => handleMOAChange(student.studentId, student.internshipId, e.target.value)}
-                        style={{ ...commonStyles.input, width: '100%', fontWeight: 700, color: MOA_COLORS[student.moaStatus], borderRadius: '10px' }}>
-                        {MOA_OPTS.map(o => <option key={o} value={o}>{MOA_LABELS[o]}</option>)}
-                      </select>
+                    <div style={{ ...commonStyles.dashboardCard, padding: '16px', flex: 1, minWidth: '200px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>MOA Status</div>
+                        {hasCompletedPreInternship ? (
+                          <button
+                            onClick={() => handleOpenMOAGenerator(student)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: theme.colors.primary,
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: 0
+                            }}
+                          >
+                            <FileText size={12} /> Generate MOA
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, fontWeight: 700 }} title="All pre-internship checklist items must be approved first.">
+                            Checklist Incomplete
+                          </span>
+                        )}
+                      </div>
+                      {student.moaStatus === 'PROCESSED' ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a' }}>
+                            <CheckCircle size={16} />
+                            <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>SIGNED MOA UPLOADED</span>
+                          </div>
+                          {student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement'))?.fileUrl && (
+                            <a 
+                              href={student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement')).fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                ...commonStyles.dashboardBtn,
+                                ...commonStyles.dashboardBtnSecondary,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                padding: '8px 12px',
+                                fontSize: '0.78rem',
+                                textDecoration: 'none',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '10px',
+                                backgroundColor: '#fff',
+                                color: theme.colors.textMain,
+                                fontWeight: 700
+                              }}
+                            >
+                              <Eye size={14} /> View Uploaded MOA
+                            </a>
+                          )}
+                          <button
+                            onClick={() => handleUnsubmitMOA(student)}
+                            style={{
+                              ...commonStyles.dashboardBtn,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              padding: '8px 12px',
+                              fontSize: '0.78rem',
+                              border: '1px solid #fca5a5',
+                              borderRadius: '10px',
+                              backgroundColor: '#fee2e2',
+                              color: '#b91c1c',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fecaca';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#fee2e2';
+                            }}
+                          >
+                            <RefreshCw size={14} /> Unsubmit MOA
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                          <label 
+                            style={{
+                              ...commonStyles.dashboardBtn,
+                              ...commonStyles.dashboardBtnPrimary,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem',
+                              fontWeight: 800,
+                              padding: '10px 14px',
+                              borderRadius: '12px',
+                              backgroundColor: theme.colors.primary,
+                              color: '#fff',
+                              boxShadow: '0 2px 8px rgba(29, 45, 91, 0.25)',
+                              transition: 'all 0.2s ease',
+                              margin: 0
+                            }}
+                          >
+                            <Upload size={14} /> Upload Signed MOA (PDF)
+                            <input 
+                              type="file" 
+                              accept=".pdf"
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) handleMOAUpload(student, file);
+                              }}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                          <span style={{ fontSize: '0.68rem', color: theme.colors.textMuted, textAlign: 'center', fontStyle: 'italic' }}>
+                            Upload signed copy to automatically update status to Processed.
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {!student.deploymentApproved && (
@@ -783,6 +1177,368 @@ export default function DocumentReviewPage() {
         title={confirmModal.title}
         message={confirmModal.message}
       />
+
+      {moaModal.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '24px',
+            width: '100%',
+            maxWidth: '1200px',
+            height: '90vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            border: `1px solid ${theme.colors.border}`,
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '24px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: theme.colors.bgSecondary
+            }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: theme.colors.textMain }}>
+                  Generate Memorandum of Agreement (MOA)
+                </h2>
+                <p style={{ margin: '4px 0 0', color: theme.colors.textMuted, fontSize: '0.85rem' }}>
+                  Customize student details, download the PDF agreement, and attach it to the student.
+                </p>
+              </div>
+              <button 
+                onClick={() => setMoaModal(prev => ({ ...prev, isOpen: false }))} 
+                style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', backgroundColor: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: theme.shadows.sm }}
+              >
+                <XCircle size={24} color={theme.colors.textMuted} />
+              </button>
+            </div>
+
+            {/* Modal Content - Dual Panel */}
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: '100%' }}>
+              {/* Left Panel - Forms (Scrollable) */}
+              <div style={{
+                flex: '1 1 450px',
+                height: '100%',
+                padding: '24px',
+                overflowY: 'auto',
+                borderRight: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.bgSecondary,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '1rem', fontWeight: 800, color: theme.colors.primary, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Contract Details
+                </h3>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* University Representative Details */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>FIRST PARTY (UNIVERSITY NAME)</label>
+                    <input 
+                      type="text" 
+                      value={moaModal.details.universityName} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, universityName: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>OJT ADVISER / REPRESENTATIVE NAME</label>
+                    <input 
+                      type="text" 
+                      value={moaModal.details.adviserName} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, adviserName: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+
+                  {/* Student Details */}
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>STUDENT NAME</label>
+                      <input 
+                        type="text" 
+                        value={moaModal.details.studentName} 
+                        onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, studentName: e.target.value } }))}
+                        style={commonStyles.input}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>STUDENT ID</label>
+                      <input 
+                        type="text" 
+                        value={moaModal.details.studentNo} 
+                        onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, studentNo: e.target.value } }))}
+                        style={commonStyles.input}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>COURSE / PROGRAM FULL NAME</label>
+                    <input 
+                      type="text" 
+                      value={moaModal.details.courseFullName} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, courseFullName: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+
+                  {/* Company Details */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>SECOND PARTY (COMPANY / ESTABLISHMENT NAME)</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Google Philippines Inc."
+                      value={moaModal.details.companyName} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, companyName: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>COMPANY ADDRESS</label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g. BGC, Taguig City, Metro Manila"
+                      value={moaModal.details.companyAddress} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, companyAddress: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+
+                  {/* Supervisor & Placement Details */}
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>SUPERVISOR NAME</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. John Smith"
+                        value={moaModal.details.supervisorName} 
+                        onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, supervisorName: e.target.value } }))}
+                        style={commonStyles.input}
+                      />
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>INTERN POSITION</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Software Engineer Intern"
+                        value={moaModal.details.position} 
+                        onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, position: e.target.value } }))}
+                        style={commonStyles.input}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Agreement Date */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted }}>DATE OF AGREEMENT</label>
+                    <input 
+                      type="text" 
+                      value={moaModal.details.dateString} 
+                      onChange={e => setMoaModal(prev => ({ ...prev, details: { ...prev.details, dateString: e.target.value } }))}
+                      style={commonStyles.input}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Panel - Live Preview (Scrollable) */}
+              <div style={{
+                flex: '1.2 1 500px',
+                height: '100%',
+                padding: '24px',
+                overflowY: 'auto',
+                backgroundColor: '#cbd5e1',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start'
+              }}>
+                <div style={{
+                  width: '100%',
+                  maxWidth: '750px',
+                  minHeight: '842px', // standard ratio for A4
+                  backgroundColor: '#fff',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  borderRadius: '4px',
+                  padding: '40px 35px',
+                  fontFamily: '"Times New Roman", Times, serif',
+                  color: '#111',
+                  lineHeight: '1.35',
+                  fontSize: '0.82rem',
+                  textAlign: 'justify',
+                  border: '1px solid #94a3b8',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    {/* CCIT Official Letterhead - Logo Only */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '5px' }}>
+                      <img src="/nu-logo.png" alt="NU Logo" style={{ height: '70px', width: '217px', display: 'block', objectFit: 'contain' }} />
+                      <div style={{ fontFamily: 'Arial, sans-serif', fontSize: '9px', fontWeight: 'bold', color: '#000000', marginBottom: '4px' }}>
+                        CCIT-FO-015
+                      </div>
+                    </div>
+                    <div style={{ height: '4px', backgroundColor: '#FDC82F', marginTop: '4px', marginBottom: '20px' }} />
+
+                    {/* Preview Document Head */}
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '2px', letterSpacing: '0.5px' }}>
+                      MEMORANDUM OF AGREEMENT
+                    </div>
+                    <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '0.8rem', marginBottom: '14px', color: '#475569' }}>
+                      STUDENT INTERNSHIP PROGRAM
+                    </div>
+                    <div style={{ borderTop: '1px solid #000', margin: '0 0 16px 0' }} />
+
+                    <p style={{ textIndent: '30px', margin: '0 0 10px 0', fontWeight: 'bold' }}>
+                      KNOWN ALL MEN BY THESE PRESENTS:
+                    </p>
+                    <p style={{ textIndent: '30px', margin: '0 0 12px 0' }}>
+                      This Memorandum of Agreement is made and entered into this <span style={{ borderBottom: '1px solid #111', padding: '0 4px', fontWeight: 'bold', color: theme.colors.primary }}>{moaModal.details.dateString || '_______'}</span>, by and between:
+                    </p>
+                    <p style={{ margin: '0 0 10px 0', textIndent: '30px' }}>
+                      The <strong>FIRST PARTY</strong>: <strong style={{ color: theme.colors.primary }}>{moaModal.details.universityName || '_______'}</strong>, an educational institution, represented by its OJT Adviser / Coordinator, <span style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{moaModal.details.adviserName || '_______'}</span>;
+                    </p>
+                    <p style={{ margin: '0 0 10px 0', textIndent: '30px' }}>
+                      The <strong>SECOND PARTY</strong>: <strong style={{ color: theme.colors.primary }}>{moaModal.details.companyName || '_______'}</strong>, a company organized under laws, with office address at <span style={{ fontStyle: 'italic' }}>{moaModal.details.companyAddress || '_______'}</span>, represented by its Supervisor / Representative, <span style={{ fontWeight: 'bold', textDecoration: 'underline' }}>{moaModal.details.supervisorName || '_______'}</span>;
+                    </p>
+                    <p style={{ textAlign: 'center', margin: '6px 0', fontWeight: 'bold', fontSize: '0.75rem' }}>AND</p>
+                    <p style={{ margin: '0 0 16px 0', textIndent: '30px' }}>
+                      The <strong>STUDENT INTERN</strong>: <strong style={{ color: theme.colors.primary }}>{moaModal.details.studentName || '_______'}</strong>, a student currently enrolled in <span style={{ fontWeight: 'bold' }}>{moaModal.details.courseFullName || '_______'}</span> (Student ID: {moaModal.details.studentNo || 'N/A'}).
+                    </p>
+
+                    <p style={{ fontWeight: 'bold', margin: '0 0 8px 0' }}>WITNESSETH THAT:</p>
+                    <p style={{ textIndent: '30px', margin: '0 0 8px 0' }}>
+                      WHEREAS, the FIRST PARTY has established a Student Internship Program designed to provide students with practical, hands-on training to supplement their academic curriculum;
+                    </p>
+                    <p style={{ textIndent: '30px', margin: '0 0 8px 0' }}>
+                      WHEREAS, the SECOND PARTY is willing to admit the STUDENT INTERN into their establishment as a <span style={{ fontWeight: 'bold', borderBottom: '1px solid #111' }}>{moaModal.details.position || '_______'}</span> to undergo training under supervised conditions;
+                    </p>
+                    <p style={{ textIndent: '30px', margin: '0 0 12px 0' }}>
+                      NOW, THEREFORE, for and in consideration of the foregoing premises, the parties hereto agree as follows:
+                    </p>
+
+                    <ol style={{ paddingLeft: '20px', margin: '0 0 16px 0' }}>
+                      <li style={{ marginBottom: '6px' }}>
+                        <strong>DURATION:</strong> The internship training shall commence on the date of deployment and shall continue until the required internship hours are fully rendered.
+                      </li>
+                      <li style={{ marginBottom: '6px' }}>
+                        <strong>ROLES AND RESPONSIBILITIES:</strong> The FIRST PARTY shall provide academic direction, evaluate the student's reports, and assign grades. The SECOND PARTY shall provide safe working conditions, relevant tasks matching the student's program, and designated supervisor guidance. The STUDENT INTERN shall adhere to all company regulations, maintain absolute confidentiality, and complete the tasks assigned with due diligence.
+                      </li>
+                      <li style={{ marginBottom: '6px' }}>
+                        <strong>COMPLIANCE:</strong> The student and parties shall follow all guidelines of the Commission on Higher Education (CHED) regarding student internship programs.
+                      </li>
+                    </ol>
+
+                    <p style={{ textIndent: '30px', margin: '0 0 20px 0' }}>
+                      IN WITNESS WHEREOF, the parties hereunto set their hands on this agreement.
+                    </p>
+
+                    {/* Signatures Grid */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', flexWrap: 'wrap', gap: '20px' }}>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '28px', fontSize: '0.78rem' }}>FIRST PARTY (University):</div>
+                        <div style={{ borderTop: '1px solid #111', width: '100%', maxWidth: '210px', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{moaModal.details.adviserName || '_______'}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#555' }}>OJT Adviser / Coordinator</div>
+                        </div>
+                      </div>
+                      <div style={{ flex: '1 1 200px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '28px', fontSize: '0.78rem' }}>SECOND PARTY (Company):</div>
+                        <div style={{ borderTop: '1px solid #111', width: '100%', maxWidth: '210px', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{moaModal.details.supervisorName || '_______'}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#555' }}>Host Supervisor / Representative</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
+                      <div style={{ textAlign: 'center', width: '100%', maxWidth: '240px' }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '28px', fontSize: '0.78rem' }}>STUDENT INTERN:</div>
+                        <div style={{ borderTop: '1px solid #111', width: '100%', paddingTop: '4px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.8rem' }}>{moaModal.details.studentName || '_______'}</div>
+                          <div style={{ fontSize: '0.7rem', color: '#555' }}>Student Intern</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CCIT ISO Badges & Compliance Footer */}
+                  <div style={{ borderTop: '4px solid #FDC82F', paddingTop: '12px', marginTop: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <svg width="35" height="35" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <circle cx="50" cy="50" r="45" stroke="#1D2D5B" strokeWidth="4" fill="#FFFFFF"/>
+                        <path d="M30 45 L45 60 L70 35" stroke="#FDC82F" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round"/>
+                        <text x="50" y="82" fontFamily="Arial" fontSize="10" fontWeight="bold" fill="#1D2D5B" textAnchor="middle">ISO 9001</text>
+                      </svg>
+                      <svg width="35" height="35" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+                        <circle cx="50" cy="50" r="45" stroke="#1D2D5B" strokeWidth="4" fill="#FFFFFF"/>
+                        <text x="50" y="42" fontFamily="Arial" fontSize="18" fontWeight="900" fill="#1D2D5B" textAnchor="middle">★★★</text>
+                        <text x="50" y="65" fontFamily="Arial" fontSize="10" fontWeight="bold" fill="#1D2D5B" textAnchor="middle">NU STARS</text>
+                      </svg>
+                    </div>
+                    <div style={{ textAlign: 'center', fontFamily: 'Arial, sans-serif', fontSize: '7.5px', lineHeight: '1.2', color: '#475569' }}>
+                      SM Baliwag Complex, Doña Remedios Trinidad Highway, Brgy. Pagala, Baliuag, Bulacan.<br />
+                      Tel: +639190814635 | Website: www.national-u.edu.ph/nu-baliwag
+                    </div>
+                    <div style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '12px', color: '#1D2D5B', fontWeight: 'bold' }}>
+                      Education that works.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: '20px 24px',
+              borderTop: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.bgSecondary,
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px'
+            }}>
+              <button 
+                onClick={() => setMoaModal(prev => ({ ...prev, isOpen: false }))} 
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary }}
+                disabled={generatingMOA}
+              >
+                Cancel
+              </button>
+              
+              <button 
+                onClick={handleDownloadMOAPDF}
+                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, display: 'flex', alignItems: 'center', gap: '8px', border: `1px solid ${theme.colors.primary}`, color: theme.colors.primary }}
+                disabled={generatingMOA}
+              >
+                <Eye size={16} /> Download Local PDF
+              </button>
+
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -29,6 +29,7 @@ export default function UserManagementPage() {
   const [newHead, setNewHead] = useState({ firstName: '', lastName: '', email: '', assignedCourse: '', programId: '', sectionIds: [] });
   const [isFetching, setIsFetching] = useState(true);
   const [programs, setPrograms] = useState([]);
+  const [selectedProgramId, setSelectedProgramId] = useState('All');
   const [allSections, setAllSections] = useState([]);
   const [editingHead, setEditingHead] = useState(null); // { id, name, programId, sectionIds }
   const [editingStudent, setEditingStudent] = useState(null);
@@ -297,17 +298,21 @@ export default function UserManagementPage() {
     fetchMetadata();
   }, []);
 
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.studentId.includes(searchTerm)
-  );
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.studentId.includes(searchTerm);
+    const matchesProgram = selectedProgramId === 'All' || s.programId === selectedProgramId;
+    return matchesSearch && matchesProgram;
+  });
 
-  const filteredHeads = heads.filter(h =>
-    h.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    h.assignedCourse.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredHeads = heads.filter(h => {
+    const matchesSearch = h.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      h.assignedCourse.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesProgram = selectedProgramId === 'All' || h.programId === selectedProgramId;
+    return matchesSearch && matchesProgram;
+  });
 
   const courses = internshipConfig.map(c => c.course);
 
@@ -563,6 +568,77 @@ export default function UserManagementPage() {
         <input placeholder={tab === 'students' ? 'Search by name, email, or student ID...' : 'Search by name, email, or course...'}
           style={{ border: 'none', outline: 'none', width: '100%', fontSize: '0.9rem', backgroundColor: 'transparent' }}
           value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      </div>
+
+      {/* Program Tab Filter */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter by Program</span>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', overflowX: 'auto', paddingBottom: '4px' }}>
+          <button
+            onClick={() => setSelectedProgramId('All')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '20px',
+              border: `1px solid ${selectedProgramId === 'All' ? theme.colors.primary : theme.colors.border}`,
+              cursor: 'pointer',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              transition: 'all 0.2s',
+              backgroundColor: selectedProgramId === 'All' ? `${theme.colors.primary}10` : '#fff',
+              color: selectedProgramId === 'All' ? theme.colors.primary : theme.colors.textMuted,
+              boxShadow: selectedProgramId === 'All' ? '0 2px 6px rgba(30, 64, 175, 0.08)' : 'none'
+            }}
+            onMouseEnter={e => {
+              if (selectedProgramId !== 'All') {
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.primary;
+              }
+            }}
+            onMouseLeave={e => {
+              if (selectedProgramId !== 'All') {
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textMuted;
+              }
+            }}
+          >
+            All Programs
+          </button>
+          {programs.map(prog => {
+            const isSelected = selectedProgramId === prog.id;
+            return (
+              <button
+                key={prog.id}
+                onClick={() => setSelectedProgramId(prog.id)}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '20px',
+                  border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  transition: 'all 0.2s',
+                  backgroundColor: isSelected ? `${theme.colors.primary}10` : '#fff',
+                  color: isSelected ? theme.colors.primary : theme.colors.textMuted,
+                  boxShadow: isSelected ? '0 2px 6px rgba(30, 64, 175, 0.08)' : 'none'
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!isSelected) {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.textMuted;
+                  }
+                }}
+              >
+                {prog.code}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Students Table */}

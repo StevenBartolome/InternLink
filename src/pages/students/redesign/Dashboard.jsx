@@ -12,6 +12,9 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
 import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
+import { attendanceService } from '../../../services/attendanceService';
+import { studentService } from '../../../services/studentService';
+import { weeklyReportService } from '../../../services/weeklyReportService';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -19,10 +22,38 @@ const Dashboard = () => {
   const [showPromptModal, setShowPromptModal] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
 
+  // Dynamic Metrics States
+  const [logs, setLogs] = React.useState([]);
+  const [documents, setDocuments] = React.useState([]);
+  const [reports, setReports] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
   React.useEffect(() => {
     if (user && user.current_stage === 'DURING_INTERNSHIP' && !user.supervisor_name && !sessionStorage.getItem('dismissedSupervisorPrompt')) {
       setShowPromptModal(true);
     }
+  }, [user]);
+
+  React.useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.internship_id) return;
+      try {
+        setLoading(true);
+        const [fetchedLogs, fetchedDocs, fetchedReports] = await Promise.all([
+          attendanceService.getAttendanceLogs(user.internship_id).catch(() => []),
+          studentService.getPreInternshipDocuments(user.internship_id).catch(() => []),
+          weeklyReportService.getWeeklyReports(user.internship_id).catch(() => [])
+        ]);
+        setLogs(fetchedLogs);
+        setDocuments(fetchedDocs);
+        setReports(fetchedReports);
+      } catch (err) {
+        console.error('Failed to load dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
   }, [user]);
   
   const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
@@ -46,24 +77,50 @@ const Dashboard = () => {
     { label: 'Post-internship', status: getStageStatus(3) }
   ];
 
+  // Compute Metrics dynamically
+  const loggedLogs = logs.filter(l => l.status === 'LOGGED');
+  const uniqueDates = new Set(loggedLogs.map(l => l.log_date));
+  const daysPresent = uniqueDates.size;
+
+  const parseReportHours = (doc) => {
+    if (!doc || !doc.comment) return 0;
+    const match = doc.comment.match(/\[HOURS:([0-9.]+)\]/);
+    return match ? parseFloat(match[1]) : 0;
+  };
+
+  const uploadedReportHours = documents
+    .filter(d => d.name && d.name.startsWith('Signed Attendance Report'))
+    .reduce((sum, d) => sum + parseReportHours(d), 0);
+
+  const requiredHours = user?.required_hours || 486;
+  const remainingHours = Math.max(0, requiredHours - uploadedReportHours);
+
+  // WARs calculations
+  const totalWARs = reports.length;
+  const requiredWARs = 12;
+  const remainingWARs = Math.max(0, requiredWARs - totalWARs);
+
+  // Present days calculation
+  const requiredDays = 60;
+
   const metrics = [
     { 
       label: 'Hours rendered', 
-      value: '312 / 486', 
-      progress: (312/486) * 100, 
-      footer: '174 hours remaining' 
+      value: `${uploadedReportHours.toFixed(1)} / ${requiredHours}`, 
+      progress: Math.min(100, (uploadedReportHours / requiredHours) * 100), 
+      footer: `${remainingHours.toFixed(1)} hours remaining` 
     },
     { 
       label: 'WARs submitted', 
-      value: '8 / 12', 
-      progress: (8/12) * 100, 
-      footer: '4 weeks remaining' 
+      value: `${totalWARs} / ${requiredWARs}`, 
+      progress: Math.min(100, (totalWARs / requiredWARs) * 100), 
+      footer: `${remainingWARs} weeks remaining` 
     },
     { 
       label: 'Days present', 
-      value: '39 / 60', 
-      progress: (39/60) * 100, 
-      footer: '1 missed day' 
+      value: `${daysPresent} / ${requiredDays}`, 
+      progress: Math.min(100, (daysPresent / requiredDays) * 100), 
+      footer: `Present: ${daysPresent} days` 
     }
   ];
 

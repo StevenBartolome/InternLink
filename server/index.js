@@ -2,7 +2,7 @@ console.log('--- BACKEND SERVER INITIALIZING ---');
 import express from 'express';
 import cors from 'cors';
 import { supabase, supabaseAdmin } from './database.js';
-// import { sendCredentialsEmail, sendAdminWelcomeEmail } from './emailService.js';
+import { sendCredentialsEmail, sendAdminWelcomeEmail, sendAttendanceReminderEmail } from './emailService.js';
 
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,7 +15,7 @@ const port = process.env.SERVER_PORT || 8080;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Request Logger
 app.use((req, res, next) => {
@@ -722,6 +722,217 @@ app.post(['/api/professor/approve-deployment', '/professor/approve-deployment'],
     }
 });
 
+// Server Route: Upload Signed MOA (Bypasses Storage RLS using supabaseAdmin)
+app.post(['/api/professor/upload-signed-moa', '/professor/upload-signed-moa'], async (req, res) => {
+    const { internshipId, fileName, fileBase64, reviewerId } = req.body;
+    
+    if (!internshipId || !fileName || !fileBase64) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    try {
+        console.log(`[Upload Server] Uploading signed MOA for internshipId: ${internshipId}`);
+        
+        // 1. Decode base64 file content
+        const fileBuffer = Buffer.from(fileBase64, 'base64');
+        const filePath = `pre-internship/${fileName}`;
+
+        // 2. Upload to Supabase Storage using Admin client (bypasses RLS)
+        const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+            .from('documents')
+            .upload(filePath, fileBuffer, {
+                contentType: 'application/pdf',
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // 3. Get Public URL
+        const { data: { publicUrl } } = supabaseAdmin.storage
+            .from('documents')
+            .getPublicUrl(filePath);
+
+        // 4. Update or insert pre_internship_documents
+        const { data: existingDocs, error: fetchError } = await supabaseAdmin
+            .from('pre_internship_documents')
+            .select('*')
+            .eq('internship_id', internshipId);
+
+        if (fetchError) throw fetchError;
+
+        const moaDoc = (existingDocs || []).find(d => 
+            d.document_name.toLowerCase().includes('moa') || 
+            d.document_name.toLowerCase().includes('memorandum of agreement')
+        );
+
+        let docRecord;
+        if (moaDoc) {
+            const { data, error } = await supabaseAdmin
+                .from('pre_internship_documents')
+                .update({
+                    file_url: publicUrl,
+                    status: 'APPROVED',
+                    submitted_at: new Date().toISOString(),
+                    reviewed_at: new Date().toISOString(),
+                    reviewed_by: reviewerId,
+                    reviewer_comment: 'MOA signed and uploaded by OJT Adviser.'
+                })
+                .eq('id', moaDoc.id)
+                .select();
+
+            if (error) throw error;
+            docRecord = data[0];
+        } else {
+            const { data, error } = await supabaseAdmin
+                .from('pre_internship_documents')
+                .insert({
+                    internship_id: internshipId,
+                    document_name: 'Memorandum of Agreement (MOA)',
+                    file_url: publicUrl,
+                    status: 'APPROVED',
+                    submitted_at: new Date().toISOString(),
+                    reviewed_at: new Date().toISOString(),
+                    reviewed_by: reviewerId,
+                    reviewer_comment: 'MOA signed and uploaded by OJT Adviser.'
+                })
+                .select();
+
+            if (error) throw error;
+            docRecord = data[0];
+        }
+
+        // 5. Update internship MOA status to PROCESSED
+        await supabaseAdmin
+            .from('student_internships')
+            .update({ moa_status: 'PROCESSED', updated_at: new Date().toISOString() })
+            .eq('id', internshipId);
+
+        // 6. Save to student_moas database table
+        const { data: studentInfo } = await supabaseAdmin
+            .from('student_internships')
+            .select('student_id')
+            .eq('id', internshipId)
+            .single();
+        
+        if (studentInfo) {
+            await supabaseAdmin
+                .from('student_moas')
+                .upsert({
+                    internship_id: internshipId,
+                    student_id: studentInfo.student_id,
+                    file_url: publicUrl,
+                    uploaded_by: reviewerId,
+                    uploaded_at: new Date().toISOString()
+                }, { onConflict: 'internship_id' });
+        }
+
+        res.json({
+            success: true,
+            publicUrl,
+            docRecord
+        });
+
+    } catch (error) {
+        console.error('[Upload Server] Critical error during MOA upload:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Server Route: Unsubmit/Clear MOA (Bypasses RLS)
+app.post(['/api/professor/unsubmit-moa', '/professor/unsubmit-moa'], async (req, res) => {
+    const { internshipId } = req.body;
+    
+    if (!internshipId) {
+        return res.status(400).json({ error: 'Missing internshipId' });
+    }
+
+    try {
+        console.log(`[Unsubmit Server] Clearing MOA for internshipId: ${internshipId}`);
+
+        // 1. Get the student ID
+        const { data: internship, error: fetchError } = await supabaseAdmin
+            .from('student_internships')
+            .select('student_id')
+            .eq('id', internshipId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+
+        // 2. Delete the record from student_moas table
+        await supabaseAdmin
+            .from('student_moas')
+            .delete()
+            .eq('internship_id', internshipId);
+
+        // 3. Update student_internships moa_status to PENDING
+        await supabaseAdmin
+            .from('student_internships')
+            .update({ moa_status: 'PENDING', updated_at: new Date().toISOString() })
+            .eq('id', internshipId);
+
+        // 4. Find the MOA document in pre_internship_documents and delete it
+        const { data: existingDocs } = await supabaseAdmin
+            .from('pre_internship_documents')
+            .select('*')
+            .eq('internship_id', internshipId);
+
+        const moaDoc = (existingDocs || []).find(d => 
+            d.document_name.toLowerCase().includes('moa') || 
+            d.document_name.toLowerCase().includes('memorandum of agreement')
+        );
+
+        if (moaDoc) {
+            // Delete the document record so it resets the stage checklist
+            await supabaseAdmin
+                .from('pre_internship_documents')
+                .delete()
+                .eq('id', moaDoc.id);
+        }
+
+        res.json({
+            success: true,
+            message: 'MOA successfully unsubmitted'
+        });
+
+    } catch (error) {
+        console.error('[Unsubmit Server] Error unsubmitting MOA:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST API to upload signed attendance report and hours
+app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signed-attendance-report'], async (req, res) => {
+    const { internshipId, fileUrl, hours } = req.body;
+    
+    if (!internshipId || !fileUrl || !hours) {
+        return res.status(400).json({ error: 'Missing required parameters: internshipId, fileUrl, hours' });
+    }
+
+    try {
+        console.log(`[Attendance Report] Inserting signed attendance report for internshipId: ${internshipId}, hours: ${hours}`);
+
+        // Insert into additional_requirements using service role client
+        const { data, error } = await supabaseAdmin
+            .from('additional_requirements')
+            .insert([{
+                internship_id: internshipId,
+                document_name: `Signed Attendance Report (${parseFloat(hours).toFixed(2)} hrs)`,
+                file_url: fileUrl,
+                status: 'APPROVED', // Immediately approved as requested
+                reviewer_comment: `[HOURS:${parseFloat(hours).toFixed(2)}] Approved signed attendance report.`,
+                submitted_at: new Date().toISOString()
+            }])
+            .select();
+
+        if (error) throw error;
+
+        return res.json({ success: true, report: data[0] });
+    } catch (err) {
+        console.error('Failed to save signed attendance report:', err);
+        return res.status(500).json({ error: err.message || 'Failed to save signed attendance report' });
+    }
+});
+
 // Serve static assets from the React build folder
 const buildPath = path.join(__dirname, '../build');
 app.use(express.static(buildPath));
@@ -733,6 +944,125 @@ app.get(/.*/, (req, res) => {
         res.sendFile(path.join(buildPath, 'index.html'));
     }
 });
+
+// Background Worker: Runs immediately on boot and every 5 minutes to deliver Shift Attendance Reminders (Clock-in and Clock-out reminders)
+const runAttendanceReminderEngine = async () => {
+    console.log('⏰ [Attendance Reminder Engine] Checking OJT schedules (Asia/Manila)...');
+    try {
+        // 1. Fetch all auth users
+        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        // 2. Filter for students with active reminders enabled
+        const activeReminderStudents = (users || []).filter(u => {
+            const role = u.user_metadata?.role || u.user_metadata?.userRole || 'student';
+            return role === 'student' && u.user_metadata?.reminders_enabled === true;
+        });
+
+        console.log(`⏰ [Attendance Reminder Engine] Found ${activeReminderStudents.length} students with reminders enabled.`);
+        if (activeReminderStudents.length === 0) return;
+
+        // Get current date/time info in Asia/Manila (Philippine Standard Time)
+        const now = new Date();
+        const todayStr = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).format(now);
+
+        const currentTimeStr = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Manila',
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(now);
+
+        console.log(`⏰ [Attendance Reminder Engine] Manila Time: ${currentTimeStr} | Date: ${todayStr}`);
+
+        for (const student of activeReminderStudents) {
+            try {
+                const metadata = student.user_metadata || {};
+                const timeInStr = metadata.usual_time_in || '08:00';
+                const timeOutStr = metadata.usual_time_out || '17:00';
+
+                // Fetch student internship record to see if they are deployed
+                const { data: internship, error: internError } = await supabaseAdmin
+                    .from('student_internships')
+                    .select('id, is_deployed')
+                    .eq('student_id', student.id)
+                    .maybeSingle();
+
+                if (internError || !internship || !internship.is_deployed) {
+                    console.log(`⏰ [Attendance Reminder Engine] Student ${student.email} is not deployed or has no internship record. Skipping.`);
+                    continue;
+                }
+
+                // Fetch today's logs for this student
+                const { data: logs, error: logsError } = await supabaseAdmin
+                    .from('attendance_logs')
+                    .select('*')
+                    .eq('internship_id', internship.id)
+                    .eq('log_date', todayStr);
+
+                if (logsError) {
+                    console.error(`⏰ [Attendance Reminder Engine] Failed to fetch logs for student ${student.email}:`, logsError);
+                    continue;
+                }
+
+                const hasTodayLog = logs && logs.length > 0;
+                const activeSession = logs && logs.find(l => l.status === 'IN_PROGRESS');
+
+                console.log(`⏰ [Attendance Reminder Engine] Student: ${student.email} | Deployed: true | Shift: ${timeInStr}-${timeOutStr} | Today Logged: ${hasTodayLog} | Clock In Reminded: ${metadata.last_clock_in_reminder_sent === todayStr} | Clock Out Reminded: ${metadata.last_clock_out_reminder_sent === todayStr}`);
+
+                // ── CASE 1: CLOCK-IN REMINDER ──
+                if (!hasTodayLog && currentTimeStr >= timeInStr && currentTimeStr < timeOutStr && metadata.last_clock_in_reminder_sent !== todayStr) {
+                    const email = student.email || student.user_metadata?.email;
+                    const name = `${student.user_metadata?.first_name || ''} ${student.user_metadata?.last_name || ''}`.trim() || 'Student';
+                    
+                    console.log(`✉️ [Attendance Reminder Engine] Sending CLOCK-IN reminder to ${email}...`);
+                    await sendAttendanceReminderEmail(email, name, 'clock_in', timeInStr);
+                    
+                    // Update metadata
+                    await supabaseAdmin.auth.admin.updateUserById(student.id, {
+                        user_metadata: {
+                            ...metadata,
+                            last_clock_in_reminder_sent: todayStr
+                        }
+                    });
+                }
+
+                // ── CASE 2: CLOCK-OUT REMINDER ──
+                if (activeSession && currentTimeStr >= timeOutStr && metadata.last_clock_out_reminder_sent !== todayStr) {
+                    const email = student.email || student.user_metadata?.email;
+                    const name = `${student.user_metadata?.first_name || ''} ${student.user_metadata?.last_name || ''}`.trim() || 'Student';
+                    
+                    console.log(`✉️ [Attendance Reminder Engine] Sending CLOCK-OUT reminder to ${email}...`);
+                    await sendAttendanceReminderEmail(email, name, 'clock_out', timeOutStr);
+                    
+                    // Update metadata
+                    await supabaseAdmin.auth.admin.updateUserById(student.id, {
+                        user_metadata: {
+                            ...metadata,
+                            last_clock_out_reminder_sent: todayStr
+                        }
+                    });
+                }
+
+            } catch (studentErr) {
+                console.error(`Error processing reminder for student ${student.id}:`, studentErr);
+            }
+        }
+    } catch (err) {
+        console.error('Error running Background Attendance Reminder Engine:', err);
+    }
+};
+
+// Run immediately on boot
+setTimeout(runAttendanceReminderEngine, 3000);
+
+// Run every 5 minutes
+setInterval(runAttendanceReminderEngine, 5 * 60 * 1000);
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

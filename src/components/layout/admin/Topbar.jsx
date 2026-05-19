@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Bell, LogOut } from 'lucide-react';
+import { Search, LogOut } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -114,13 +114,7 @@ const Topbar = () => {
           <button style={styles.iconButton}>
             <Search size={20} />
           </button>
-          <motion.button 
-            whileHover={{ backgroundColor: '#F1F5F9' }}
-            style={styles.iconButton}
-            onClick={() => navigate('/admin/notifications')}
-          >
-            <Bell size={20} />
-          </motion.button>
+
           <motion.div 
             whileHover={{ scale: 1.1 }}
             style={styles.avatar}

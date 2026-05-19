@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, Users, BarChart2, ShieldAlert, 
+  LayoutDashboard, Users, BarChart2, 
   Settings, Shield, User, Building2
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
@@ -30,7 +30,6 @@ const Sidebar = () => {
     {
       title: 'SYSTEM',
       items: [
-        { label: 'Notification Center', path: '/admin/notifications', icon: ShieldAlert },
         { label: 'Audit Logs', path: '/admin/audit', icon: Shield },
       ]
     },
