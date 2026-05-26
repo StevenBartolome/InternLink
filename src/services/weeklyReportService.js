@@ -49,8 +49,9 @@ export const weeklyReportService = {
    * Submit/Save a Weekly Activity Report (with optional PDF/image file upload)
    */
   async submitWeeklyReport(reportData, file = null) {
-    const { internship_id, week_number, week_label, summary, skills_learned, challenges } = reportData;
+    const { internship_id, week_number, week_label, summary, skills_learned, challenges, status } = reportData;
     let fileUrl = reportData.file_url || null;
+    const reportStatus = status || 'PENDING';
 
     try {
       // 1. If an actual file is selected, upload it first
@@ -83,7 +84,7 @@ export const weeklyReportService = {
           skills_learned,
           challenges,
           file_url: fileUrl, // Store upload URL
-          status: 'PENDING',
+          status: reportStatus,
           submitted_at: new Date().toISOString()
         }, {
           onConflict: 'internship_id,week_number'

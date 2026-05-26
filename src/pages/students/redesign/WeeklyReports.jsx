@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ClipboardList, 
@@ -12,11 +12,15 @@ import {
   FileText,
   Info,
   Check,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Upload
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
 import { weeklyReportService } from '../../../services/weeklyReportService';
+import { supabase } from '../../../services/supabaseClient';
 import PageLoader from '../../../components/common/PageLoader';
 import Toast from '../../../components/common/Toast';
 
@@ -43,13 +47,53 @@ const WeeklyReports = () => {
   const [summary, setSummary] = useState('');
   const [skillsLearned, setSkillsLearned] = useState('');
   const [challenges, setChallenges] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null); // WAR Upload
+  
+  // File Upload State
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  
+  // Accordion State
+  const [expandedWeeks, setExpandedWeeks] = useState({});
+  const [expandedDates, setExpandedDates] = useState({});
+
   const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   // Active / Selected Report for View details
   const [selectedReport, setSelectedReport] = useState(null);
+
+  // Group activities by Week and Date
+  const groupedActivities = useMemo(() => {
+    if (!activities || activities.length === 0) return {};
+    
+    let startDateStr = user?.start_date;
+    if (!startDateStr) {
+       const sortedActs = [...activities].sort((a,b) => new Date(a.log_date) - new Date(b.log_date));
+       startDateStr = sortedActs[0]?.log_date;
+    }
+    if (!startDateStr) return {};
+
+    const start = new Date(startDateStr + 'T00:00:00');
+    const grouped = {};
+
+    activities.forEach(act => {
+      const actDate = new Date(act.log_date + 'T00:00:00');
+      const diffTime = Math.abs(actDate - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const weekNum = Math.floor(diffDays / 7) + 1;
+
+      const weekKey = `Week ${weekNum}`;
+      if (!grouped[weekKey]) grouped[weekKey] = {};
+      
+      const dateKey = new Date(act.log_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (!grouped[weekKey][dateKey]) grouped[weekKey][dateKey] = [];
+      
+      grouped[weekKey][dateKey].push(act);
+    });
+
+    return grouped;
+  }, [activities, user?.start_date]);
 
   const fetchReports = useCallback(async () => {
     if (!internshipId) return;
@@ -134,7 +178,43 @@ const WeeklyReports = () => {
     }
   };
 
-  // Handle saving the report to the database
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setUploadFile(e.target.files[0]);
+    }
+  };
+
+  const handleUploadSignedWAR = async () => {
+    if (!uploadFile) {
+      setToast({ message: 'Please select a signed report file (PDF or Image) to upload.', type: 'warning' });
+      return;
+    }
+    if (!selectedReport) return;
+
+    try {
+      setUploading(true);
+      const updatedReport = await weeklyReportService.submitWeeklyReport({
+        internship_id: internshipId,
+        week_number: selectedReport.week_number,
+        week_label: selectedReport.week_label || `Week ${selectedReport.week_number}`,
+        summary: selectedReport.summary,
+        skills_learned: selectedReport.skills_learned,
+        challenges: selectedReport.challenges,
+        status: 'PENDING'
+      }, uploadFile);
+
+      setToast({ message: '✅ Signed Weekly Activity Report uploaded and submitted to your OJT Adviser!', type: 'success' });
+      setUploadFile(null);
+      setSelectedReport(updatedReport);
+      await fetchReports();
+    } catch (err) {
+      setToast({ message: 'Failed to upload signed report: ' + err.message, type: 'error' });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Handle saving the draft report to the database
   const handleSubmitReport = async () => {
     if (!summary.trim()) {
       setToast({ message: 'Summary is required to submit report.', type: 'warning' });
@@ -149,22 +229,22 @@ const WeeklyReports = () => {
         week_label: weekLabel || `Week ${weekNumber}`,
         summary,
         skills_learned: skillsLearned,
-        challenges
-      }, selectedFile);
+        challenges,
+        status: 'DRAFT'
+      });
 
-      setToast({ message: `✅ Week ${weekNumber} Weekly Report submitted successfully!`, type: 'success' });
+      setToast({ message: `✅ Week ${weekNumber} Weekly Report generated successfully! Export it to PDF to get signatures.`, type: 'success' });
       setShowGenModal(false);
       
       // Clear fields
       setSummary('');
       setSkillsLearned('');
       setChallenges('');
-      setSelectedFile(null);
       setSelectedActIds([]);
       
       await fetchReports();
     } catch (err) {
-      setToast({ message: 'Failed to submit weekly report: ' + err.message, type: 'error' });
+      setToast({ message: 'Failed to save weekly report: ' + err.message, type: 'error' });
     } finally {
       setSubmitting(false);
     }
@@ -174,138 +254,264 @@ const WeeklyReports = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    let ojtStartDateStr = user?.start_date;
+    if (!ojtStartDateStr) {
+      if (reports && reports.length > 0) {
+        // Find earliest submission date as start date estimate
+        const sortedReports = [...reports].sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+        ojtStartDateStr = sortedReports[0].submitted_at.slice(0, 10);
+      } else {
+        // Default to a date relative to today
+        const today = new Date();
+        today.setDate(today.getDate() - (previewData.weekNumber - 1) * 7);
+        ojtStartDateStr = today.toLocaleDateString('en-CA');
+      }
+    }
+
+    const startOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
+    startOfWeek.setDate(startOfWeek.getDate() + (previewData.weekNumber - 1) * 7);
+
+    const endOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
+    endOfWeek.setDate(endOfWeek.getDate() + previewData.weekNumber * 7 - 1);
+
+    const optionsFormat = { month: 'short', day: '2-digit', year: 'numeric' };
+    const datesCoveredLabel = `${startOfWeek.toLocaleDateString('en-US', optionsFormat)} - ${endOfWeek.toLocaleDateString('en-US', optionsFormat)}`;
+
     printWindow.document.write(`
       <html>
         <head>
-          <title>Weekly Activity Report - ${previewData.weekLabel}</title>
+          <title>CCIT-FO-016 (001) Weekly Activity Report</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-            body {
-              font-family: 'Inter', sans-serif;
-              color: #1e293b;
-              padding: 40px;
-              line-height: 1.6;
+            @page { size: letter portrait; margin: 0; }
+            @media print {
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
-            .header {
-              text-align: center;
-              border-bottom: 3px double #cbd5e1;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              font-size: 24px;
-              font-weight: 800;
+            html, body {
               margin: 0;
-              letter-spacing: -0.5px;
-              color: #1e3a8a;
+              padding: 0;
+              height: 100%;
             }
-            .header p {
-              margin: 5px 0 0 0;
-              font-size: 13px;
-              color: #64748b;
-              text-transform: uppercase;
-              letter-spacing: 1px;
+            body { 
+              font-family: 'Arial', 'Helvetica', sans-serif; 
+              color: #000;
+              font-size: 11px;
+              line-height: 1.3;
+              display: flex;
+              flex-direction: column;
+              min-height: 100vh;
+              padding: 15mm;
+              box-sizing: border-box;
             }
-            .meta-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 15px 30px;
-              margin-bottom: 40px;
-              background-color: #f8fafc;
-              padding: 20px;
-              border-radius: 8px;
-              border: 1px solid #e2e8f0;
+            .page-content {
+              flex: 1;
             }
-            .meta-item {
+            .header-container {
+              display: flex;
+              align-items: center;
+              gap: 15px;
+              margin-bottom: 5px;
+            }
+            .header-logo {
+              height: 60px;
+              width: auto;
+            }
+            .gold-divider {
+              height: 5px;
+              background-color: #F1B82D;
+              border: none;
+              margin: 5px 0 10px 0;
+            }
+            .report-title {
+              text-align: center;
               font-size: 14px;
-            }
-            .meta-item strong {
-              color: #475569;
-              display: inline-block;
-              width: 130px;
-            }
-            .section {
-              margin-bottom: 35px;
-            }
-            .section-title {
-              font-size: 14px;
-              font-weight: 800;
-              color: #1e3a8a;
-              border-bottom: 2px solid #e2e8f0;
-              padding-bottom: 6px;
-              margin-bottom: 12px;
-              text-transform: uppercase;
+              font-weight: bold;
+              color: #000;
+              margin: 10px 0 10px 0;
               letter-spacing: 0.5px;
             }
-            .section-content {
-              font-size: 15px;
-              color: #334155;
-              white-space: pre-wrap;
-              text-align: justify;
+            .metadata-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 10px;
             }
-            .signatures {
-              margin-top: 60px;
-              display: grid;
-              grid-template-columns: 1fr 1fr 1fr;
-              gap: 30px;
-              text-align: center;
+            .metadata-table td {
+              padding: 6px 10px;
+              border: 1px solid #000;
+              font-size: 11px;
             }
-            .sig-line {
-              border-top: 1px solid #94a3b8;
-              margin-top: 50px;
-              padding-top: 8px;
-              font-size: 12px;
-              font-weight: 600;
-              color: #475569;
+            .metadata-label {
+              font-weight: bold;
+              width: 15%;
             }
-            @media print {
-              body { padding: 0; }
-              .meta-grid { background-color: #ffffff !important; border: 1px solid #cbd5e1; }
+            .day-box {
+              border: 1px solid #000;
+              margin-bottom: 10px;
+            }
+            .day-header {
+              display: flex;
+              border-bottom: 1px solid #000;
+              font-size: 11px;
+            }
+            .day-header-item {
+              padding: 6px;
+              width: 50%;
+              font-weight: bold;
+            }
+            .day-header-item:first-child {
+              border-right: 1px solid #000;
+            }
+            .day-content {
+              padding: 10px;
+              font-size: 11px;
+              line-height: 1.6;
+            }
+            .day-content-field {
+              margin-bottom: 6px;
+            }
+            .signatures-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: auto;
+            }
+            .signatures-table td {
+              border: 1px solid #000;
+              padding: 10px;
+              font-size: 11px;
+              vertical-align: middle;
+            }
+            .sig-label {
+              font-weight: bold;
+              width: 20%;
+            }
+            .sig-date {
+              width: 25%;
+              vertical-align: top !important;
+              height: 40px;
+              padding: 4px 8px !important;
+            }
+            .sig-date-label {
+              font-size: 9px;
+              font-weight: bold;
+            }
+            .footer-section {
+              display: flex;
+              justify-content: space-between;
+              font-size: 11px;
+              font-family: Arial, sans-serif;
+              margin-top: 10px;
+              padding-bottom: 0;
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>INTERNLINK WEEKLY ACTIVITY REPORT</h1>
-            <p>Academic Internship Portfolio Document</p>
+          <div class="page-content">
+          <div class="header-container">
+            <img class="header-logo" src="${window.location.origin}/nu-logo.png" alt="NU Logo" />
           </div>
           
-          <div class="meta-grid">
-            <div class="meta-item"><strong>Student Name:</strong> ${previewData.studentName}</div>
-            <div class="meta-item"><strong>OJT Program:</strong> ${previewData.programName}</div>
-            <div class="meta-item"><strong>Week Label:</strong> ${previewData.weekLabel}</div>
-            <div class="meta-item"><strong>Week Number:</strong> Week ${previewData.weekNumber}</div>
-            <div class="meta-item"><strong>Deployment Status:</strong> Approved / Deployed</div>
-            <div class="meta-item"><strong>Generated On:</strong> ${new Date().toLocaleDateString()}</div>
-          </div>
+          <hr class="gold-divider" />
+          
+          <h2 class="report-title">WEEKLY ACTIVITY REPORT</h2>
+          
+          <table class="metadata-table">
+            <tr>
+              <td class="metadata-label">Name:</td>
+              <td style="text-transform: uppercase; font-weight: bold;">${previewData.studentName}</td>
+            </tr>
+            <tr>
+              <td class="metadata-label">Company:</td>
+              <td style="font-weight: bold;">${user?.company_name || 'N/A'}</td>
+            </tr>
+            <tr>
+              <td class="metadata-label">Week No:</td>
+              <td style="font-weight: bold;">${previewData.weekNumber}</td>
+            </tr>
+            <tr>
+              <td class="metadata-label">Dates Covered:</td>
+              <td style="font-weight: bold;">${datesCoveredLabel}</td>
+            </tr>
+          </table>
+          
+          ${(() => {
+            const seenDates = new Set();
+            const printDayLogs = activities
+              .filter(a => {
+                const d = new Date(a.log_date + 'T00:00:00');
+                return d >= startOfWeek && d <= endOfWeek;
+              })
+              .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
+              .reduce((acc, act) => {
+                if (!seenDates.has(act.log_date)) {
+                  seenDates.add(act.log_date);
+                  const d = new Date(act.log_date + 'T00:00:00');
+                  const allDescs = activities
+                    .filter(x => x.log_date === act.log_date)
+                    .map(x => x.description)
+                    .filter(Boolean)
+                    .join('\\n');
+                  acc.push({
+                    date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                    day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+                    description: allDescs
+                  });
+                }
+                return acc;
+              }, []);
 
-          <div class="section">
-            <div class="section-title">1. Weekly Tasks & Accomplishments Summary</div>
-            <div class="section-content">${previewData.summary}</div>
-          </div>
+            if (printDayLogs.length === 0) {
+              return '<div style="border:1px solid #ccc;padding:12px;font-size:11px;color:#666;text-align:center;margin-bottom:10px;">No activities found for this week.</div>';
+            }
 
-          <div class="section">
-            <div class="section-title">2. Technical & Soft Skills Acquired</div>
-            <div class="section-content">${previewData.skillsLearned}</div>
+            return printDayLogs.map(function(dayLog) {
+              var actField = dayLog.description
+                ? '<div class="day-content-field"><strong>Activities:</strong> ' + dayLog.description.replace(/\n/g, '<br/>') + '</div>'
+                : '';
+              var sumField = previewData.summary
+                ? '<div class="day-content-field"><strong>Summary:</strong> ' + previewData.summary + '</div>'
+                : '';
+              var skillsField = previewData.skillsLearned
+                ? '<div class="day-content-field"><strong>Skills Learned:</strong> ' + previewData.skillsLearned + '</div>'
+                : '';
+              var challengesField = previewData.challenges
+                ? '<div class="day-content-field"><strong>Challenges &amp; Solutions:</strong> ' + previewData.challenges + '</div>'
+                : '';
+              return (
+                '<div class="day-box">' +
+                  '<div class="day-header">' +
+                    '<div class="day-header-item">Date: <span style="font-weight:normal;">' + dayLog.date + '</span></div>' +
+                    '<div class="day-header-item">Day: <span style="font-weight:normal;">' + dayLog.day + '</span></div>' +
+                  '</div>' +
+                  '<div class="day-content">' +
+                    actField + sumField + skillsField + challengesField +
+                  '</div>' +
+                '</div>'
+              );
+            }).join('');
+          })()}
           </div>
-
-          <div class="section">
-            <div class="section-title">3. Reflection on Challenges & Obstacles</div>
-            <div class="section-content">${previewData.challenges || 'No critical challenges faced during this week.'}</div>
+          
+          <table class="signatures-table">
+            <tr>
+              <td class="sig-label">Intern Signature</td>
+              <td style="width: 55%;"></td>
+              <td class="sig-date">
+                <div class="sig-date-label">Date</div>
+              </td>
+            </tr>
+            <tr>
+              <td class="sig-label">Supervisor Signature</td>
+              <td style="width: 55%;"></td>
+              <td class="sig-date">
+                <div class="sig-date-label">Date</div>
+              </td>
+            </tr>
+          </table>
+          
+          <div class="footer-section">
+            <span>CCIT-FO-016 (001)</span>
+            <span>Page 1 of 1</span>
           </div>
-
-          <div class="signatures">
-            <div>
-              <div class="sig-line">Prepared By:<br/><strong>${previewData.studentName}</strong><br/>Student Intern</div>
-            </div>
-            <div>
-              <div class="sig-line">Verified By:<br/><strong>Industry Supervisor</strong><br/>Company Representative</div>
-            </div>
-            <div>
-              <div class="sig-line">Approved By:<br/><strong>OJT Adviser / Coordinator</strong><br/>Academic Head</div>
-            </div>
-          </div>
-
+          
           <script>
             window.onload = function() {
               window.print();
@@ -322,6 +528,7 @@ const WeeklyReports = () => {
     if (status === 'APPROVED') return studentDesign.colors.status.done;
     if (status === 'PENDING') return studentDesign.colors.status.active;
     if (status === 'REJECTED') return studentDesign.colors.status.error;
+    if (status === 'DRAFT') return studentDesign.colors.status.neutral;
     return studentDesign.colors.status.neutral;
   };
 
@@ -329,11 +536,10 @@ const WeeklyReports = () => {
     if (status === 'APPROVED') return <CheckCircle2 size={16} color={studentDesign.colors.success} />;
     if (status === 'PENDING') return <Clock size={16} color={studentDesign.colors.primary} />;
     if (status === 'REJECTED') return <XCircle size={16} color={studentDesign.colors.danger} />;
+    if (status === 'DRAFT') return <FileText size={16} color="#64748B" />;
     return null;
   };
 
-  const fmtDate = (d) =>
-    new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
   // Guard: Not Deployed
   if (!isDeployed) {
@@ -624,6 +830,78 @@ const WeeklyReports = () => {
                     <FileText size={16} /> View Uploaded Signed WAR (PDF/Image)
                   </button>
                 )}
+
+              {(selectedReport.status === 'DRAFT' || selectedReport.status === 'REJECTED') && (
+                <div style={{
+                  border: `2px dashed ${studentDesign.colors.primary}40`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  backgroundColor: `${studentDesign.colors.primary}02`,
+                  textAlign: 'center',
+                  marginTop: '10px'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <Upload size={32} color={studentDesign.colors.primary} style={{ opacity: 0.8 }} />
+                    <span style={{ fontSize: '14px', fontWeight: 700, color: studentDesign.colors.textMain }}>
+                      Upload Signed Weekly Activity Report
+                    </span>
+                    <span style={{ fontSize: '12px', color: studentDesign.colors.textMuted, maxWidth: '300px', lineHeight: 1.4 }}>
+                      Export the PDF, get signatures from you and your Industry Supervisor, then upload the signed copy to submit.
+                    </span>
+                    
+                    <input 
+                      type="file" 
+                      id="signed-war-upload" 
+                      accept=".pdf,image/*" 
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    
+                    <label 
+                      htmlFor="signed-war-upload"
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '8px',
+                        border: `1.5px solid ${studentDesign.colors.primary}`,
+                        backgroundColor: '#FFFFFF',
+                        color: studentDesign.colors.primary,
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        marginTop: '8px',
+                        display: 'inline-block'
+                      }}
+                    >
+                      {uploadFile ? `Selected: ${uploadFile.name}` : 'Select PDF or Image'}
+                    </label>
+
+                    {uploadFile && (
+                      <button
+                        onClick={handleUploadSignedWAR}
+                        disabled={uploading}
+                        style={{
+                          marginTop: '12px',
+                          padding: '10px 20px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          backgroundColor: studentDesign.colors.primary,
+                          color: '#FFFFFF',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: `0 4px 10px ${studentDesign.colors.primary}20`
+                        }}
+                      >
+                        {uploading ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                        Submit Signed Report
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
               </div>
 
               {selectedReport.reviewer_comment && (
@@ -717,50 +995,118 @@ const WeeklyReports = () => {
                     </div>
                   ) : (
                     <div style={{
-                      maxHeight: '160px', overflowY: 'auto', padding: '12px',
+                      maxHeight: '260px', overflowY: 'auto', padding: '12px',
                       borderRadius: '10px', border: `1px solid ${studentDesign.colors.border}`,
                       backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '8px'
                     }}>
-                      {activities.map(act => {
-                        const checked = selectedActIds.includes(act.id);
-                        return (
+                      {Object.entries(groupedActivities).map(([week, dates]) => (
+                        <div key={week} style={{
+                          backgroundColor: '#FFFFFF', borderRadius: '8px', 
+                          border: `1px solid ${studentDesign.colors.border}`, overflow: 'hidden'
+                        }}>
                           <div 
-                            key={act.id}
-                            onClick={() => {
-                              if (checked) {
-                                setSelectedActIds(prev => prev.filter(id => id !== act.id));
-                              } else {
-                                setSelectedActIds(prev => [...prev, act.id]);
-                              }
-                            }}
+                            onClick={() => setExpandedWeeks(prev => ({ ...prev, [week]: !prev[week] }))}
                             style={{
-                              display: 'flex', alignItems: 'center', gap: '10px',
-                              padding: '8px 12px', borderRadius: '6px', cursor: 'pointer',
-                              backgroundColor: checked ? '#EFF6FF' : '#FFFFFF',
-                              border: `1px solid ${checked ? studentDesign.colors.primary + '30' : '#E2E8F0'}`,
-                              transition: 'all 0.15s'
+                              padding: '10px 14px', display: 'flex', justifyContent: 'space-between',
+                              alignItems: 'center', cursor: 'pointer', backgroundColor: expandedWeeks[week] ? '#F1F5F9' : '#FFFFFF',
+                              fontWeight: 700, fontSize: '14px', color: studentDesign.colors.textMain, transition: 'all 0.2s'
                             }}
                           >
-                            <div style={{
-                              width: '16px', height: '16px', borderRadius: '4px',
-                              border: `2px solid ${checked ? studentDesign.colors.primary : '#94A3B8'}`,
-                              backgroundColor: checked ? studentDesign.colors.primary : 'transparent',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              color: '#fff', fontSize: '10px', flexShrink: 0
-                            }}>
-                              {checked && <Check size={10} strokeWidth={3} />}
-                            </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 700, color: studentDesign.colors.textMuted }}>{fmtDate(act.log_date)}</span>
-                              </div>
-                              <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: studentDesign.colors.textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {act.description}
-                              </p>
-                            </div>
+                            <span>{week}</span>
+                            {expandedWeeks[week] ? <ChevronUp size={16} color={studentDesign.colors.textMuted} /> : <ChevronDown size={16} color={studentDesign.colors.textMuted} />}
                           </div>
-                        );
-                      })}
+                          
+                          <AnimatePresence>
+                            {expandedWeeks[week] && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                style={{ overflow: 'hidden' }}
+                              >
+                                <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#F8FAFC' }}>
+                                  {Object.entries(dates).map(([date, dateActs]) => {
+                                    const dateKey = `${week}-${date}`;
+                                    const isDateExpanded = expandedDates[dateKey];
+                                    return (
+                                      <div key={dateKey} style={{
+                                        backgroundColor: '#FFFFFF', borderRadius: '6px',
+                                        border: `1px solid ${studentDesign.colors.border}`, overflow: 'hidden'
+                                      }}>
+                                        <div 
+                                          onClick={() => setExpandedDates(prev => ({ ...prev, [dateKey]: !prev[dateKey] }))}
+                                          style={{
+                                            padding: '8px 12px', display: 'flex', justifyContent: 'space-between',
+                                            alignItems: 'center', cursor: 'pointer',
+                                            fontWeight: 600, fontSize: '13px', color: studentDesign.colors.textMain,
+                                          }}
+                                        >
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Clock size={14} color={studentDesign.colors.primary} />
+                                            <span>{date}</span>
+                                          </div>
+                                          {isDateExpanded ? <ChevronUp size={14} color={studentDesign.colors.textMuted} /> : <ChevronDown size={14} color={studentDesign.colors.textMuted} />}
+                                        </div>
+                                        
+                                        <AnimatePresence>
+                                          {isDateExpanded && (
+                                            <motion.div
+                                              initial={{ height: 0, opacity: 0 }}
+                                              animate={{ height: 'auto', opacity: 1 }}
+                                              exit={{ height: 0, opacity: 0 }}
+                                              style={{ overflow: 'hidden' }}
+                                            >
+                                              <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: `1px solid ${studentDesign.colors.border}40` }}>
+                                                {dateActs.map(act => {
+                                                  const checked = selectedActIds.includes(act.id);
+                                                  return (
+                                                    <div 
+                                                      key={act.id}
+                                                      onClick={() => {
+                                                        if (checked) {
+                                                          setSelectedActIds(prev => prev.filter(id => id !== act.id));
+                                                        } else {
+                                                          setSelectedActIds(prev => [...prev, act.id]);
+                                                        }
+                                                      }}
+                                                      style={{
+                                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                                        padding: '8px 10px', borderRadius: '6px', cursor: 'pointer',
+                                                        backgroundColor: checked ? '#EFF6FF' : '#FFFFFF',
+                                                        border: `1px solid ${checked ? studentDesign.colors.primary + '30' : 'transparent'}`,
+                                                        transition: 'all 0.15s'
+                                                      }}
+                                                    >
+                                                      <div style={{
+                                                        width: '16px', height: '16px', borderRadius: '4px',
+                                                        border: `2px solid ${checked ? studentDesign.colors.primary : '#94A3B8'}`,
+                                                        backgroundColor: checked ? studentDesign.colors.primary : 'transparent',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        color: '#fff', fontSize: '10px', flexShrink: 0
+                                                      }}>
+                                                        {checked && <Check size={10} strokeWidth={3} />}
+                                                      </div>
+                                                      <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <p style={{ margin: 0, fontSize: '13px', color: studentDesign.colors.textMain, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                          {act.description}
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </motion.div>
+                                          )}
+                                        </AnimatePresence>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', alignItems: 'center' }}>
@@ -931,65 +1277,12 @@ const WeeklyReports = () => {
                         boxSizing: 'border-box'
                       }}
                     />
-                  </div>
-                </div>
-
-                {/* Step 5: Upload Signed WAR (Optional) */}
-                <div style={{
-                  padding: '16px', borderRadius: '12px',
-                  border: `1.5px dashed ${selectedFile ? studentDesign.colors.success + '40' : studentDesign.colors.border}`,
-                  backgroundColor: selectedFile ? '#F0FDF4' : '#F8FAFC',
-                  textAlign: 'center', transition: 'all 0.2s'
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                    <FileText size={24} color={selectedFile ? studentDesign.colors.success : studentDesign.colors.textMuted} />
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: studentDesign.colors.textMain }}>
-                      {selectedFile ? 'Signed WAR Selected' : 'Upload Signed WAR Document (Optional)'}
-                    </span>
-                    <span style={{ fontSize: '11px', color: studentDesign.colors.textMuted }}>
-                      {selectedFile ? `${selectedFile.name} (${(selectedFile.size / 1024 / 1024).toFixed(2)} MB)` : 'Accepts PDF, PNG, JPG up to 5MB'}
-                    </span>
-                    
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-                      <label style={{
-                        padding: '6px 14px', borderRadius: '8px',
-                        backgroundColor: studentDesign.colors.primary, color: '#fff',
-                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                        display: 'inline-block'
-                      }}>
-                        Choose File
-                        <input 
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg"
-                          onChange={e => {
-                            if (e.target.files && e.target.files[0]) {
-                              setSelectedFile(e.target.files[0]);
-                            }
-                          }}
-                          style={{ display: 'none' }}
-                        />
-                      </label>
-                      
-                      {selectedFile && (
-                        <button
-                          onClick={() => setSelectedFile(null)}
-                          style={{
-                            padding: '6px 14px', borderRadius: '8px',
-                            border: '1px solid #EF4444', backgroundColor: 'transparent',
-                            color: '#EF4444', fontSize: '12px', fontWeight: 700,
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
               </div>
+            </div>
 
-              {/* Modal Footer */}
+            {/* Modal Footer */}
               <div style={{
                 padding: '16px 24px', borderTop: `1px solid ${studentDesign.colors.border}`,
                 display: 'flex', justifyContent: 'flex-end', gap: '12px',
@@ -1045,7 +1338,7 @@ const WeeklyReports = () => {
                   }}
                 >
                   {submitting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Submit to OJT Adviser
+                  Save Draft Report
                 </button>
               </div>
 
@@ -1056,178 +1349,242 @@ const WeeklyReports = () => {
 
       {/* PDF PREVIEW MODAL */}
       <AnimatePresence>
-        {showPdfPreview && previewData && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000,
-            padding: '20px', overflowY: 'auto'
-          }}>
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              style={{
-                width: '100%', maxWidth: '850px',
-                backgroundColor: '#f1f5f9', borderRadius: '16px',
-                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden'
-              }}
-            >
-              {/* Preview Header Actions */}
-              <div style={{
-                padding: '14px 24px', borderBottom: `1px solid ${studentDesign.colors.border}`,
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                backgroundColor: '#ffffff'
-              }}>
-                <span style={{ fontWeight: 800, color: studentDesign.colors.textMain, fontSize: '15px' }}>
-                  📄 Official Document Preview (A4 Form)
-                </span>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
-                    onClick={handlePrintPDF}
-                    style={{
-                      padding: '8px 16px', borderRadius: '8px', border: 'none',
-                      backgroundColor: studentDesign.colors.primary, color: '#fff',
-                      fontWeight: 700, fontSize: '13px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: '6px'
-                    }}
-                  >
-                    🖨&nbsp; Export / Print PDF
-                  </button>
-                  <button 
-                    onClick={() => setShowPdfPreview(false)}
-                    style={{
-                      padding: '8px 16px', borderRadius: '8px',
-                      border: `1px solid ${studentDesign.colors.border}`,
-                      backgroundColor: '#FFFFFF', color: studentDesign.colors.textMuted,
-                      fontWeight: 700, fontSize: '13px', cursor: 'pointer'
-                    }}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
+        {showPdfPreview && previewData && (() => {
+          // Compute week date range for preview
+          let ojtStartDateStr = user?.start_date;
+          if (!ojtStartDateStr && reports && reports.length > 0) {
+            const sortedR = [...reports].sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+            ojtStartDateStr = sortedR[0].submitted_at.slice(0, 10);
+          }
+          if (!ojtStartDateStr) {
+            const today = new Date();
+            today.setDate(today.getDate() - (previewData.weekNumber - 1) * 7);
+            ojtStartDateStr = today.toLocaleDateString('en-CA');
+          }
 
-              {/* Document Sheet Container */}
-              <div style={{
-                padding: '30px', overflowY: 'auto', maxHeight: '70vh',
-                display: 'flex', justifyContent: 'center'
-              }}>
-                {/* Simulated A4 sheet */}
+          const startOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
+          startOfWeek.setDate(startOfWeek.getDate() + (previewData.weekNumber - 1) * 7);
+
+          const endOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
+          endOfWeek.setDate(endOfWeek.getDate() + previewData.weekNumber * 7 - 1);
+
+          const optFmt = { month: 'short', day: '2-digit', year: 'numeric' };
+          const datesCoveredLabel = `${startOfWeek.toLocaleDateString('en-US', optFmt)} - ${endOfWeek.toLocaleDateString('en-US', optFmt)}`;
+
+          // Build day-log entries ONLY for dates that have activities in this week
+          const seenDates = new Set();
+          const previewDayLogs = activities
+            .filter(a => {
+              const d = new Date(a.log_date + 'T00:00:00');
+              return d >= startOfWeek && d <= endOfWeek;
+            })
+            .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
+            .reduce((acc, act) => {
+              if (!seenDates.has(act.log_date)) {
+                seenDates.add(act.log_date);
+                const d = new Date(act.log_date + 'T00:00:00');
+                // Collect all descriptions logged on this date
+                const allDescs = activities
+                  .filter(a => a.log_date === act.log_date)
+                  .map(a => a.description)
+                  .filter(Boolean)
+                  .join('\n');
+                acc.push({
+                  date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                  day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+                  description: allDescs
+                });
+              }
+              return acc;
+            }, []);
+
+          return (
+            <div style={{
+              position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000,
+              padding: '20px', overflowY: 'auto'
+            }}>
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                style={{
+                  width: '100%', maxWidth: '860px',
+                  backgroundColor: '#f1f5f9', borderRadius: '16px',
+                  boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+                  display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden'
+                }}
+              >
+                {/* Preview Header Actions */}
                 <div style={{
-                  width: '100%', maxWidth: '794px', minHeight: '1000px',
-                  backgroundColor: '#ffffff', padding: '48px',
-                  boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
-                  fontFamily: "'Inter', sans-serif", boxSizing: 'border-box'
+                  padding: '14px 24px', borderBottom: `1px solid ${studentDesign.colors.border}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  backgroundColor: '#ffffff'
                 }}>
-                  {/* Letterhead Header */}
-                  <div style={{
-                    textAlign: 'center', borderBottom: '3px double #cbd5e1',
-                    paddingBottom: '20px', marginBottom: '30px'
-                  }}>
-                    <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, color: '#1e3a8a', letterSpacing: '-0.5px' }}>
-                      INTERNLINK WEEKLY ACTIVITY REPORT
-                    </h1>
-                    <p style={{ margin: '5px 0 0 0', fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                      Academic Internship Portfolio Document
-                    </p>
+                  <span style={{ fontWeight: 800, color: studentDesign.colors.textMain, fontSize: '15px' }}>
+                    📄 Official Document Preview — CCIT-FO-016 (001)
+                  </span>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      onClick={handlePrintPDF}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px', border: 'none',
+                        backgroundColor: studentDesign.colors.primary, color: '#fff',
+                        fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '6px'
+                      }}
+                    >
+                      🖨&nbsp; Export / Print PDF
+                    </button>
+                    <button
+                      onClick={() => setShowPdfPreview(false)}
+                      style={{
+                        padding: '8px 16px', borderRadius: '8px',
+                        border: `1px solid ${studentDesign.colors.border}`,
+                        backgroundColor: '#FFFFFF', color: studentDesign.colors.textMuted,
+                        fontWeight: 700, fontSize: '13px', cursor: 'pointer'
+                      }}
+                    >
+                      Close
+                    </button>
                   </div>
-
-                  {/* Metadata Table-Grid */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: '1fr 1fr',
-                    gap: '12px 24px', marginBottom: '35px',
-                    backgroundColor: '#f8fafc', padding: '18px',
-                    borderRadius: '8px', border: '1px solid #e2e8f0'
-                  }}>
-                    <div style={{ fontSize: '13px', color: '#334155' }}>
-                      <strong style={{ color: '#475569', display: 'inline-block', width: '110px' }}>Student Name:</strong>
-                      {previewData.studentName}
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#334155' }}>
-                      <strong style={{ color: '#475569', display: 'inline-block', width: '110px' }}>OJT Program:</strong>
-                      {previewData.programName}
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#334155' }}>
-                      <strong style={{ color: '#475569', display: 'inline-block', width: '110px' }}>Week Number:</strong>
-                      Week {previewData.weekNumber}
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#334155' }}>
-                      <strong style={{ color: '#475569', display: 'inline-block', width: '110px' }}>Week Date:</strong>
-                      {previewData.weekLabel}
-                    </div>
-                  </div>
-
-                  {/* Section Content */}
-                  <div style={{ marginBottom: '30px' }}>
-                    <div style={{
-                      fontSize: '13px', fontWeight: 800, color: '#1e3a8a',
-                      borderBottom: '2px solid #e2e8f0', paddingBottom: '6px',
-                      marginBottom: '10px', textTransform: 'uppercase'
-                    }}>
-                      1. Weekly Tasks & Accomplishments Summary
-                    </div>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap', textAlign: 'justify' }}>
-                      {previewData.summary}
-                    </p>
-                  </div>
-
-                  <div style={{ marginBottom: '30px' }}>
-                    <div style={{
-                      fontSize: '13px', fontWeight: 800, color: '#1e3a8a',
-                      borderBottom: '2px solid #e2e8f0', paddingBottom: '6px',
-                      marginBottom: '10px', textTransform: 'uppercase'
-                    }}>
-                      2. Technical & Soft Skills Acquired
-                    </div>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap', textAlign: 'justify' }}>
-                      {previewData.skillsLearned}
-                    </p>
-                  </div>
-
-                  <div style={{ marginBottom: '30px' }}>
-                    <div style={{
-                      fontSize: '13px', fontWeight: 800, color: '#1e3a8a',
-                      borderBottom: '2px solid #e2e8f0', paddingBottom: '6px',
-                      marginBottom: '10px', textTransform: 'uppercase'
-                    }}>
-                      3. Reflection on Challenges & Obstacles
-                    </div>
-                    <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: 1.6, whiteSpace: 'pre-wrap', textAlign: 'justify' }}>
-                      {previewData.challenges || 'No critical challenges faced during this week.'}
-                    </p>
-                  </div>
-
-                  {/* Signatures */}
-                  <div style={{
-                    marginTop: '60px', display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr', gap: '20px',
-                    textAlign: 'center'
-                  }}>
-                    <div>
-                      <div style={{ borderTop: '1px solid #94a3b8', marginTop: '40px', paddingTop: '8px', fontSize: '11px', color: '#475569' }}>
-                        Prepared By:<br/><strong style={{ color: '#1e293b' }}>{previewData.studentName}</strong><br/>Student Intern
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ borderTop: '1px solid #94a3b8', marginTop: '40px', paddingTop: '8px', fontSize: '11px', color: '#475569' }}>
-                        Verified By:<br/><strong style={{ color: '#1e293b' }}>Industry Supervisor</strong><br/>Company Representative
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ borderTop: '1px solid #94a3b8', marginTop: '40px', paddingTop: '8px', fontSize: '11px', color: '#475569' }}>
-                        Approved By:<br/><strong style={{ color: '#1e293b' }}>OJT Adviser</strong><br/>Coordinator Head
-                      </div>
-                    </div>
-                  </div>
-
                 </div>
-              </div>
 
-            </motion.div>
-          </div>
-        )}
+                {/* Document Sheet Container */}
+                <div style={{ padding: '30px', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+                  {/* NU Official A4 Sheet */}
+                  <div style={{
+                    width: '100%', maxWidth: '794px',
+                    backgroundColor: '#ffffff', padding: '40px 48px',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                    fontFamily: "'Arial', 'Helvetica', sans-serif",
+                    fontSize: '11px', color: '#000',
+                    boxSizing: 'border-box', lineHeight: 1.3
+                  }}>
+
+                    {/* NU Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '5px' }}>
+                      <img
+                        src={`${window.location.origin}/nu-logo.png`}
+                        alt="NU Logo"
+                        style={{ height: '60px', width: 'auto' }}
+                        onError={e => { e.target.style.display = 'none'; }}
+                      />
+                    </div>
+
+                    {/* Gold Divider */}
+                    <hr style={{ height: '5px', backgroundColor: '#F1B82D', border: 'none', margin: '5px 0 10px 0' }} />
+
+                    {/* Report Title */}
+                    <h2 style={{
+                      textAlign: 'center', fontSize: '14px', fontWeight: 'bold',
+                      color: '#000', margin: '10px 0', letterSpacing: '0.5px'
+                    }}>
+                      WEEKLY ACTIVITY REPORT
+                    </h2>
+
+                    {/* Metadata Table */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', width: '18%', fontSize: '11px' }}>Name:</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', textTransform: 'uppercase', fontSize: '11px' }}>{previewData.studentName}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>Company:</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>{user?.company_name || 'N/A'}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>Week No:</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>{previewData.weekNumber}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>Dates Covered:</td>
+                          <td style={{ padding: '6px 10px', border: '1px solid #000', fontWeight: 'bold', fontSize: '11px' }}>{datesCoveredLabel}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+
+
+                    {/* Daily Report Boxes — only for dates with logged activities */}
+                    {previewDayLogs.length === 0 ? (
+                      <div style={{ border: '1px solid #ccc', padding: '12px', fontSize: '11px', color: '#666', textAlign: 'center', marginBottom: '10px' }}>
+                        No activities found for this week.
+                      </div>
+                    ) : (
+                      previewDayLogs.map((dayLog, idx) => (
+                        <div key={idx} style={{ border: '1px solid #000', marginBottom: '10px' }}>
+                          {/* Day Header */}
+                          <div style={{ display: 'flex', borderBottom: '1px solid #000', fontSize: '11px' }}>
+                            <div style={{ padding: '6px', width: '50%', fontWeight: 'bold', borderRight: '1px solid #000' }}>
+                              Date: <span style={{ fontWeight: 'normal' }}>{dayLog.date}</span>
+                            </div>
+                            <div style={{ padding: '6px', width: '50%', fontWeight: 'bold' }}>
+                              Day: <span style={{ fontWeight: 'normal' }}>{dayLog.day}</span>
+                            </div>
+                          </div>
+                          {/* Day Content — activities + AI-generated report fields */}
+                          <div style={{ padding: '10px', fontSize: '11px', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                            {dayLog.description && (
+                              <div style={{ marginBottom: '8px' }}>
+                                <strong>Activities:</strong>{' '}{dayLog.description}
+                              </div>
+                            )}
+                            {previewData.summary && (
+                              <div style={{ marginBottom: '6px' }}>
+                                <strong>Summary:</strong>{' '}{previewData.summary}
+                              </div>
+                            )}
+                            {previewData.skillsLearned && (
+                              <div style={{ marginBottom: '6px' }}>
+                                <strong>Skills Learned:</strong>{' '}{previewData.skillsLearned}
+                              </div>
+                            )}
+                            {previewData.challenges && (
+                              <div>
+                                <strong>Challenges &amp; Solutions:</strong>{' '}{previewData.challenges}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    {/* Signatures Table */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '15px' }}>
+                      <tbody>
+                        <tr>
+                          <td style={{ border: '1px solid #000', padding: '10px', fontSize: '11px', fontWeight: 'bold', width: '20%' }}>Intern Signature</td>
+                          <td style={{ border: '1px solid #000', padding: '10px', fontSize: '11px', width: '55%' }}></td>
+                          <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px', width: '25%', verticalAlign: 'top', height: '40px' }}>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold' }}>Date</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style={{ border: '1px solid #000', padding: '10px', fontSize: '11px', fontWeight: 'bold' }}>Supervisor Signature</td>
+                          <td style={{ border: '1px solid #000', padding: '10px', fontSize: '11px' }}></td>
+                          <td style={{ border: '1px solid #000', padding: '4px 8px', fontSize: '11px', verticalAlign: 'top', height: '40px' }}>
+                            <div style={{ fontSize: '9px', fontWeight: 'bold' }}>Date</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    {/* Footer */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '15px' }}>
+                      <span>CCIT-FO-016 (001)</span>
+                      <span>Page 1 of 1</span>
+                    </div>
+
+                  </div>
+                </div>
+
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
     </motion.div>
