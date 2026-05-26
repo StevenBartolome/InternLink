@@ -140,11 +140,16 @@ export function AuthProvider({ children }) {
           // Fetch internship data
           const { data: sInternship } = await supabase
             .from('student_internships')
-            .select('*')
+            .select('*, companies(name)')
             .eq('student_id', authUser.id)
             .maybeSingle();
             
-          if (sInternship) internshipData = sInternship;
+          if (sInternship) {
+            internshipData = {
+              ...sInternship,
+              company_name: sInternship.companies?.name || 'N/A'
+            };
+          }
         } else if (baseUser.role === 'ojt_head') {
           // OJT Advisers now have all their data in the base users table
           console.log('fetchProfile: Professor detected, program:', baseUser.programs?.code);

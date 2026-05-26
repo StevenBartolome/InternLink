@@ -67,6 +67,41 @@ const Attendance = () => {
   const [weeklyStart, setWeeklyStart] = useState(defaultWeek.start);
   const [weeklyEnd, setWeeklyEnd] = useState(defaultWeek.end);
   const [monthlyMonth, setMonthlyMonth] = useState(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+  const [exportWeekNo, setExportWeekNo] = useState('');
+
+  // Auto-calculate Week Number based on start date
+  useEffect(() => {
+    const ojtStartDate = user?.start_date || (logs.length > 0 ? [...logs].sort((a, b) => new Date(a.log_date + 'T00:00:00') - new Date(b.log_date + 'T00:00:00'))[0].log_date : null);
+    
+    if (!ojtStartDate) {
+      setExportWeekNo('');
+      return;
+    }
+
+    let referenceDate = '';
+    if (exportType === 'daily') {
+      referenceDate = dailyDate;
+    } else if (exportType === 'weekly') {
+      referenceDate = weeklyStart;
+    } else if (exportType === 'monthly') {
+      referenceDate = `${monthlyMonth}-01`;
+    }
+
+    if (ojtStartDate && referenceDate) {
+      const start = new Date(ojtStartDate + 'T00:00:00');
+      const ref = new Date(referenceDate + 'T00:00:00');
+      const diffTime = ref - start;
+      if (diffTime < 0) {
+        setExportWeekNo('Week 1');
+      } else {
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const weekNum = Math.floor(diffDays / 7) + 1;
+        setExportWeekNo(`Week ${weekNum}`);
+      }
+    } else {
+      setExportWeekNo('');
+    }
+  }, [exportType, dailyDate, weeklyStart, monthlyMonth, user?.start_date, logs]);
 
   const handleExportPDF = (type, options) => {
     let filtered = [];
@@ -99,15 +134,6 @@ const Attendance = () => {
     // Sort chronologically
     filtered.sort((a, b) => new Date(a.log_date + 'T00:00:00') - new Date(b.log_date + 'T00:00:00'));
 
-    const formatHoursAndMins = (decimalHours) => {
-      if (!decimalHours || decimalHours <= 0) return '0 mins';
-      const hours = Math.floor(decimalHours);
-      const minutes = Math.round((decimalHours - hours) * 60);
-      if (hours === 0) return `${minutes} mins`;
-      if (minutes === 0) return `${hours} hrs`;
-      return `${hours} hrs ${minutes} mins`;
-    };
-
     const totalHoursPeriod = filtered.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
 
     // Calculate previous hours (all logs prior to this range)
@@ -115,6 +141,13 @@ const Attendance = () => {
     const previousLogs = logs.filter(l => l.log_date < firstFilteredDate && l.status === 'LOGGED');
     const previousTotal = previousLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
     const grandTotal = previousTotal + totalHoursPeriod;
+
+    // Pad with empty rows to minimum of 15 rows for layout structure
+    const maxRows = 15;
+    const displayRows = [...filtered];
+    while (displayRows.length < maxRows) {
+      displayRows.push({ isPadding: true });
+    }
 
     // Create printer iframe
     const printFrame = document.createElement('iframe');
@@ -138,11 +171,11 @@ const Attendance = () => {
             }
             body { 
               font-family: 'Arial', 'Helvetica', sans-serif; 
-              color: #1e293b; 
+              color: #000; 
               margin: 0; 
               padding: 0; 
-              font-size: 13px;
-              line-height: 1.4;
+              font-size: 11px;
+              line-height: 1.3;
             }
             .header-container {
               display: flex;
@@ -150,183 +183,142 @@ const Attendance = () => {
               gap: 15px;
               margin-bottom: 5px;
             }
-            .logo-placeholder {
-              width: 55px;
-              height: 55px;
-              background-color: #1D2D5B;
-              color: #fff;
-              border-radius: 50%;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: bold;
-              font-size: 16px;
-              border: 2px solid #F1B82D;
+            .header-logo {
+              height: 60px;
+              width: auto;
             }
             .header-text {
               flex: 1;
             }
             .header-title-nu {
-              font-size: 18px;
-              font-weight: 900;
+              font-size: 24px;
+              font-weight: bold;
               color: #1D2D5B;
               margin: 0;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
+              line-height: 1.1;
             }
             .header-subtitle {
-              font-size: 12px;
-              color: #475569;
+              font-size: 13px;
+              color: #1D2D5B;
               margin: 2px 0 0 0;
-              font-weight: bold;
+              font-weight: 500;
             }
             .gold-divider {
-              height: 4px;
+              height: 5px;
               background-color: #F1B82D;
               border: none;
-              margin: 8px 0 15px 0;
+              margin: 5px 0 10px 0;
             }
             .report-title {
               text-align: center;
-              font-size: 16px;
-              font-weight: 800;
-              color: #0f172a;
-              margin: 0 0 15px 0;
+              font-size: 14px;
+              font-weight: bold;
+              color: #000;
+              margin: 10px 0 10px 0;
               letter-spacing: 0.5px;
-              text-decoration: underline;
             }
             .metadata-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 12px;
+              margin-bottom: 10px;
             }
             .metadata-table td {
-              padding: 6px 8px;
-              vertical-align: middle;
-              border: 1px solid #cbd5e1;
+              padding: 6px 10px;
+              border: 1px solid #000;
+              font-size: 11px;
             }
             .metadata-label {
               font-weight: bold;
-              font-style: italic;
-              color: #334155;
-              width: 150px;
-              background-color: #f8fafc;
+              width: 15%;
             }
             .note-box {
-              background-color: #FFFDF5;
-              border: 1px solid #FBE1A0;
-              padding: 10px;
-              border-radius: 4px;
-              font-size: 11px;
-              font-weight: bold;
-              color: #78350f;
-              margin-bottom: 20px;
-              line-height: 1.5;
+              border: 1px solid #000;
+              padding: 8px 10px;
+              font-size: 10px;
+              margin-bottom: 10px;
+              line-height: 1.4;
             }
             .data-table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 20px;
             }
             .data-table th {
-              background-color: #1D2D5B;
-              color: #ffffff;
+              background-color: #ffffff;
+              color: #000;
               font-weight: bold;
-              text-align: left;
-              padding: 8px 12px;
-              font-size: 12px;
-              text-transform: uppercase;
-              border: 1px solid #1D2D5B;
+              text-align: center;
+              padding: 6px;
+              font-size: 11px;
+              border: 1px solid #000;
             }
             .data-table td {
-              padding: 8px 12px;
-              border: 1px solid #cbd5e1;
-            }
-            .data-table tr:nth-child(even) {
-              background-color: #f8fafc;
-            }
-            .totals-section {
-              margin-top: 15px;
-              margin-bottom: 30px;
-              background-color: #f8fafc;
-              border: 1px solid #cbd5e1;
-              border-radius: 6px;
-              padding: 12px 16px;
-            }
-            .totals-grid {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: 15px;
-            }
-            .total-item {
-              display: flex;
-              flex-direction: column;
-            }
-            .total-label {
+              padding: 5px;
+              border: 1px solid #000;
               font-size: 11px;
-              color: #475569;
-              font-weight: bold;
-              text-transform: uppercase;
             }
-            .total-value {
-              font-size: 13px;
-              font-weight: 800;
-              color: #1D2D5B;
-              margin-top: 4px;
+            .totals-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: -1px;
+            }
+            .totals-table td {
+              border: 1px solid #000;
+              padding: 4px 8px;
+              font-size: 11px;
+              vertical-align: middle;
+            }
+            .totals-label {
+              font-weight: bold;
+              text-align: left;
+            }
+            .totals-value {
+              font-weight: bold;
+              text-align: center;
+            }
+            .signatures-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 15px;
+            }
+            .signatures-table td {
+              border: 1px solid #000;
+              padding: 10px;
+              font-size: 11px;
+              vertical-align: middle;
+            }
+            .sig-label {
+              font-weight: bold;
+              width: 20%;
+            }
+            .sig-date {
+              width: 25%;
+              vertical-align: top !important;
+              height: 40px;
+              padding: 4px 8px !important;
+            }
+            .sig-date-label {
+              font-size: 9px;
+              font-weight: bold;
             }
             .verification-text {
-              text-align: center;
+              border: 1px solid #000;
+              padding: 6px 10px;
               font-style: italic;
-              font-size: 12px;
-              color: #475569;
-              margin: 40px 0 25px 0;
-              line-height: 1.6;
-            }
-            .signatures-grid {
-              display: grid;
-              grid-template-columns: 1.2fr 0.8fr;
-              gap: 40px;
-              margin-top: 30px;
-            }
-            .signature-block {
-              display: flex;
-              flex-direction: column;
-            }
-            .sig-line {
-              border-top: 1px solid #475569;
-              margin-top: 40px;
-              margin-bottom: 4px;
-            }
-            .sig-title {
-              font-weight: bold;
-              font-size: 12px;
-              color: #1e293b;
-            }
-            .sig-subtitle {
-              font-size: 11px;
-              color: #64748b;
+              font-size: 10px;
+              line-height: 1.4;
             }
             .footer-section {
-              position: fixed;
-              bottom: 0;
-              left: 0;
-              right: 0;
               display: flex;
               justify-content: space-between;
-              font-size: 10px;
-              color: #94a3b8;
-              border-top: 1px solid #e2e8f0;
-              padding-top: 5px;
+              font-size: 11px;
+              font-family: Arial, sans-serif;
+              margin-top: 15px;
             }
           </style>
         </head>
         <body>
           <div class="header-container">
-            <div class="logo-placeholder">NU</div>
-            <div class="header-text">
-              <h1 class="header-title-nu">National University</h1>
-              <p class="header-subtitle">School of Engineering and Technology</p>
-            </div>
+            <img class="header-logo" src="${window.location.origin}/nu-logo.png" alt="NU Logo" />
           </div>
           
           <hr class="gold-divider" />
@@ -335,77 +327,91 @@ const Attendance = () => {
           
           <table class="metadata-table">
             <tr>
-              <td class="metadata-label">STUDENT NAME:</td>
-              <td style="font-weight: bold; text-transform: uppercase;">${user?.first_name || ''} ${user?.last_name || ''}</td>
+              <td class="metadata-label">Name:</td>
+              <td style="text-transform: uppercase; font-weight: bold;">${user?.first_name || ''} ${user?.last_name || ''}</td>
             </tr>
             <tr>
-              <td class="metadata-label">COMPANY (HTE):</td>
+              <td class="metadata-label">Company:</td>
               <td style="font-weight: bold;">${user?.company_name || 'N/A'}</td>
             </tr>
             <tr>
-              <td class="metadata-label">PERIOD COVERED:</td>
-              <td style="font-weight: bold; color: #1D2D5B;">${periodLabel}</td>
+              <td class="metadata-label">Week No.</td>
+              <td style="font-weight: bold;">${options.weekNo || ''}</td>
             </tr>
           </table>
           
           <div class="note-box">
-            NOTE: To be filled-up by the intern and signed by the Internship Supervisor/immediate supervisor. This must be submitted to the Internship Coordinator along with the weekly activity report.
+            <strong>NOTE:</strong> To be filled-up by the intern and signed by the Internship Supervisor/immediate supervisor. This must be submitted to the Internship Coordinator along with the weekly activity report.
           </div>
           
           <table class="data-table">
             <thead>
               <tr>
-                <th style="width: 20%">Date</th>
+                <th style="width: 25%">Date</th>
                 <th style="width: 25%">Time-In</th>
                 <th style="width: 25%">Time-Out</th>
-                <th style="width: 30%">Hours Rendered</th>
+                <th style="width: 25%">Total Hours</th>
               </tr>
             </thead>
             <tbody>
-              ${filtered.map(l => `
-                <tr>
-                  <td>${new Date(l.log_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</td>
-                  <td>${l.time_in ? new Date(l.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
-                  <td>${l.time_out ? new Date(l.time_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
-                  <td style="font-weight: bold;">${l.hours_rendered ? `${l.hours_rendered.toFixed(2)} hrs (${formatHoursAndMins(l.hours_rendered)})` : '0.00 hrs (0 mins)'}</td>
-                </tr>
-              `).join('')}
+              ${displayRows.map(l => {
+                if (l.isPadding) {
+                  return `
+                    <tr style="height: 25px;">
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                      <td>&nbsp;</td>
+                    </tr>
+                  `;
+                }
+                return `
+                  <tr style="height: 25px;">
+                    <td style="text-align: center;">${new Date(l.log_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}</td>
+                    <td style="text-align: center;">${l.time_in ? new Date(l.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
+                    <td style="text-align: center;">${l.time_out ? new Date(l.time_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'}</td>
+                    <td style="text-align: center; font-weight: bold;">${l.hours_rendered ? l.hours_rendered.toFixed(2) : '0.00'}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
           
-          <div class="totals-section">
-            <div class="totals-grid">
-              <div class="total-item">
-                <span class="total-label">Previous Hours Total</span>
-                <span class="total-value">${previousTotal.toFixed(2)} hrs (${formatHoursAndMins(previousTotal)})</span>
-              </div>
-              <div class="total-item" style="border-left: 1px solid #cbd5e1; padding-left: 15px;">
-                <span class="total-label">Hours this Period</span>
-                <span class="total-value">${totalHoursPeriod.toFixed(2)} hrs (${formatHoursAndMins(totalHoursPeriod)})</span>
-              </div>
-              <div class="total-item" style="border-left: 1px solid #cbd5e1; padding-left: 15px;">
-                <span class="total-label">Grand Total Served</span>
-                <span class="total-value" style="color: #16a34a; font-size: 14px;">${grandTotal.toFixed(2)} hrs (${formatHoursAndMins(grandTotal)})</span>
-              </div>
-            </div>
-          </div>
+          <table class="totals-table">
+            <tr>
+              <td class="totals-label" style="width: 15%;">Previous<br>Total:</td>
+              <td class="totals-value" style="width: 15%;">${previousTotal.toFixed(2)}</td>
+              <td class="totals-label" style="width: 15%;">Total this<br>Period:</td>
+              <td class="totals-value" style="width: 15%;">${totalHoursPeriod.toFixed(2)}</td>
+              <td class="totals-label" style="width: 28%; text-align: center; line-height: 1.2;">
+                Total Hours Served:<br>
+                <span style="font-weight: normal; font-style: italic; font-size: 9px;">(Previous Total + Total this Period)</span>
+              </td>
+              <td class="totals-value" style="width: 12%; font-size: 12px;">${grandTotal.toFixed(2)}</td>
+            </tr>
+          </table>
           
-          <p class="verification-text">
-            I verify that the above information is correct and that the intern was in attendance on the above days at the times indicated.
-          </p>
-          
-          <div class="signatures-grid">
-            <div class="signature-block">
-              <div class="sig-line"></div>
-              <span class="sig-title">${user?.first_name || ''} ${user?.last_name || ''}</span>
-              <span class="sig-subtitle">Student Intern Signature</span>
-            </div>
-            <div class="signature-block">
-              <div class="sig-line"></div>
-              <span class="sig-title">${user?.supervisor_name || 'Immediate Supervisor'}</span>
-              <span class="sig-subtitle">OJT Supervisor Signature</span>
-            </div>
-          </div>
+          <table class="signatures-table">
+            <tr>
+              <td class="sig-label">Intern Signature</td>
+              <td style="width: 55%;"><!-- empty space for signature --></td>
+              <td class="sig-date">
+                <div class="sig-date-label">Date</div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3" class="verification-text">
+                I verify that the above information is correct and that the intern was in attendance on the above days at the times indicated.
+              </td>
+            </tr>
+            <tr>
+              <td class="sig-label">Supervisor<br>Signature</td>
+              <td style="width: 55%;"><!-- empty space for signature --></td>
+              <td class="sig-date">
+                <div class="sig-date-label">Date</div>
+              </td>
+            </tr>
+          </table>
           
           <div class="footer-section">
             <span>CCIT-FO-017</span>
@@ -1721,7 +1727,10 @@ const Attendance = () => {
               </p>
               <button
                 type="button"
-                onClick={() => setShowExportModal(false)}
+                onClick={() => {
+                  setShowExportModal(false);
+                  setExportWeekNo('');
+                }}
                 style={{
                   position: 'absolute',
                   top: '24px',
@@ -1783,6 +1792,29 @@ const Attendance = () => {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Week Number Input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>
+                  Week Number (Optional)
+                </span>
+                <input
+                  type="text"
+                  placeholder="e.g. Week 1"
+                  value={exportWeekNo}
+                  onChange={e => setExportWeekNo(e.target.value)}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '14px',
+                    color: '#1E293B',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    transition: 'border-color 0.2s'
+                  }}
+                />
               </div>
 
               {/* Dynamic Inputs Container */}
@@ -1889,7 +1921,10 @@ const Attendance = () => {
               <div style={{ display: 'flex', gap: '12px', marginTop: '10px' }}>
                 <button
                   type="button"
-                  onClick={() => setShowExportModal(false)}
+                  onClick={() => {
+                    setShowExportModal(false);
+                    setExportWeekNo('');
+                  }}
                   style={{
                     flex: 1,
                     padding: '12px 0',
@@ -1910,7 +1945,7 @@ const Attendance = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    handleExportPDF(exportType, { dailyDate, weeklyStart, weeklyEnd, monthlyMonth });
+                    handleExportPDF(exportType, { dailyDate, weeklyStart, weeklyEnd, monthlyMonth, weekNo: exportWeekNo });
                     setShowExportModal(false);
                   }}
                   style={{
