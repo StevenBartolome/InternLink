@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import { Search, Filter, X, UserPlus, CheckCircle } from 'lucide-react';
+import { Search, Filter, UserPlus, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
 import ProgressBar from '../../components/common/ProgressBar/ProgressBar';
 import CreateStudentModal from '../../components/ojt-professor/CreateStudentModal';
-import { mockStudents } from '../../services/mocks/ojtProfessorMockData';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2 } from 'lucide-react';
 import PageLoader from '../../components/common/PageLoader';
 
 const STATUS_MAP = {
@@ -30,6 +28,7 @@ const StudentDirectoryPage = () => {
   const [availableSections, setAvailableSections] = useState([]);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [expandedSectionId, setExpandedSectionId] = useState(null);
   
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -91,6 +90,7 @@ const StudentDirectoryPage = () => {
           hoursRendered: internship.rendered_hours || 0,
           hoursRequired: profile.programs?.required_hours || 486,
           section: profile.program_sections?.name || 'Not Assigned',
+          sectionId: profile.section_id || 'unassigned',
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
         };
       });
@@ -106,7 +106,7 @@ const StudentDirectoryPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.program_id, showToast]);
+  }, [user?.program_id, user?.professor_sections, showToast]);
 
   React.useEffect(() => {
     fetchStudents();
@@ -114,11 +114,55 @@ const StudentDirectoryPage = () => {
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
+                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || student.status === statusFilter;
     const matchesSection = sectionFilter === 'All' || student.section === sectionFilter;
     
     return matchesSearch && matchesStatus && matchesSection;
+  });
+
+  // Group students by section
+  const assignedSections = user?.professor_sections?.map(ps => ({
+    id: ps.section_id || ps.program_sections?.id,
+    name: ps.program_sections?.name || 'Assigned Section'
+  })).filter(s => s.id) || [];
+
+  const sectionsList = [];
+  const sectionsMap = {};
+
+  // First, initialize with assigned sections so they display
+  assignedSections.forEach(sec => {
+    if (!sectionsMap[sec.id]) {
+      sectionsMap[sec.id] = {
+        id: sec.id,
+        name: sec.name,
+        students: []
+      };
+      sectionsList.push(sectionsMap[sec.id]);
+    }
+  });
+
+  // Then group the filtered students
+  filteredStudents.forEach(student => {
+    const sId = student.sectionId || 'unassigned';
+    const sName = student.section || 'Not Assigned';
+
+    if (!sectionsMap[sId]) {
+      sectionsMap[sId] = {
+        id: sId,
+        name: sName,
+        students: []
+      };
+      sectionsList.push(sectionsMap[sId]);
+    }
+
+    sectionsMap[sId].students.push(student);
+  });
+
+  // Sort sections and students alphabetically
+  sectionsList.sort((a, b) => a.name.localeCompare(b.name));
+  sectionsList.forEach(sec => {
+    sec.students.sort((a, b) => a.name.localeCompare(b.name));
   });
 
   const openProfile = (student) => {
@@ -254,6 +298,33 @@ const StudentDirectoryPage = () => {
       display: 'flex',
       gap: '1rem',
       justifyContent: 'flex-end',
+    },
+    sectionCard: {
+      ...commonStyles.dashboardCard,
+      padding: 0,
+      overflow: 'hidden',
+      border: `1px solid ${theme.colors.border}`,
+      marginBottom: '16px',
+      transition: 'box-shadow 0.2s ease',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)',
+    },
+    sectionHeader: (isOpen) => ({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px 20px',
+      cursor: 'pointer',
+      backgroundColor: isOpen ? '#f8fafc' : '#ffffff',
+      borderBottom: isOpen ? `1px solid ${theme.colors.border}` : 'none',
+      transition: 'background-color 0.2s ease',
+    }),
+    countBadge: {
+      padding: '3px 8px',
+      borderRadius: '12px',
+      backgroundColor: theme.colors.bgSecondary,
+      color: theme.colors.textSecondary,
+      fontSize: '0.72rem',
+      fontWeight: 700,
     }
   };
 
@@ -315,93 +386,145 @@ const StudentDirectoryPage = () => {
         </div>
       </div>
 
-      {/* Students List */}
-      <div style={commonStyles.dashboardTableContainer}>
+      {/* Grouped Students List */}
+      <div>
         {loading ? (
           <PageLoader message="Loading directory list..." />
         ) : filteredStudents.length === 0 ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: theme.colors.textMuted }}>
-            <p style={{ marginBottom: '1rem' }}>No students found for {user?.course_code || 'this program'}.</p>
-            <p style={{ fontSize: '0.75rem' }}>Program ID: <code style={{ backgroundColor: theme.colors.bgSecondary, padding: '2px 4px', borderRadius: '4px' }}>{user?.program_id || 'NOT SET'}</code></p>
-            <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Total students fetched (unfiltered): {students.length === 0 && !loading ? 'Check console' : students.length}</p>
+            <p style={{ marginBottom: '1rem' }}>No students found matching filters.</p>
           </div>
         ) : (
-          <table style={commonStyles.dashboardTable}>
-            <thead>
-              <tr>
-                <th style={commonStyles.dashboardTableTh}>Name / ID</th>
-                <th style={commonStyles.dashboardTableTh}>Course / Section</th>
-                <th style={commonStyles.dashboardTableTh}>Status</th>
-                <th style={commonStyles.dashboardTableTh}>Assigned Company</th>
-                <th style={commonStyles.dashboardTableTh}>Hours Progress</th>
-                <th style={commonStyles.dashboardTableTh}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.map((student) => (
-                <tr 
-                  key={student.id} 
-                  style={styles.tableRow(hoveredRow === student.id)} 
-                  onMouseEnter={() => setHoveredRow(student.id)}
-                  onMouseLeave={() => setHoveredRow(null)}
-                  onClick={() => openProfile(student)}
-                >
-                  <td style={commonStyles.dashboardTableTd}>
-                    <div style={styles.studentInfo}>
-                      <img src={student.avatar} alt={student.name} style={styles.avatarSmall} />
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {sectionsList.map(sec => {
+              const isSectionOpen = expandedSectionId === sec.id;
+              const matchCount = sec.students.length;
+
+              // Filter check: If sectionFilter is set and doesn't match this section name, skip
+              if (sectionFilter !== 'All' && sec.name !== sectionFilter) {
+                return null;
+              }
+
+              // Also, if we have a search term or status filter, and this section has 0 matches, hide it
+              if ((searchTerm || statusFilter !== 'All') && matchCount === 0) {
+                return null;
+              }
+
+              return (
+                <div key={sec.id} style={styles.sectionCard}>
+                  {/* Section Header */}
+                  <div 
+                    style={styles.sectionHeader(isSectionOpen)}
+                    onClick={() => setExpandedSectionId(isSectionOpen ? null : sec.id)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', color: theme.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Layers size={18} />
+                      </div>
                       <div>
-                        <span style={styles.studentName}>{student.name}</span>
-                        <span style={styles.studentId}>{student.studentId}</span>
+                        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: theme.colors.textMain }}>{sec.name}</span>
+                        <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted, marginTop: '2px' }}>
+                          {matchCount} {matchCount === 1 ? 'student' : 'students'}
+                        </div>
                       </div>
                     </div>
-                  </td>
-                  <td style={commonStyles.dashboardTableTd}>
-                    <div>{student.course} ({student.yearLevel})</div>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: theme.colors.primary }}>{student.section}</div>
-                  </td>
-                  <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
-                  <td style={commonStyles.dashboardTableTd}>
-                    {student.company && student.company !== 'Not Applied' ? (
-                      <div style={styles.companyInfo}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={styles.companyName}>{student.company}</span>
-                          {!student.isDeployed && (
-                            <span style={{ 
-                              fontSize: '0.65rem', 
-                              backgroundColor: '#fff7ed', 
-                              color: '#c2410c', 
-                              padding: '2px 6px', 
-                              borderRadius: '4px',
-                              fontWeight: 700,
-                              border: '1px solid #fed7aa',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              PENDING
-                            </span>
-                          )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={styles.countBadge}>{matchCount} Students</span>
+                      {isSectionOpen ? <ChevronUp size={18} color={theme.colors.textMuted} /> : <ChevronDown size={18} color={theme.colors.textMuted} />}
+                    </div>
+                  </div>
+
+                  {/* Section Content: Table */}
+                  {isSectionOpen && (
+                    <div style={{ overflowX: 'auto', backgroundColor: '#fff', borderTop: `1px solid ${theme.colors.border}` }}>
+                      {matchCount === 0 ? (
+                        <div style={{ padding: '24px', textAlign: 'center', color: theme.colors.textMuted, fontSize: '0.875rem' }}>
+                          No students found matching current filters in this section.
                         </div>
-                        <span style={styles.supervisorName}>{student.supervisor}</span>
-                      </div>
-                    ) : (
-                      <span style={{ color: theme.colors.textMuted }}>Not Applied</span>
-                    )}
-                  </td>
-                  <td style={commonStyles.dashboardTableTd}>
-                    <ProgressBar value={student.hoursRendered} max={student.hoursRequired} size="sm" />
-                    <span style={styles.hoursText}>{student.hoursRendered}/{student.hoursRequired} hrs</span>
-                  </td>
-                  <td style={commonStyles.dashboardTableTd}>
-                    <button 
-                      style={{...commonStyles.dashboardBtnSecondary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
-                      onClick={(e) => { e.stopPropagation(); openProfile(student); }}
-                    >
-                      View Profile
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      ) : (
+                        <table style={commonStyles.dashboardTable}>
+                          <thead>
+                            <tr>
+                              <th style={commonStyles.dashboardTableTh}>Name / ID</th>
+                              <th style={commonStyles.dashboardTableTh}>Course / Section</th>
+                              <th style={commonStyles.dashboardTableTh}>Status</th>
+                              <th style={commonStyles.dashboardTableTh}>Assigned Company</th>
+                              <th style={commonStyles.dashboardTableTh}>Hours Progress</th>
+                              <th style={commonStyles.dashboardTableTh}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sec.students.map((student) => (
+                              <tr 
+                                key={student.id} 
+                                style={styles.tableRow(hoveredRow === student.id)} 
+                                onMouseEnter={() => setHoveredRow(student.id)}
+                                onMouseLeave={() => setHoveredRow(null)}
+                                onClick={() => openProfile(student)}
+                              >
+                                <td style={commonStyles.dashboardTableTd}>
+                                  <div style={styles.studentInfo}>
+                                    <img src={student.avatar} alt={student.name} style={styles.avatarSmall} />
+                                    <div>
+                                      <span style={styles.studentName}>{student.name}</span>
+                                      <span style={styles.studentId}>{student.studentId}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={commonStyles.dashboardTableTd}>
+                                  <div>{student.course} ({student.yearLevel})</div>
+                                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: theme.colors.primary }}>{student.section}</div>
+                                </td>
+                                <td style={commonStyles.dashboardTableTd}><StatusBadge status={student.status} /></td>
+                                <td style={commonStyles.dashboardTableTd}>
+                                  {student.company && student.company !== 'Not Applied' ? (
+                                    <div style={styles.companyInfo}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={styles.companyName}>{student.company}</span>
+                                        {!student.isDeployed && (
+                                          <span style={{ 
+                                            fontSize: '0.65rem', 
+                                            backgroundColor: '#fff7ed', 
+                                            color: '#c2410c', 
+                                            padding: '2px 6px', 
+                                            borderRadius: '4px',
+                                            fontWeight: 700,
+                                            border: '1px solid #fed7aa',
+                                            whiteSpace: 'nowrap'
+                                          }}>
+                                            PENDING
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span style={styles.supervisorName}>{student.supervisor}</span>
+                                    </div>
+                                  ) : (
+                                    <span style={{ color: theme.colors.textMuted }}>Not Applied</span>
+                                  )}
+                                </td>
+                                <td style={commonStyles.dashboardTableTd}>
+                                  <ProgressBar value={student.hoursRendered} max={student.hoursRequired} size="sm" />
+                                  <span style={styles.hoursText}>{student.hoursRendered}/{student.hoursRequired} hrs</span>
+                                </td>
+                                <td style={commonStyles.dashboardTableTd}>
+                                  <button 
+                                    style={{...commonStyles.dashboardBtnSecondary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
+                                    onClick={(e) => { e.stopPropagation(); openProfile(student); }}
+                                  >
+                                    View Profile
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 

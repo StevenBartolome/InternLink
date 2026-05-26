@@ -1,7 +1,6 @@
-// src/pages/ojt-professor/DocumentReviewPage.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload, Layers } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { ojtProfessorService } from '../../services/ojtProfessorService';
@@ -30,6 +29,7 @@ export default function DocumentReviewPage() {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [expandedSectionId, setExpandedSectionId] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null); // For the side panel review
   const [rejectComment, setRejectComment] = useState({});
   const [localToast, setLocalToast] = useState(null);
@@ -218,23 +218,10 @@ export default function DocumentReviewPage() {
 
 
 
-  const [selectedSection, setSelectedSection] = useState('All');
-  const [availableSections, setAvailableSections] = useState([]);
   const [deploymentFilter, setDeploymentFilter] = useState('ALL'); // 'ALL', 'PENDING', 'DEPLOYED'
 
-  useEffect(() => {
-    const profSections = user?.professor_sections?.map(ps => ps.program_sections?.name).filter(Boolean) || [];
-    const queueSections = queue.map(s => s.sectionName).filter(name => name && name !== 'Not Assigned');
-    const unique = [...new Set([...profSections, ...queueSections])].sort();
-    setAvailableSections(unique);
-  }, [user, queue]);
-
   const filteredQueue = queue.filter(student => {
-    // 1. Section Filter
-    if (selectedSection !== 'All' && student.sectionName !== selectedSection) {
-      return false;
-    }
-    // 2. Deployment Filter
+    // Deployment Filter
     if (deploymentFilter === 'PENDING' && student.deploymentApproved) {
       return false;
     }
@@ -244,17 +231,87 @@ export default function DocumentReviewPage() {
     return true;
   });
 
-  const notify = (msg, type) => {
+  // Group students by section
+  const assignedSections = user?.professor_sections?.map(ps => ({
+    id: ps.section_id || ps.program_sections?.id,
+    name: ps.program_sections?.name || 'Assigned Section'
+  })).filter(s => s.id) || [];
+
+  const sectionsList = [];
+  const sectionsMap = {};
+
+  // First, initialize sectionsMap with all assigned sections
+  assignedSections.forEach(sec => {
+    if (!sectionsMap[sec.id]) {
+      sectionsMap[sec.id] = {
+        id: sec.id,
+        name: sec.name,
+        students: []
+      };
+      sectionsList.push(sectionsMap[sec.id]);
+    }
+  });
+
+  // Then group the students in the filteredQueue
+  filteredQueue.forEach(student => {
+    const sId = student.sectionId || 'unassigned';
+    const sName = student.sectionName || 'Not Assigned';
+
+    if (!sectionsMap[sId]) {
+      sectionsMap[sId] = {
+        id: sId,
+        name: sName,
+        students: []
+      };
+      sectionsList.push(sectionsMap[sId]);
+    }
+
+    sectionsMap[sId].students.push(student);
+  });
+
+  // Sort sections and students alphabetically
+  sectionsList.sort((a, b) => a.name.localeCompare(b.name));
+  sectionsList.forEach(sec => {
+    sec.students.sort((a, b) => a.studentName.localeCompare(b.studentName));
+  });
+
+  const sectionStyles = {
+    sectionCard: {
+      ...commonStyles.dashboardCard,
+      padding: 0,
+      overflow: 'hidden',
+      border: `1px solid ${theme.colors.border}`,
+      marginBottom: '16px',
+      transition: 'box-shadow 0.2s ease',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.01)',
+    },
+    sectionHeader: (isOpen) => ({
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '16px 20px',
+      cursor: 'pointer',
+      backgroundColor: isOpen ? '#f8fafc' : '#ffffff',
+      borderBottom: isOpen ? `1px solid ${theme.colors.border}` : 'none',
+      transition: 'background-color 0.2s ease',
+    }),
+    countBadge: {
+      padding: '3px 8px',
+      borderRadius: '12px',
+      backgroundColor: theme.colors.bgSecondary,
+      color: theme.colors.textSecondary,
+      fontSize: '0.72rem',
+      fontWeight: 700,
+    }
+  };
+
+  const notify = useCallback((msg, type) => {
     if (showOutletToast) showOutletToast(msg, type);
     else if (showToast) showToast(msg, type);
     else setLocalToast({ message: msg, type });
-  };
+  }, [showOutletToast, showToast]);
 
-  useEffect(() => {
-    fetchQueue();
-  }, []);
-
-  const fetchQueue = async (silent = false) => {
+  const fetchQueue = useCallback(async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const data = await ojtProfessorService.getDocumentQueue();
@@ -265,7 +322,11 @@ export default function DocumentReviewPage() {
     } finally {
       if (!silent) setLoading(false);
     }
-  };
+  }, [notify]);
+
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
 
   const handleDocAction = async (studentId, docId, action) => {
     if (action === 'REJECTED' && !rejectComment[docId]?.trim()) {
@@ -568,464 +629,427 @@ export default function DocumentReviewPage() {
           })}
         </div>
 
-        {/* Section Filter Tabs */}
-        {availableSections.length > 0 && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center',
-            gap: '8px',
-            overflowX: 'auto', 
-            paddingBottom: '4px',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}>
-            <div style={{
-              display: 'flex',
-              backgroundColor: theme.colors.bgSecondary,
-              padding: '4px',
-              borderRadius: '12px',
-              border: `1px solid ${theme.colors.border}`,
-              boxShadow: theme.shadows.sm,
-              gap: '4px',
-            }}>
-              {['All', ...availableSections].map((section) => {
-                const isActive = selectedSection === section;
-                return (
-                  <button
-                    key={section}
-                    onClick={() => setSelectedSection(section)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      fontWeight: 700,
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      backgroundColor: isActive ? theme.colors.primary : 'transparent',
-                      color: isActive ? '#fff' : theme.colors.textMuted,
-                      boxShadow: isActive ? '0 4px 12px rgba(30, 64, 175, 0.2)' : 'none',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      whiteSpace: 'nowrap',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'rgba(30, 64, 175, 0.05)';
-                        e.currentTarget.style.color = theme.colors.primary;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.colors.textMuted;
-                      }
+        {filteredQueue.length === 0 ? (
+          <div style={{ ...commonStyles.dashboardCard, padding: '60px', textAlign: 'center', color: theme.colors.textMuted }}>
+            <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
+            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>No students pending review.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {sectionsList.map(sec => {
+              const isSectionOpen = expandedSectionId === sec.id;
+              const matchCount = sec.students.length;
+
+              // Hide empty sections if filtering is active (deploymentFilter is not ALL)
+              if (deploymentFilter !== 'ALL' && matchCount === 0) {
+                return null;
+              }
+
+              return (
+                <div key={sec.id} style={sectionStyles.sectionCard}>
+                  {/* Section Header */}
+                  <div 
+                    style={sectionStyles.sectionHeader(isSectionOpen)}
+                    onClick={() => {
+                      setExpandedSectionId(isSectionOpen ? null : sec.id);
+                      setExpanded(null);
                     }}
                   >
-                    {section}
-                    <span style={{
-                      fontSize: '0.7rem',
-                      padding: '2px 6px',
-                      borderRadius: '6px',
-                      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.2)' : theme.colors.bgAccent,
-                      color: isActive ? '#fff' : theme.colors.primary,
-                      fontWeight: 800,
-                      transition: 'all 0.25s ease'
-                    }}>
-                      {section === 'All' 
-                        ? queue.filter(s => {
-                            if (deploymentFilter === 'PENDING' && s.deploymentApproved) return false;
-                            if (deploymentFilter === 'DEPLOYED' && !s.deploymentApproved) return false;
-                            return true;
-                          }).length 
-                        : queue.filter(s => {
-                            if (s.sectionName !== section) return false;
-                            if (deploymentFilter === 'PENDING' && s.deploymentApproved) return false;
-                            if (deploymentFilter === 'DEPLOYED' && !s.deploymentApproved) return false;
-                            return true;
-                          }).length}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {queue.length === 0 ? (
-          <div style={{ ...commonStyles.dashboardCard, padding: '60px', textAlign: 'center', color: theme.colors.textMuted }}>
-            <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>No students in the pre-internship queue.</p>
-          </div>
-        ) : filteredQueue.length === 0 ? (
-          <div style={{ ...commonStyles.dashboardCard, padding: '60px', textAlign: 'center', color: theme.colors.textMuted }}>
-            <FileText size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>No students in {selectedSection} pending review.</p>
-          </div>
-        ) : filteredQueue.map(student => {
-          const isOpen = expanded === student.studentId;
-          const pendingCount = student.docs.filter(d => d.status === 'PENDING').length;
-          const approvedCount = student.docs.filter(d => d.status === 'APPROVED').length;
-          const allApproved = student.docs.length > 0 && approvedCount === student.docs.length;
-          const hasCompletedPreInternship = student.docs.length > 0 && student.docs.filter(d => !d.name.toLowerCase().includes('moa') && !d.name.toLowerCase().includes('memorandum of agreement')).every(d => d.status === 'APPROVED');
-          const canDeploy = allApproved && student.moaStatus === 'PROCESSED' && !student.deploymentApproved;
-
-          return (
-            <div key={student.studentId} style={{ 
-              ...commonStyles.dashboardCard, 
-              padding: 0, 
-              overflow: 'hidden', 
-              border: student.deploymentApproved ? '1px solid #bbf7d0' : (isOpen ? `2px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`),
-              boxShadow: isOpen ? '0 8px 30px rgba(0,0,0,0.1)' : '0 2px 8px rgba(0,0,0,0.05)',
-              transform: isOpen ? 'scale(1.01)' : 'scale(1)',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}>
-              {/* Student header */}
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '16px', 
-                padding: '20px 24px', 
-                cursor: 'pointer', 
-                backgroundColor: student.deploymentApproved ? '#f0fdf4' : (isOpen ? theme.colors.bgAccent : '#fff') 
-              }}
-                onClick={() => setExpanded(isOpen ? null : student.studentId)}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: isOpen ? '#fff' : theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: theme.colors.primary, boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
-                  <User size={24} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 800, color: theme.colors.textMain, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    {student.studentName}
-                    <span style={{ 
-                      fontSize: '0.72rem', 
-                      fontWeight: 700, 
-                      color: theme.colors.primary, 
-                      backgroundColor: theme.colors.bgAccent, 
-                      padding: '2px 8px', 
-                      borderRadius: '6px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.3px'
-                    }}>
-                      {student.sectionName}
-                    </span>
-                    {student.deploymentApproved && (
-                      <span style={{ 
-                        fontSize: '0.72rem', 
-                        fontWeight: 800, 
-                        color: '#16a34a', 
-                        backgroundColor: '#dcfce7', 
-                        padding: '2px 8px', 
-                        borderRadius: '6px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.3px',
-                        border: '1px solid #bbf7d0'
-                      }}>
-                        Deployed
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>
-                    {student.company && student.company !== 'Not Applied' && student.company !== 'N/A' ? (
-                      `${student.company}${student.position ? ` • ${student.position}` : ''}`
-                    ) : (
-                      'Not Applied'
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  {student.deploymentApproved ? (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: '#dcfce7', color: '#16a34a', fontSize: '0.8rem', fontWeight: 800 }}>
-                      <CheckCircle size={14} /> Deployed
-                    </span>
-                  ) : pendingCount > 0 ? (
-                    <span style={{ padding: '6px 12px', borderRadius: '20px', backgroundColor: '#fef9c3', color: '#92400e', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 2px 5px rgba(234, 179, 8, 0.2)' }}>
-                      {pendingCount} PENDING
-                    </span>
-                  ) : null}
-                  {isOpen ? <ChevronUp size={20} color={theme.colors.textMuted} /> : <ChevronDown size={20} color={theme.colors.textMuted} />}
-                </div>
-              </div>
-
-              {isOpen && (
-                <div style={{ padding: '0 24px 24px', borderTop: `1px solid ${theme.colors.border}`, backgroundColor: '#fafafa' }}>
-                  {student.docs.length === 0 ? (
-                    <div style={{ padding: '40px', textAlign: 'center', color: theme.colors.textMuted }}>
-                      <AlertCircle size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
-                      <p style={{ margin: '0 0 16px 0', fontWeight: 500 }}>No documents in checklist.</p>
-                      <button 
-                        onClick={() => handleSyncChecklist(student.studentId, student.internshipId)}
-                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px' }}
-                      >
-                        <RefreshCw size={16} /> Sync with Program Checklist
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: '12px', 
-                      marginTop: '20px',
-                      maxHeight: '335px',
-                      overflowY: 'auto',
-                      paddingRight: '6px'
-                    }}>
-                      {student.docs.map(doc => {
-                        const st = DOC_STATUS[doc.status] || DOC_STATUS.NOT_SUBMITTED;
-                        const isSelected = activeDoc?.id === doc.id;
-                        return (
-                          <div key={doc.id} 
-                            onClick={() => setActiveDoc({ ...doc, studentId: student.studentId, studentName: student.studentName })}
-                            style={{ 
-                              border: isSelected ? `2px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`, 
-                              borderRadius: '16px', 
-                              backgroundColor: isSelected ? '#fff' : '#fff',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '12px',
-                              padding: '16px'
-                            }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: st.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: st.color }}>
-                              <FileText size={20} />
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, color: theme.colors.textMain, fontSize: '0.9rem' }}>{doc.name}</div>
-                              <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{doc.submittedAt}</div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              {doc.isAdditional && (
-                                <span style={{ 
-                                  padding: '2px 6px', 
-                                  borderRadius: '6px', 
-                                  backgroundColor: '#eff6ff', 
-                                  color: '#1d4ed8', 
-                                  fontSize: '0.65rem', 
-                                  fontWeight: 800,
-                                  textTransform: 'uppercase',
-                                  border: '1px solid #bfdbfe'
-                                }}>
-                                  Custom
-                                </span>
-                              )}
-                              <span style={{ 
-                                padding: '4px 10px', 
-                                borderRadius: '12px', 
-                                backgroundColor: st.bg, 
-                                color: st.color, 
-                                fontSize: '0.72rem', 
-                                fontWeight: 800,
-                                textTransform: 'uppercase'
-                              }}>
-                                {st.label}
-                              </span>
-                              {doc.isAdditional && (
-                                <button 
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteRequirement(student.studentId, doc.id); }}
-                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', padding: '4px', borderRadius: '4px' }}
-                                  onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
-                                  onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                      
-                      {/* Add New Requirement Input */}
-                      <div style={{ 
-                        display: 'flex', 
-                        gap: '8px', 
-                        marginTop: '12px',
-                        padding: '12px',
-                        backgroundColor: '#fff',
-                        borderRadius: '12px',
-                        border: `1px dashed ${theme.colors.border}`
-                      }}>
-                        <input 
-                          id={`new-doc-${student.studentId}`}
-                          type="text" 
-                          placeholder="Add other requirement..." 
-                          style={{ ...commonStyles.input, flex: 1, height: '36px', fontSize: '0.85rem' }} 
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddRequirement(student.studentId, student.internshipId)}
-                        />
-                        <button 
-                          onClick={() => handleAddRequirement(student.studentId, student.internshipId)}
-                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, height: '36px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Plus size={14} /> Add
-                        </button>
-                        <button 
-                          onClick={() => handleSyncChecklist(student.studentId, student.internshipId)}
-                          title="Sync with Program Checklist"
-                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, height: '36px', width: '36px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <RefreshCw size={14} />
-                        </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#eff6ff', color: theme.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: theme.colors.textMain }}>{sec.name}</span>
+                        <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted, marginTop: '2px' }}>
+                          {matchCount} {matchCount === 1 ? 'student' : 'students'}
+                        </div>
                       </div>
                     </div>
-                  )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={sectionStyles.countBadge}>{matchCount} Students</span>
+                      {isSectionOpen ? <ChevronUp size={18} color={theme.colors.textMuted} /> : <ChevronDown size={18} color={theme.colors.textMuted} />}
+                    </div>
+                  </div>
 
-                  {/* MOA + Deploy section */}
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '24px', flexWrap: 'wrap' }}>
-                    <div style={{ ...commonStyles.dashboardCard, padding: '16px', flex: 1, minWidth: '200px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>MOA Status</div>
-                        {hasCompletedPreInternship ? (
-                          <button
-                            onClick={() => handleOpenMOAGenerator(student)}
-                            style={{
-                              background: 'none',
-                              border: 'none',
-                              color: theme.colors.primary,
-                              fontSize: '0.75rem',
-                              fontWeight: 800,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: 0
-                            }}
-                          >
-                            <FileText size={12} /> Generate MOA
-                          </button>
-                        ) : (
-                          <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, fontWeight: 700 }} title="All pre-internship checklist items must be approved first.">
-                            Checklist Incomplete
-                          </span>
-                        )}
-                      </div>
-                      {student.moaStatus === 'PROCESSED' ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a' }}>
-                            <CheckCircle size={16} />
-                            <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>SIGNED MOA UPLOADED</span>
-                          </div>
-                          {student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement'))?.fileUrl && (
-                            <a 
-                              href={student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement')).fileUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                ...commonStyles.dashboardBtn,
-                                ...commonStyles.dashboardBtnSecondary,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px',
-                                padding: '8px 12px',
-                                fontSize: '0.78rem',
-                                textDecoration: 'none',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '10px',
-                                backgroundColor: '#fff',
-                                color: theme.colors.textMain,
-                                fontWeight: 700
-                              }}
-                            >
-                              <Eye size={14} /> View Uploaded MOA
-                            </a>
-                          )}
-                          <button
-                            onClick={() => handleUnsubmitMOA(student)}
-                            style={{
-                              ...commonStyles.dashboardBtn,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              padding: '8px 12px',
-                              fontSize: '0.78rem',
-                              border: '1px solid #fca5a5',
-                              borderRadius: '10px',
-                              backgroundColor: '#fee2e2',
-                              color: '#b91c1c',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fecaca';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = '#fee2e2';
-                            }}
-                          >
-                            <RefreshCw size={14} /> Unsubmit MOA
-                          </button>
+                  {/* Section Content: Students Queue Accordion */}
+                  {isSectionOpen && (
+                    <div style={{ padding: '16px', backgroundColor: '#fcfcfd', borderTop: `1px solid ${theme.colors.border}`, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {matchCount === 0 ? (
+                        <div style={{ padding: '12px', textAlign: 'center', color: theme.colors.textMuted, fontSize: '0.85rem' }}>
+                          No students in this section.
                         </div>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                          <label 
-                            style={{
-                              ...commonStyles.dashboardBtn,
-                              ...commonStyles.dashboardBtnPrimary,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '8px',
-                              cursor: 'pointer',
-                              fontSize: '0.78rem',
-                              fontWeight: 800,
-                              padding: '10px 14px',
-                              borderRadius: '12px',
-                              backgroundColor: theme.colors.primary,
-                              color: '#fff',
-                              boxShadow: '0 2px 8px rgba(29, 45, 91, 0.25)',
-                              transition: 'all 0.2s ease',
-                              margin: 0
-                            }}
-                          >
-                            <Upload size={14} /> Upload Signed MOA (PDF)
-                            <input 
-                              type="file" 
-                              accept=".pdf"
-                              onChange={e => {
-                                const file = e.target.files?.[0];
-                                if (file) handleMOAUpload(student, file);
+                        sec.students.map(student => {
+                          const isOpen = expanded === student.studentId;
+                          const pendingCount = student.docs.filter(d => d.status === 'PENDING').length;
+                          const approvedCount = student.docs.filter(d => d.status === 'APPROVED').length;
+                          const allApproved = student.docs.length > 0 && approvedCount === student.docs.length;
+                          const hasCompletedPreInternship = student.docs.length > 0 && student.docs.filter(d => !d.name.toLowerCase().includes('moa') && !d.name.toLowerCase().includes('memorandum of agreement')).every(d => d.status === 'APPROVED');
+                          const canDeploy = allApproved && student.moaStatus === 'PROCESSED' && !student.deploymentApproved;
+
+                          return (
+                            <div key={student.studentId} style={{ 
+                              ...commonStyles.dashboardCard, 
+                              padding: 0, 
+                              overflow: 'hidden', 
+                              border: student.deploymentApproved ? '1px solid #bbf7d0' : (isOpen ? `2px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`),
+                              boxShadow: isOpen ? '0 8px 30px rgba(0,0,0,0.1)' : '0 2px 8px rgba(0,0,0,0.05)',
+                              transform: isOpen ? 'scale(1.01)' : 'scale(1)',
+                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}>
+                              {/* Student header */}
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '16px', 
+                                padding: '20px 24px', 
+                                cursor: 'pointer', 
+                                backgroundColor: student.deploymentApproved ? '#f0fdf4' : (isOpen ? theme.colors.bgAccent : '#fff') 
                               }}
-                              style={{ display: 'none' }}
-                            />
-                          </label>
-                          <span style={{ fontSize: '0.68rem', color: theme.colors.textMuted, textAlign: 'center', fontStyle: 'italic' }}>
-                            Upload signed copy to automatically update status to Processed.
-                          </span>
-                        </div>
+                                onClick={() => setExpanded(isOpen ? null : student.studentId)}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: isOpen ? '#fff' : theme.colors.bgAccent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: theme.colors.primary, boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>
+                                  <User size={24} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 800, color: theme.colors.textMain, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    {student.studentName}
+                                    <span style={{ 
+                                      fontSize: '0.72rem', 
+                                      fontWeight: 700, 
+                                      color: theme.colors.primary, 
+                                      backgroundColor: theme.colors.bgAccent, 
+                                      padding: '2px 8px', 
+                                      borderRadius: '6px',
+                                      textTransform: 'uppercase',
+                                      letterSpacing: '0.3px'
+                                    }}>
+                                      {student.sectionName}
+                                    </span>
+                                    {student.deploymentApproved && (
+                                      <span style={{ 
+                                        fontSize: '0.72rem', 
+                                        fontWeight: 800, 
+                                        color: '#16a34a', 
+                                        backgroundColor: '#dcfce7', 
+                                        padding: '2px 8px', 
+                                        borderRadius: '6px',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.3px',
+                                        border: '1px solid #bbf7d0'
+                                      }}>
+                                        Deployed
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '0.85rem', color: theme.colors.textMuted }}>
+                                    {student.company && student.company !== 'Not Applied' && student.company !== 'N/A' ? (
+                                      `${student.company}${student.position ? ` • ${student.position}` : ''}`
+                                    ) : (
+                                      'Not Applied'
+                                    )}
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                  {student.deploymentApproved ? (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '20px', backgroundColor: '#dcfce7', color: '#16a34a', fontSize: '0.8rem', fontWeight: 800 }}>
+                                      <CheckCircle size={14} /> Deployed
+                                    </span>
+                                  ) : pendingCount > 0 ? (
+                                    <span style={{ padding: '6px 12px', borderRadius: '20px', backgroundColor: '#fef9c3', color: '#92400e', fontSize: '0.8rem', fontWeight: 800, boxShadow: '0 2px 5px rgba(234, 179, 8, 0.2)' }}>
+                                      {pendingCount} PENDING
+                                    </span>
+                                  ) : null}
+                                  {isOpen ? <ChevronUp size={20} color={theme.colors.textMuted} /> : <ChevronDown size={20} color={theme.colors.textMuted} />}
+                                </div>
+                              </div>
+
+                              {isOpen && (
+                                <div style={{ padding: '0 24px 24px', borderTop: `1px solid ${theme.colors.border}`, backgroundColor: '#fafafa' }}>
+                                  {student.docs.length === 0 ? (
+                                    <div style={{ padding: '40px', textAlign: 'center', color: theme.colors.textMuted }}>
+                                      <AlertCircle size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />
+                                      <p style={{ margin: '0 0 16px 0', fontWeight: 500 }}>No documents in checklist.</p>
+                                      <button 
+                                        onClick={() => handleSyncChecklist(student.studentId, student.internshipId)}
+                                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                      >
+                                        <RefreshCw size={16} /> Sync with Program Checklist
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div style={{ 
+                                      display: 'flex', 
+                                      flexDirection: 'column', 
+                                      gap: '12px', 
+                                      marginTop: '20px',
+                                      maxHeight: '335px',
+                                      overflowY: 'auto',
+                                      paddingRight: '6px'
+                                    }}>
+                                      {student.docs.map(doc => {
+                                        const st = DOC_STATUS[doc.status] || DOC_STATUS.NOT_SUBMITTED;
+                                        const isSelected = activeDoc?.id === doc.id;
+                                        return (
+                                          <div key={doc.id} 
+                                            onClick={() => setActiveDoc({ ...doc, studentId: student.studentId, studentName: student.studentName })}
+                                            style={{ 
+                                              border: isSelected ? `2px solid ${theme.colors.primary}` : `1px solid ${theme.colors.border}`, 
+                                              borderRadius: '16px', 
+                                              backgroundColor: isSelected ? '#fff' : '#fff',
+                                              cursor: 'pointer',
+                                              transition: 'all 0.2s ease',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '12px',
+                                              padding: '16px'
+                                            }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: st.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: st.color }}>
+                                              <FileText size={20} />
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontWeight: 700, color: theme.colors.textMain, fontSize: '0.9rem' }}>{doc.name}</div>
+                                              <div style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>{doc.submittedAt}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              {doc.isAdditional && (
+                                                <span style={{ 
+                                                  padding: '2px 6px', 
+                                                  borderRadius: '6px', 
+                                                  backgroundColor: '#eff6ff', 
+                                                  color: '#1d4ed8', 
+                                                  fontSize: '0.65rem', 
+                                                  fontWeight: 800,
+                                                  textTransform: 'uppercase',
+                                                  border: '1px solid #bfdbfe'
+                                                }}>
+                                                  Custom
+                                                </span>
+                                              )}
+                                              <span style={{ 
+                                                padding: '4px 10px', 
+                                                borderRadius: '12px', 
+                                                backgroundColor: st.bg, 
+                                                color: st.color, 
+                                                fontSize: '0.72rem', 
+                                                fontWeight: 800,
+                                                textTransform: 'uppercase'
+                                              }}>
+                                                {st.label}
+                                              </span>
+                                              {doc.isAdditional && (
+                                                <button 
+                                                  onClick={(e) => { e.stopPropagation(); handleDeleteRequirement(student.studentId, doc.id); }}
+                                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.textMuted, display: 'flex', alignItems: 'center', padding: '4px', borderRadius: '4px' }}
+                                                  onMouseEnter={(e) => e.currentTarget.style.color = '#dc2626'}
+                                                  onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
+                                                >
+                                                  <Trash2 size={14} />
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                      
+                                      {/* Add New Requirement Input */}
+                                      <div style={{ 
+                                        display: 'flex', 
+                                        gap: '8px', 
+                                        marginTop: '12px',
+                                        padding: '12px',
+                                        backgroundColor: '#fff',
+                                        borderRadius: '12px',
+                                        border: `1px dashed ${theme.colors.border}`
+                                      }}>
+                                        <input 
+                                          id={`new-doc-${student.studentId}`}
+                                          type="text" 
+                                          placeholder="Add other requirement..." 
+                                          style={{ ...commonStyles.input, flex: 1, height: '36px', fontSize: '0.85rem' }} 
+                                          onKeyDown={(e) => e.key === 'Enter' && handleAddRequirement(student.studentId, student.internshipId)}
+                                        />
+                                        <button 
+                                          onClick={() => handleAddRequirement(student.studentId, student.internshipId)}
+                                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, height: '36px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                        >
+                                          <Plus size={14} /> Add
+                                        </button>
+                                        <button 
+                                          onClick={() => handleSyncChecklist(student.studentId, student.internshipId)}
+                                          title="Sync with Program Checklist"
+                                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, height: '36px', width: '36px', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                        >
+                                          <RefreshCw size={14} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* MOA + Deploy section */}
+                                  <div style={{ display: 'flex', gap: '16px', marginTop: '24px', flexWrap: 'wrap' }}>
+                                    <div style={{ ...commonStyles.dashboardCard, padding: '16px', flex: 1, minWidth: '200px', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>MOA Status</div>
+                                        {hasCompletedPreInternship ? (
+                                          <button
+                                            onClick={() => handleOpenMOAGenerator(student)}
+                                            style={{
+                                              background: 'none',
+                                              border: 'none',
+                                              color: theme.colors.primary,
+                                              fontSize: '0.75rem',
+                                              fontWeight: 800,
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              padding: 0
+                                            }}
+                                          >
+                                            <FileText size={12} /> Generate MOA
+                                          </button>
+                                        ) : (
+                                          <span style={{ fontSize: '0.7rem', color: theme.colors.textMuted, fontWeight: 700 }} title="All pre-internship checklist items must be approved first.">
+                                            Checklist Incomplete
+                                          </span>
+                                        )}
+                                      </div>
+                                      {student.moaStatus === 'PROCESSED' ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', borderRadius: '12px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#16a34a' }}>
+                                            <CheckCircle size={16} />
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>SIGNED MOA UPLOADED</span>
+                                          </div>
+                                          {student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement'))?.fileUrl && (
+                                            <a 
+                                              href={student.docs.find(d => d.name.toLowerCase().includes('moa') || d.name.toLowerCase().includes('memorandum of agreement')).fileUrl}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              style={{
+                                                ...commonStyles.dashboardBtn,
+                                                ...commonStyles.dashboardBtnSecondary,
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                gap: '6px',
+                                                padding: '8px 12px',
+                                                fontSize: '0.78rem',
+                                                textDecoration: 'none',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '10px',
+                                                backgroundColor: '#fff',
+                                                color: theme.colors.textMain,
+                                                fontWeight: 700
+                                              }}
+                                            >
+                                              <Eye size={14} /> View Uploaded MOA
+                                            </a>
+                                          )}
+                                          <button
+                                            onClick={() => handleUnsubmitMOA(student)}
+                                            style={{
+                                              ...commonStyles.dashboardBtn,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              gap: '6px',
+                                              padding: '8px 12px',
+                                              fontSize: '0.78rem',
+                                              border: '1px solid #fca5a5',
+                                              borderRadius: '10px',
+                                              backgroundColor: '#fee2e2',
+                                              color: '#b91c1c',
+                                              fontWeight: 700,
+                                              cursor: 'pointer',
+                                              transition: 'all 0.2s'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#fecaca';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                              e.currentTarget.style.backgroundColor = '#fee2e2';
+                                            }}
+                                          >
+                                            <RefreshCw size={14} /> Unsubmit MOA
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                                          <label 
+                                            style={{
+                                              ...commonStyles.dashboardBtn,
+                                              ...commonStyles.dashboardBtnPrimary,
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                              gap: '8px',
+                                              cursor: 'pointer',
+                                              fontSize: '0.78rem',
+                                              fontWeight: 800,
+                                              padding: '10px 14px',
+                                              borderRadius: '12px',
+                                              backgroundColor: theme.colors.primary,
+                                              color: '#fff',
+                                              boxShadow: '0 2px 8px rgba(29, 45, 91, 0.25)',
+                                              transition: 'all 0.2s ease',
+                                              margin: 0
+                                            }}
+                                          >
+                                            <Upload size={14} /> Upload Signed MOA (PDF)
+                                            <input 
+                                              type="file" 
+                                              accept=".pdf"
+                                              onChange={e => {
+                                                const file = e.target.files?.[0];
+                                                if (file) handleMOAUpload(student, file);
+                                              }}
+                                              style={{ display: 'none' }}
+                                            />
+                                          </label>
+                                          <span style={{ fontSize: '0.68rem', color: theme.colors.textMuted, textAlign: 'center', fontStyle: 'italic' }}>
+                                            Upload signed copy to automatically update status to Processed.
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {!student.deploymentApproved && (
+                                      <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'flex-end' }}>
+                                        <button onClick={() => handleDeploy(student.studentId, student.internshipId, student.studentName)} disabled={!canDeploy}
+                                          style={{ 
+                                            ...commonStyles.dashboardBtn, 
+                                            ...commonStyles.dashboardBtnPrimary, 
+                                            width: '100%', 
+                                            height: '52px',
+                                            borderRadius: '12px',
+                                            opacity: canDeploy ? 1 : 0.4,
+                                            boxShadow: canDeploy ? '0 4px 15px rgba(22, 163, 74, 0.3)' : 'none',
+                                            background: canDeploy ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#ccc' 
+                                          }}>
+                                          <Rocket size={18} /> Approve Deployment
+                                        </button>
+                                      </div>
+                                    )}
+                                    {student.deploymentApproved && (
+                                      <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#16a34a', fontWeight: 800, padding: '16px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #dcfce7' }}>
+                                        <CheckCircle size={22} /> Student Deployed!
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })
                       )}
                     </div>
-
-                    {!student.deploymentApproved && (
-                      <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'flex-end' }}>
-                        <button onClick={() => handleDeploy(student.studentId, student.internshipId, student.studentName)} disabled={!canDeploy}
-                          style={{ 
-                            ...commonStyles.dashboardBtn, 
-                            ...commonStyles.dashboardBtnPrimary, 
-                            width: '100%', 
-                            height: '52px',
-                            borderRadius: '12px',
-                            opacity: canDeploy ? 1 : 0.4,
-                            boxShadow: canDeploy ? '0 4px 15px rgba(22, 163, 74, 0.3)' : 'none',
-                            background: canDeploy ? 'linear-gradient(135deg, #16a34a, #15803d)' : '#ccc' 
-                          }}>
-                          <Rocket size={18} /> Approve Deployment
-                        </button>
-                      </div>
-                    )}
-                    {student.deploymentApproved && (
-                      <div style={{ flex: 1, minWidth: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#16a34a', fontWeight: 800, padding: '16px', backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #dcfce7' }}>
-                        <CheckCircle size={22} /> Student Deployed!
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        )}  </div>
 
       {/* Right Side: Document Detail / Side Panel */}
       {activeDoc ? (
