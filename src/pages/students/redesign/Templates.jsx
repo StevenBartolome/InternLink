@@ -113,24 +113,24 @@ const Templates = () => {
         studentName: studentName,
         program: program,
         hours: hours,
-        companyName: internship?.company_name || 'National Irrigation Administration Region III',
-        companyAddress: internship?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
-        position: internship?.position || 'IT Intern',
-        parentName: hasInternship ? '' : 'Maria Clara G. Ortiz',
-        parentContact: hasInternship ? '' : '09171234567',
-        parentRelationship: 'Mother',
-        witnessName: 'Prof. Steven Bartolome',
-        dateSigned: new Date().toISOString().split('T')[0],
-        startDate: internship?.start_date || '2026-02-01',
-        endDate: internship?.end_date || '2026-05-30',
-        pronounSubject: 'her',
-        pronounPossessive: 'her',
+        companyName: internship?.company_name || user?.user_metadata?.company_name || 'National Irrigation Administration Region III',
+        companyAddress: internship?.company_address || user?.user_metadata?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
+        position: internship?.position || user?.user_metadata?.position || 'IT Intern',
+        parentName: user?.user_metadata?.parent_name || (hasInternship ? '' : 'Maria Clara G. Ortiz'),
+        parentContact: user?.user_metadata?.parent_contact || (hasInternship ? '' : '09171234567'),
+        parentRelationship: user?.user_metadata?.parent_relationship || 'Mother',
+        witnessName: user?.user_metadata?.witness_name || 'Prof. Steven Bartolome',
+        dateSigned: user?.user_metadata?.date_signed || new Date().toISOString().split('T')[0],
+        startDate: user?.user_metadata?.start_date || '2026-02-01',
+        endDate: user?.user_metadata?.end_date || '2026-05-30',
+        pronounSubject: user?.user_metadata?.pronoun_subject || 'her',
+        pronounPossessive: (user?.user_metadata?.pronoun_subject || 'her') === 'him' ? 'his' : 'her',
         letterDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        recipientName: '',
-        recipientTitle: '',
-        recipientCompany: '',
-        recipientAddress: '',
-        salutation: '',
+        recipientName: user?.user_metadata?.recipient_name || '',
+        recipientTitle: user?.user_metadata?.recipient_title || '',
+        recipientCompany: user?.user_metadata?.recipient_company || internship?.company_name || 'National Irrigation Administration Region III',
+        recipientAddress: user?.user_metadata?.recipient_address || internship?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
+        salutation: user?.user_metadata?.salutation || '',
         adviserName: 'KATHERINE S. DERLA',
         adviserEmail: 'ksderla@nu-baliwag.edu.ph',
         adviserPhone: '+632 87121900 loc 1456',
@@ -141,28 +141,28 @@ const Templates = () => {
         studentName: studentName,
         program: program,
         hours: hours,
-        companyName: internship?.company_name || 'National Irrigation Administration Region III',
-        companyAddress: internship?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
-        position: internship?.position || 'IT Intern',
-        parentName: '',
-        parentContact: '',
-        parentRelationship: 'Mother',
-        witnessName: '',
-        dateSigned: '',
-        startDate: '',
-        endDate: '',
+        companyName: internship?.company_name || user?.user_metadata?.company_name || 'National Irrigation Administration Region III',
+        companyAddress: internship?.company_address || user?.user_metadata?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
+        position: internship?.position || user?.user_metadata?.position || 'IT Intern',
+        parentName: user?.user_metadata?.parent_name || '',
+        parentContact: user?.user_metadata?.parent_contact || '',
+        parentRelationship: user?.user_metadata?.parent_relationship || 'Mother',
+        witnessName: user?.user_metadata?.witness_name || '',
+        dateSigned: user?.user_metadata?.date_signed || '',
+        startDate: user?.user_metadata?.start_date || '',
+        endDate: user?.user_metadata?.end_date || '',
         letterDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-        recipientName: hasInternship ? '' : 'ENGR. JOSEPHINE B. SALAZAR',
-        recipientTitle: hasInternship ? '' : 'Regional Manager',
-        recipientCompany: internship?.company_name || 'National Irrigation Administration Region III',
-        recipientAddress: internship?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
-        salutation: hasInternship ? '' : 'Dear Mrs. De Guia:',
+        recipientName: user?.user_metadata?.recipient_name || 'ENGR. JOSEPHINE B. SALAZAR',
+        recipientTitle: user?.user_metadata?.recipient_title || 'Regional Manager',
+        recipientCompany: user?.user_metadata?.recipient_company || internship?.company_name || 'National Irrigation Administration Region III',
+        recipientAddress: user?.user_metadata?.recipient_address || internship?.company_address || 'San Rafael Municipal Road, San Rafael, Bulacan',
+        salutation: user?.user_metadata?.salutation || 'Dear Mrs. De Guia:',
         adviserName: 'KATHERINE S. DERLA',
         adviserEmail: 'ksderla@nu-baliwag.edu.ph',
         adviserPhone: '+632 87121900 loc 1456',
         programCode: 'BSIT Program',
-        pronounSubject: 'her',
-        pronounPossessive: 'her'
+        pronounSubject: user?.user_metadata?.pronoun_subject || 'her',
+        pronounPossessive: (user?.user_metadata?.pronoun_subject || 'her') === 'him' ? 'his' : 'her'
       };
     } else if (type === 'resume') {
       initialData = {
@@ -188,8 +188,8 @@ const Templates = () => {
         letterDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         resumeStyle: defaultStyle || 'classic',
         photoUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200',
-        pronounSubject: 'her',
-        pronounPossessive: 'her'
+        pronounSubject: user?.user_metadata?.pronoun_subject || 'her',
+        pronounPossessive: (user?.user_metadata?.pronoun_subject || 'her') === 'him' ? 'his' : 'her'
       };
     }
 
@@ -225,6 +225,28 @@ const Templates = () => {
         return;
       }
     }
+
+    // Persist empty/new fields filled by student to user metadata so they become default values
+    const metadataUpdates = {
+      parent_name: data.parentName,
+      parent_contact: data.parentContact,
+      parent_relationship: data.parentRelationship,
+      witness_name: data.witnessName,
+      pronoun_subject: data.pronounSubject,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      date_signed: data.dateSigned,
+      recipient_name: data.recipientName,
+      recipient_title: data.recipientTitle,
+      recipient_company: data.recipientCompany,
+      recipient_address: data.recipientAddress,
+      salutation: data.salutation
+    };
+
+    // Sync to Supabase auth user in the background
+    supabase.auth.updateUser({
+      data: metadataUpdates
+    }).catch(err => console.error('Failed to sync document generator defaults to auth metadata:', err));
 
     setGeneratorModal(prev => ({ ...prev, isOpen: false }));
 

@@ -12,7 +12,9 @@ import {
   FileText,
   XCircle,
   Pencil,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -45,6 +47,42 @@ const Attendance = () => {
   const [usualTimeIn, setUsualTimeIn] = useState('08:00');
   const [usualTimeOut, setUsualTimeOut] = useState('17:00');
   const [remindersEnabled, setRemindersEnabled] = useState(false);
+
+  const [currentViewDate, setCurrentViewDate] = useState(new Date());
+
+  const handlePrevMonth = () => {
+    setCurrentViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const formatMonthYear = (dateObj) => {
+    return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const getViewedMonthDays = () => {
+    const year = currentViewDate.getFullYear();
+    const month = currentViewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const startDayOfWeek = firstDay.getDay();
+    
+    const days = [];
+    for (let i = 0; i < startDayOfWeek; i++) {
+      days.push({ isPadding: true });
+    }
+    for (let d = 1; d <= totalDays; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      days.push({
+        dayNum: d,
+        dateStr,
+        isPadding: false
+      });
+    }
+    return days;
+  };
 
   // Attendance PDF Export Settings
   const [showExportModal, setShowExportModal] = useState(false);
@@ -545,18 +583,79 @@ const Attendance = () => {
     }
   };
 
+  // Helper function to apply the daily OJT overtime (max 2 hours) and absolute 7:00 PM cutoff caps
+  const applyOvertimeCap = (logDate, timeInIso, timeOutIso, usualTimeOut = '17:00') => {
+    const timeInDate = new Date(timeInIso);
+    const timeOutDate = new Date(timeOutIso);
+    
+    // Extract date parts
+    const year = timeInDate.getFullYear();
+    const month = timeInDate.getMonth();
+    const date = timeInDate.getDate();
+
+    // 1. Parse standard usualTimeOut (HH:mm)
+    const [outHrs, outMins] = (usualTimeOut || '17:00').split(':').map(Number);
+    const shiftEndTime = new Date(year, month, date, outHrs, outMins, 0);
+
+    // 2. Maximum overtime is 2 hours
+    const maxOtEndTime = new Date(shiftEndTime.getTime() + 2 * 60 * 60 * 1000);
+
+    // 3. Absolute cap is 7:00 PM (19:00) on that shift day
+    const absoluteCapTime = new Date(year, month, date, 19, 0, 0);
+
+    // 4. Maximum allowed credited end time is the smaller of shiftEndTime+2h or 7 PM
+    const allowedEndTime = new Date(Math.min(maxOtEndTime.getTime(), absoluteCapTime.getTime()));
+
+    let finalTimeOut = timeOutDate;
+    let wasCapped = false;
+    let capReason = '';
+
+    if (timeOutDate > allowedEndTime) {
+      finalTimeOut = allowedEndTime;
+      wasCapped = true;
+      if (maxOtEndTime.getTime() < absoluteCapTime.getTime()) {
+        capReason = 'daily overtime limit (maximum 2 hours)';
+      } else {
+        capReason = 'absolute 7:00 PM cutoff rule';
+      }
+    }
+
+    const diffMs = finalTimeOut - timeInDate;
+    const hoursRendered = Math.max(0, parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2)));
+
+    return {
+      timeOutIso: finalTimeOut.toISOString(),
+      hoursRendered,
+      wasCapped,
+      capReason
+    };
+  };
+
   // 4. Handle Clock Out
   const handleClockOut = async () => {
     if (!todayLog || !internshipId) return;
     try {
       setActionLoading(true);
+      const usualTimeOut = user?.user_metadata?.usual_time_out || '17:00';
       const res = await attendanceService.clockOut(
         todayLog.id,
         internshipId,
-        todayLog.time_in
+        todayLog.time_in,
+        usualTimeOut
       );
       setTodayLog(res.log);
-      setToast({ message: `🔒 Clocked out! ${res.log.hours_rendered} hrs saved. Use Resume if you clocked out by mistake.`, type: 'success' });
+      
+      if (res.wasCapped) {
+        setToast({ 
+          message: `🔒 Clocked out! Hours capped at ${res.log.hours_rendered} hrs due to ${res.capReason}.`, 
+          type: 'warning' 
+        });
+      } else {
+        setToast({ 
+          message: `🔒 Clocked out! ${res.log.hours_rendered} hrs saved. Keep up the great work!`, 
+          type: 'success' 
+        });
+      }
       await fetchLogs(true);
     } catch (err) {
       console.error('Clock out error:', err);
@@ -573,17 +672,20 @@ const Attendance = () => {
     if (!missedLog || !internshipId) return;
     try {
       setActionLoading(true);
-      // Build a retroactive time_out ISO string on the missed date
-      const retroTimeOut = new Date(`${missedLog.log_date}T${missedClockOut}:00`).toISOString();
-      const diffMs = new Date(retroTimeOut) - new Date(missedLog.time_in);
-      const hoursRendered = Math.max(0, parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2)));
+      const usualTimeOut = user?.user_metadata?.usual_time_out || '17:00';
+      
+      // Build actual retroactive time_out ISO string on the missed date
+      const retroTimeOutStr = new Date(`${missedLog.log_date}T${missedClockOut}:00`).toISOString();
+      
+      // Apply capping
+      const capResult = applyOvertimeCap(missedLog.log_date, missedLog.time_in, retroTimeOutStr, usualTimeOut);
 
       const { supabase } = await import('../../../services/supabaseClient');
       const { error: updateError } = await supabase
         .from('attendance_logs')
         .update({
-          time_out: retroTimeOut,
-          hours_rendered: hoursRendered,
+          time_out: capResult.timeOutIso,
+          hours_rendered: capResult.hoursRendered,
           status: 'LOGGED',
           updated_at: new Date().toISOString()
         })
@@ -607,7 +709,18 @@ const Attendance = () => {
         .eq('id', internshipId);
 
       setMissedLog(null);
-      setToast({ message: `✅ Missed clock-out resolved! ${hoursRendered} hours saved for ${missedLog.log_date}.`, type: 'success' });
+      
+      if (capResult.wasCapped) {
+        setToast({ 
+          message: `⚠️ Missed clock-out resolved! Hours capped at ${capResult.hoursRendered} hrs due to ${capResult.capReason}.`, 
+          type: 'warning' 
+        });
+      } else {
+        setToast({ 
+          message: `✅ Missed clock-out resolved! ${capResult.hoursRendered} hours saved for ${missedLog.log_date}.`, 
+          type: 'success' 
+        });
+      }
       await fetchLogs(true);
     } catch (err) {
       console.error('Retroactive clock-out error:', err);
@@ -621,18 +734,21 @@ const Attendance = () => {
   const handleEditSave = async (log) => {
     try {
       setActionLoading(true);
+      const usualTimeOut = user?.user_metadata?.usual_time_out || '17:00';
+      
       const startIso = new Date(`${log.log_date}T${editForm.timeIn}:00`).toISOString();
       const endIso   = new Date(`${log.log_date}T${editForm.timeOut}:00`).toISOString();
-      const diffMs   = new Date(endIso) - new Date(startIso);
-      const hrs      = Math.max(0, parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2)));
+      
+      // Apply capping
+      const capResult = applyOvertimeCap(log.log_date, startIso, endIso, usualTimeOut);
 
       const { supabase } = await import('../../../services/supabaseClient');
       const { error } = await supabase
         .from('attendance_logs')
         .update({
           time_in: startIso,
-          time_out: endIso,
-          hours_rendered: hrs,
+          time_out: capResult.timeOutIso,
+          hours_rendered: capResult.hoursRendered,
           activities: editForm.activities,
           updated_at: new Date().toISOString()
         })
@@ -654,7 +770,18 @@ const Attendance = () => {
         .eq('id', internshipId);
 
       setEditingLog(null);
-      setToast({ message: `✏️ Log updated — ${hrs.toFixed(2)} hrs recorded.`, type: 'success' });
+      
+      if (capResult.wasCapped) {
+        setToast({ 
+          message: `⚠️ Log updated! Hours capped at ${capResult.hoursRendered.toFixed(2)} hrs due to ${capResult.capReason}.`, 
+          type: 'warning' 
+        });
+      } else {
+        setToast({ 
+          message: `✏️ Log updated — ${capResult.hoursRendered.toFixed(2)} hrs recorded.`, 
+          type: 'success' 
+        });
+      }
       await fetchLogs(true);
     } catch (err) {
       setToast({ message: 'Failed to save edit: ' + err.message, type: 'error' });
@@ -904,7 +1031,140 @@ const Attendance = () => {
       position: 'relative',
       overflow: 'hidden',
       boxShadow: '0 10px 30px rgba(30, 58, 138, 0.25)',
-    }
+    },
+    dashboardGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+      gap: '24px',
+    },
+    calendarCard: {
+      ...studentDesign.card,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      padding: '24px',
+      borderRadius: '20px',
+      boxShadow: studentDesign.shadows.premium,
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      border: '1px solid #E2E8F0',
+      minHeight: '340px'
+    },
+    calendarHeader: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    calendarTitle: {
+      fontSize: '16px',
+      fontWeight: 800,
+      color: studentDesign.colors.textMain,
+      margin: 0
+    },
+    navBtn: {
+      border: '1px solid #E2E8F0',
+      background: '#fff',
+      color: studentDesign.colors.textMain,
+      width: '32px',
+      height: '32px',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      transition: 'all 0.2s',
+      outline: 'none'
+    },
+    calendarGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(7, 1fr)',
+      gap: '8px',
+      textAlign: 'center'
+    },
+    weekHeader: {
+      fontSize: '11px',
+      fontWeight: 700,
+      color: studentDesign.colors.textMuted,
+      textTransform: 'uppercase',
+      paddingBottom: '4px'
+    },
+    dayCell: (isToday, hasLog, isLogged, isScheduled, isPadding) => {
+      let bg = 'transparent';
+      let color = studentDesign.colors.textDark;
+      let border = '1px solid transparent';
+      let shadow = 'none';
+      let fontWeight = '500';
+
+      if (isPadding) {
+        return { visibility: 'hidden' };
+      }
+
+      if (hasLog) {
+        bg = isLogged ? '#DCFCE7' : '#EFF6FF'; // green for logged, blue for active
+        color = isLogged ? '#15803D' : studentDesign.colors.primary;
+        border = `1.5px solid ${isLogged ? '#BBF7D0' : '#BFDBFE'}`;
+        fontWeight = '700';
+      } else if (isScheduled) {
+        border = `1.5px dashed #CBD5E1`;
+        color = '#475569';
+      }
+
+      if (isToday) {
+        border = `2.5px solid ${studentDesign.colors.primary}`;
+        fontWeight = '800';
+        shadow = `0 4px 12px ${studentDesign.colors.primary}20`;
+        if (!hasLog) {
+          color = studentDesign.colors.primary;
+        }
+      }
+
+      return {
+        height: '36px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '10px',
+        fontSize: '13px',
+        fontWeight,
+        backgroundColor: bg,
+        color,
+        border,
+        boxShadow: shadow,
+        cursor: 'default',
+        position: 'relative',
+        transition: 'all 0.2s'
+      };
+    },
+    todayDot: {
+      width: '5px',
+      height: '5px',
+      borderRadius: '50%',
+      backgroundColor: studentDesign.colors.primary,
+      position: 'absolute',
+      bottom: '3px'
+    },
+    legend: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      fontSize: '11.5px',
+      color: studentDesign.colors.textMuted,
+      borderTop: '1px solid #F1F5F9',
+      paddingTop: '12px',
+      marginTop: 'auto',
+      flexWrap: 'wrap',
+      gap: '8px'
+    },
+    legendItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '6px'
+    },
+    legendDot: (color, border = 'none') => ({
+      width: '10px',
+      height: '10px',
+      borderRadius: '50%',
+      backgroundColor: color,
+      border
+    })
   };
 
   // Locked State for Un-deployed Students
@@ -998,67 +1258,142 @@ const Attendance = () => {
         </div>
       )}
 
-      {/* Premium Clock In/Out Panel */}
-      <div style={styles.clockPanel}>
-        <div style={{ position: 'absolute', right: '-40px', bottom: '-40px', opacity: 0.05, color: '#fff' }}>
-          <Clock size={240} />
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', zIndex: 2 }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px' }}>OJT Time Tracker</h2>
-            <p style={{ margin: '4px 0 0', color: '#93c5fd', fontSize: '14px' }}>
-              {isClockedIn
-                ? '🔴 Attendance is active. Your hours are currently ticking!'
-                : '👋 Ready to start your shift? Click Clock In to begin. You can clock in multiple times per day.'}
-            </p>
+      {/* Top Section: Dashboard side-by-side Grid */}
+      <div style={styles.dashboardGrid}>
+        {/* Premium Clock In/Out Panel */}
+        <div style={styles.clockPanel}>
+          <div style={{ position: 'absolute', right: '-40px', bottom: '-40px', opacity: 0.05, color: '#fff' }}>
+            <Clock size={240} />
           </div>
 
-          {isClockedIn && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '14px' }}>
-              <div style={{ width: '10px', height: '10px', backgroundColor: '#ef4444', borderRadius: '50%', animation: 'pulse 1.5s infinite' }} />
-              <span style={{ fontSize: '24px', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '1px' }}>
-                {elapsedTime}
-              </span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', zIndex: 2 }}>
+            <div>
+              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 800, letterSpacing: '-0.5px' }}>OJT Time Tracker</h2>
+              <p style={{ margin: '4px 0 0', color: '#93c5fd', fontSize: '14px' }}>
+                {isClockedIn
+                  ? '🔴 Attendance is active. Your hours are currently ticking!'
+                  : '👋 Ready to start your shift? Click Clock In to begin. You can clock in multiple times per day.'}
+              </p>
             </div>
-          )}
+
+            {isClockedIn && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '10px 20px', borderRadius: '14px' }}>
+                <div style={{ width: '10px', height: '10px', backgroundColor: '#ef4444', borderRadius: '50%', animation: 'pulse 1.5s infinite' }} />
+                <span style={{ fontSize: '24px', fontFamily: 'monospace', fontWeight: 700, letterSpacing: '1px' }}>
+                  {elapsedTime}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ zIndex: 2, display: 'flex', gap: '12px', marginTop: 'auto' }}>
+            {isClockedIn ? (
+              <button
+                disabled={actionLoading}
+                onClick={handleClockOut}
+                style={{
+                  backgroundColor: '#ef4444', color: '#fff', border: 'none',
+                  padding: '14px 28px', borderRadius: '12px', fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                  transition: 'background-color 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+              >
+                {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Square size={18} fill="#fff" />}
+                Clock Out &amp; Save Shift
+              </button>
+            ) : (
+              <button
+                disabled={actionLoading}
+                onClick={handleClockIn}
+                style={{
+                  backgroundColor: '#3b82f6', color: '#fff', border: 'none',
+                  padding: '14px 28px', borderRadius: '12px', fontWeight: 700,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                  transition: 'background-color 0.2s', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+              >
+                {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="#fff" />}
+                Clock In Shift
+              </button>
+            )}
+          </div>
         </div>
 
+        {/* Attendance Calendar Card */}
+        <div style={styles.calendarCard}>
+          <div style={styles.calendarHeader}>
+            <h3 style={styles.calendarTitle}>
+              {formatMonthYear(currentViewDate)}
+            </h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={handlePrevMonth} style={styles.navBtn} className="hover:bg-slate-100">
+                <ChevronLeft size={16} />
+              </button>
+              <button type="button" onClick={handleNextMonth} style={styles.navBtn} className="hover:bg-slate-100">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
 
-        <div style={{ zIndex: 2, display: 'flex', gap: '12px' }}>
-          {isClockedIn ? (
-            <button
-              disabled={actionLoading}
-              onClick={handleClockOut}
-              style={{
-                backgroundColor: '#ef4444', color: '#fff', border: 'none',
-                padding: '14px 28px', borderRadius: '12px', fontWeight: 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                transition: 'background-color 0.2s', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.25)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
-            >
-              {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Square size={18} fill="#fff" />}
-              Clock Out &amp; Save Shift
-            </button>
-          ) : (
-            <button
-              disabled={actionLoading}
-              onClick={handleClockIn}
-              style={{
-                backgroundColor: '#3b82f6', color: '#fff', border: 'none',
-                padding: '14px 28px', borderRadius: '12px', fontWeight: 700,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                transition: 'background-color 0.2s', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
-            >
-              {actionLoading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} fill="#fff" />}
-              Clock In Shift
-            </button>
-          )}
+          <div style={styles.calendarGrid}>
+            {/* Weekday headers */}
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+              <div key={day} style={styles.weekHeader}>
+                {day}
+              </div>
+            ))}
+
+            {/* Days in Month */}
+            {getViewedMonthDays().map((day, idx) => {
+              if (day.isPadding) {
+                return <div key={`pad-${idx}`} style={styles.dayCell(false, false, false, false, true)} />;
+              }
+
+              const todayCAStr = new Date().toLocaleDateString('en-CA');
+              const isToday = day.dateStr === todayCAStr;
+              
+              // Find log for this date
+              const dayLog = logs.find(l => l.log_date === day.dateStr);
+              const hasLog = !!dayLog;
+              const isLogged = dayLog?.status === 'LOGGED';
+
+              // Check if scheduled shift workday
+              const dayDateObj = new Date(day.dateStr + 'T00:00:00');
+              const dayOfWeekName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(dayDateObj);
+              const isScheduled = user?.user_metadata?.work_days?.includes(dayOfWeekName);
+
+              return (
+                <div 
+                  key={day.dateStr} 
+                  style={styles.dayCell(isToday, hasLog, isLogged, isScheduled, false)}
+                  title={isToday ? 'Today' : (hasLog ? `Logged OJT Shift: ${dayLog.hours_rendered} hrs` : (isScheduled ? 'Scheduled OJT Shift' : ''))}
+                >
+                  {day.dayNum}
+                  {isToday && <div style={styles.todayDot} />}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Calendar Legend */}
+          <div style={styles.legend}>
+            <div style={styles.legendItem}>
+              <div style={styles.legendDot(studentDesign.colors.primary, 'none')} />
+              <span>Today</span>
+            </div>
+            <div style={styles.legendItem}>
+              <div style={styles.legendDot('#DCFCE7', '1px solid #BBF7D0')} />
+              <span style={{ color: '#15803D', fontWeight: 650 }}>Logged</span>
+            </div>
+            <div style={styles.legendItem}>
+              <div style={styles.legendDot('transparent', '1.5px dashed #CBD5E1')} />
+              <span>Scheduled Shift</span>
+            </div>
+          </div>
         </div>
       </div>
 

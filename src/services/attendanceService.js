@@ -62,17 +62,54 @@ export const attendanceService = {
 
   /**
    * Clock out — closes the active session and re-sums all hours.
+   * Enforces a 2-hour maximum overtime limit and an absolute 7:00 PM (19:00) cutoff.
    */
-  async clockOut(logId, internshipId, timeIn) {
-    const nowStr        = new Date().toISOString();
-    const diffMs        = new Date(nowStr) - new Date(timeIn);
+  async clockOut(logId, internshipId, timeIn, usualTimeOut = '17:00') {
+    const now = new Date();
+    
+    // Parse timeIn to extract the local date of the shift
+    const timeInDate = new Date(timeIn);
+    const year = timeInDate.getFullYear();
+    const month = timeInDate.getMonth();
+    const date = timeInDate.getDate();
+
+    // 1. Parse standard usualTimeOut (HH:mm)
+    const [outHrs, outMins] = (usualTimeOut || '17:00').split(':').map(Number);
+    const shiftEndTime = new Date(year, month, date, outHrs, outMins, 0);
+
+    // 2. Maximum overtime is 2 hours
+    const maxOtEndTime = new Date(shiftEndTime.getTime() + 2 * 60 * 60 * 1000);
+
+    // 3. Absolute cap is 7:00 PM (19:00) on that shift day
+    const absoluteCapTime = new Date(year, month, date, 19, 0, 0);
+
+    // 4. Maximum allowed credited end time is the smaller of shiftEndTime+2h or 7 PM
+    const allowedEndTime = new Date(Math.min(maxOtEndTime.getTime(), absoluteCapTime.getTime()));
+
+    let timeOutToSave = now;
+    let wasCapped = false;
+    let capReason = '';
+
+    if (now > allowedEndTime) {
+      timeOutToSave = allowedEndTime;
+      wasCapped = true;
+      if (maxOtEndTime.getTime() < absoluteCapTime.getTime()) {
+        capReason = 'daily overtime limit (maximum 2 hours)';
+      } else {
+        capReason = 'absolute 7:00 PM cutoff rule';
+      }
+    }
+
+    const diffMs = timeOutToSave - timeInDate;
     const hoursRendered = Math.max(0, parseFloat((diffMs / (1000 * 60 * 60)).toFixed(2)));
+    const nowStr = now.toISOString();
+    const timeOutIso = timeOutToSave.toISOString();
 
     // 1. Close this session
     const { data: updatedLog, error: updateError } = await supabase
       .from('attendance_logs')
       .update({
-        time_out:       nowStr,
+        time_out:       timeOutIso,
         hours_rendered: hoursRendered,
         status:         'LOGGED',
         updated_at:     nowStr
@@ -103,6 +140,12 @@ export const attendanceService = {
 
     if (internError) throw internError;
 
-    return { log: updatedLog, totalHours: roundedHours };
+    return { 
+      log: updatedLog, 
+      totalHours: roundedHours,
+      wasCapped,
+      capReason,
+      allowedEndTime: timeOutIso
+    };
   }
 };
