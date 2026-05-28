@@ -5,6 +5,7 @@ import { theme } from '../../../styles/theme';
 import { commonStyles } from '../../../styles/commonStyles';
 import Toast from '../../common/Toast';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../services/supabaseClient';
 // import { portfolioItems, studentInternship } from '../../../services/mocks/mockData';
 
 export default function PostInternship() {
@@ -23,13 +24,25 @@ export default function PostInternship() {
   const allUploaded = items.every(i => i.uploaded);
   const uploadedCount = items.filter(i => i.uploaded).length;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!allUploaded) {
       setToast({ message: 'Please upload all portfolio items before submitting.', type: 'error' });
       return;
     }
-    setSubmitted(true);
-    setToast({ message: 'Portfolio submitted successfully! Awaiting OJT Adviser review and grading.', type: 'success' });
+    try {
+      const { error } = await supabase
+        .from('student_internships')
+        .update({ stage3_submitted: true })
+        .eq('student_id', user.id);
+
+      if (error) throw error;
+      
+      setSubmitted(true);
+      setToast({ message: 'Portfolio submitted successfully! Awaiting OJT Adviser review and grading.', type: 'success' });
+    } catch (err) {
+      console.error('Error submitting portfolio:', err);
+      setToast({ message: 'Failed to submit portfolio to server.', type: 'error' });
+    }
   };
 
   const gradeLabel = (g) => {

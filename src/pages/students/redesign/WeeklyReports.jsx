@@ -63,25 +63,31 @@ const WeeklyReports = () => {
   // Active / Selected Report for View details
   const [selectedReport, setSelectedReport] = useState(null);
 
+  const getOjtStartDate = useCallback(() => {
+    if (user?.start_date) return user.start_date;
+    if (activities && activities.length > 0) {
+      const sortedActs = [...activities].sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+      if (sortedActs[0]?.log_date) return sortedActs[0].log_date;
+    }
+    if (reports && reports.length > 0) {
+      const sortedR = [...reports].sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
+      if (sortedR[0]?.submitted_at) return sortedR[0].submitted_at.slice(0, 10);
+    }
+    return new Date().toISOString().slice(0, 10);
+  }, [user?.start_date, activities, reports]);
+
   // Group activities by Week and Date
   const groupedActivities = useMemo(() => {
     if (!activities || activities.length === 0) return {};
     
-    let startDateStr = user?.start_date;
-    if (!startDateStr) {
-       const sortedActs = [...activities].sort((a,b) => new Date(a.log_date) - new Date(b.log_date));
-       startDateStr = sortedActs[0]?.log_date;
-    }
-    if (!startDateStr) return {};
-
-    const start = new Date(startDateStr + 'T00:00:00');
+    const startDateStr = getOjtStartDate();
     const grouped = {};
 
     activities.forEach(act => {
-      const actDate = new Date(act.log_date + 'T00:00:00');
-      const diffTime = Math.abs(actDate - start);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const weekNum = Math.floor(diffDays / 7) + 1;
+      const d1 = new Date(act.log_date + 'T00:00:00Z');
+      const d2 = new Date(startDateStr + 'T00:00:00Z');
+      const diffDays = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+      const weekNum = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 1;
 
       const weekKey = `Week ${weekNum}`;
       if (!grouped[weekKey]) grouped[weekKey] = {};
@@ -93,12 +99,12 @@ const WeeklyReports = () => {
     });
 
     return grouped;
-  }, [activities, user?.start_date]);
+  }, [activities, getOjtStartDate]);
 
-  const fetchReports = useCallback(async () => {
+  const fetchReports = useCallback(async (silent = false) => {
     if (!internshipId) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await weeklyReportService.getWeeklyReports(internshipId);
       setReports(data);
       
@@ -114,11 +120,12 @@ const WeeklyReports = () => {
         setWeekNumber(1);
         setWeekLabel('Week 1');
       }
+      return data;
     } catch (err) {
       console.error('Error fetching weekly reports:', err);
       setToast({ message: 'Failed to load weekly reports.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [internshipId]);
 
@@ -205,8 +212,9 @@ const WeeklyReports = () => {
 
       setToast({ message: '✅ Signed Weekly Activity Report uploaded and submitted to your OJT Adviser!', type: 'success' });
       setUploadFile(null);
-      setSelectedReport(updatedReport);
-      await fetchReports();
+      const freshData = await fetchReports(true);
+      const freshReport = freshData?.find(r => r.id === updatedReport.id) || updatedReport;
+      setSelectedReport(freshReport);
     } catch (err) {
       setToast({ message: 'Failed to upload signed report: ' + err.message, type: 'error' });
     } finally {
@@ -223,11 +231,36 @@ const WeeklyReports = () => {
 
     try {
       setSubmitting(true);
-      await weeklyReportService.submitWeeklyReport({
+
+      // Compile selected activities for non-week-based layout persistence
+      const selectedActs = activities.filter(a => selectedActIds.includes(a.id));
+      const seenDates = new Set();
+      const serializedActs = [];
+      const sortedSelected = [...selectedActs].sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+      
+      sortedSelected.forEach(act => {
+        if (!seenDates.has(act.log_date)) {
+          seenDates.add(act.log_date);
+          const d = new Date(act.log_date + 'T00:00:00');
+          const allDescs = sortedSelected
+            .filter(x => x.log_date === act.log_date)
+            .map(x => x.description)
+            .filter(Boolean)
+            .join('\n');
+          serializedActs.push({
+            date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+            day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+            description: allDescs
+          });
+        }
+      });
+      const summaryWithMeta = summary.trim() + "\n\n---ACTIVITIES_JSON---\n" + JSON.stringify(serializedActs);
+
+      const newReport = await weeklyReportService.submitWeeklyReport({
         internship_id: internshipId,
         week_number: parseInt(weekNumber),
         week_label: weekLabel || `Week ${weekNumber}`,
-        summary,
+        summary: summaryWithMeta,
         skills_learned: skillsLearned,
         challenges,
         status: 'DRAFT'
@@ -242,7 +275,10 @@ const WeeklyReports = () => {
       setChallenges('');
       setSelectedActIds([]);
       
-      await fetchReports();
+      // Automatically select the newly created draft so it loads in the preview panel instantly
+      const freshData = await fetchReports(true);
+      const freshReport = freshData?.find(r => r.week_number === parseInt(weekNumber)) || newReport;
+      setSelectedReport(freshReport);
     } catch (err) {
       setToast({ message: 'Failed to save weekly report: ' + err.message, type: 'error' });
     } finally {
@@ -254,19 +290,7 @@ const WeeklyReports = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    let ojtStartDateStr = user?.start_date;
-    if (!ojtStartDateStr) {
-      if (reports && reports.length > 0) {
-        // Find earliest submission date as start date estimate
-        const sortedReports = [...reports].sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
-        ojtStartDateStr = sortedReports[0].submitted_at.slice(0, 10);
-      } else {
-        // Default to a date relative to today
-        const today = new Date();
-        today.setDate(today.getDate() - (previewData.weekNumber - 1) * 7);
-        ojtStartDateStr = today.toLocaleDateString('en-CA');
-      }
-    }
+    const ojtStartDateStr = getOjtStartDate();
 
     const startOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
     startOfWeek.setDate(startOfWeek.getDate() + (previewData.weekNumber - 1) * 7);
@@ -433,30 +457,35 @@ const WeeklyReports = () => {
           </table>
           
           ${(() => {
-            const seenDates = new Set();
-            const printDayLogs = activities
-              .filter(a => {
-                const d = new Date(a.log_date + 'T00:00:00');
-                return d >= startOfWeek && d <= endOfWeek;
-              })
-              .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
-              .reduce((acc, act) => {
-                if (!seenDates.has(act.log_date)) {
-                  seenDates.add(act.log_date);
-                  const d = new Date(act.log_date + 'T00:00:00');
-                  const allDescs = activities
-                    .filter(x => x.log_date === act.log_date)
-                    .map(x => x.description)
-                    .filter(Boolean)
-                    .join('\\n');
-                  acc.push({
-                    date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-                    day: d.toLocaleDateString('en-US', { weekday: 'long' }),
-                    description: allDescs
-                  });
-                }
-                return acc;
-              }, []);
+            const printDayLogs = previewData.selectedActivities || (() => {
+              const seenDates = new Set();
+              return activities
+                .filter(a => {
+                  const d1 = new Date(a.log_date + 'T00:00:00Z');
+                  const d2 = new Date(ojtStartDateStr + 'T00:00:00Z');
+                  const diffDays = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+                  const weekNum = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 1;
+                  return weekNum === previewData.weekNumber;
+                })
+                .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
+                .reduce((acc, act) => {
+                  if (!seenDates.has(act.log_date)) {
+                    seenDates.add(act.log_date);
+                    const d = new Date(act.log_date + 'T00:00:00');
+                    const allDescs = activities
+                      .filter(x => x.log_date === act.log_date)
+                      .map(x => x.description)
+                      .filter(Boolean)
+                      .join('\\n');
+                    acc.push({
+                      date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                      day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+                      description: allDescs
+                    });
+                  }
+                  return acc;
+                }, []);
+            })();
 
             if (printDayLogs.length === 0) {
               return '<div style="border:1px solid #ccc;padding:12px;font-size:11px;color:#666;text-align:center;margin-bottom:10px;">No activities found for this week.</div>';
@@ -783,7 +812,8 @@ const WeeklyReports = () => {
                       weekLabel: selectedReport.week_label || `Week ${selectedReport.week_number}`,
                       summary: selectedReport.summary,
                       skillsLearned: selectedReport.skills_learned,
-                      challenges: selectedReport.challenges
+                      challenges: selectedReport.challenges,
+                      selectedActivities: selectedReport.selected_activities
                     });
                     setShowPdfPreview(true);
                   }}
@@ -995,14 +1025,21 @@ const WeeklyReports = () => {
                     </div>
                   ) : (
                     <div style={{
-                      maxHeight: '260px', overflowY: 'auto', padding: '12px',
-                      borderRadius: '10px', border: `1px solid ${studentDesign.colors.border}`,
-                      backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: '8px'
+                      maxHeight: '300px', 
+                      overflowY: 'scroll', 
+                      padding: '12px',
+                      borderRadius: '10px', 
+                      border: `1px solid ${studentDesign.colors.border}`,
+                      backgroundColor: '#F8FAFC', 
+                      display: 'block', 
+                      overscrollBehavior: 'contain',
+                      WebkitOverflowScrolling: 'touch'
                     }}>
                       {Object.entries(groupedActivities).map(([week, dates]) => (
                         <div key={week} style={{
                           backgroundColor: '#FFFFFF', borderRadius: '8px', 
-                          border: `1px solid ${studentDesign.colors.border}`, overflow: 'hidden'
+                          border: `1px solid ${studentDesign.colors.border}`, overflow: 'hidden',
+                          marginBottom: '8px'
                         }}>
                           <div 
                             onClick={() => setExpandedWeeks(prev => ({ ...prev, [week]: !prev[week] }))}
@@ -1018,12 +1055,7 @@ const WeeklyReports = () => {
                           
                           <AnimatePresence>
                             {expandedWeeks[week] && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                style={{ overflow: 'hidden' }}
-                              >
+                              <div style={{ overflow: 'visible' }}>
                                 <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px', backgroundColor: '#F8FAFC' }}>
                                   {Object.entries(dates).map(([date, dateActs]) => {
                                     const dateKey = `${week}-${date}`;
@@ -1050,12 +1082,7 @@ const WeeklyReports = () => {
                                         
                                         <AnimatePresence>
                                           {isDateExpanded && (
-                                            <motion.div
-                                              initial={{ height: 0, opacity: 0 }}
-                                              animate={{ height: 'auto', opacity: 1 }}
-                                              exit={{ height: 0, opacity: 0 }}
-                                              style={{ overflow: 'hidden' }}
-                                            >
+                                            <div style={{ overflow: 'visible' }}>
                                               <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: `1px solid ${studentDesign.colors.border}40` }}>
                                                 {dateActs.map(act => {
                                                   const checked = selectedActIds.includes(act.id);
@@ -1095,14 +1122,14 @@ const WeeklyReports = () => {
                                                   );
                                                 })}
                                               </div>
-                                            </motion.div>
+                                            </div>
                                           )}
                                         </AnimatePresence>
                                       </div>
                                     );
                                   })}
                                 </div>
-                              </motion.div>
+                              </div>
                             )}
                           </AnimatePresence>
                         </div>
@@ -1302,6 +1329,28 @@ const WeeklyReports = () => {
                 
                 <button 
                   onClick={() => {
+                    const selectedActs = activities.filter(a => selectedActIds.includes(a.id));
+                    const seenDates = new Set();
+                    const serializedActs = [];
+                    const sortedSelected = [...selectedActs].sort((a, b) => new Date(a.log_date) - new Date(b.log_date));
+                    
+                    sortedSelected.forEach(act => {
+                      if (!seenDates.has(act.log_date)) {
+                        seenDates.add(act.log_date);
+                        const d = new Date(act.log_date + 'T00:00:00');
+                        const allDescs = sortedSelected
+                          .filter(x => x.log_date === act.log_date)
+                          .map(x => x.description)
+                          .filter(Boolean)
+                          .join('\n');
+                        serializedActs.push({
+                          date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                          day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+                          description: allDescs
+                        });
+                      }
+                    });
+
                     setPreviewData({
                       studentName: `${user?.first_name} ${user?.last_name}`,
                       programName: user?.program_code || user?.program_id || 'Academic Internship Program',
@@ -1309,7 +1358,8 @@ const WeeklyReports = () => {
                       weekLabel: weekLabel || `Week ${weekNumber}`,
                       summary: summary,
                       skillsLearned: skillsLearned,
-                      challenges: challenges
+                      challenges: challenges,
+                      selectedActivities: serializedActs
                     });
                     setShowPdfPreview(true);
                   }}
@@ -1351,16 +1401,7 @@ const WeeklyReports = () => {
       <AnimatePresence>
         {showPdfPreview && previewData && (() => {
           // Compute week date range for preview
-          let ojtStartDateStr = user?.start_date;
-          if (!ojtStartDateStr && reports && reports.length > 0) {
-            const sortedR = [...reports].sort((a, b) => new Date(a.submitted_at) - new Date(b.submitted_at));
-            ojtStartDateStr = sortedR[0].submitted_at.slice(0, 10);
-          }
-          if (!ojtStartDateStr) {
-            const today = new Date();
-            today.setDate(today.getDate() - (previewData.weekNumber - 1) * 7);
-            ojtStartDateStr = today.toLocaleDateString('en-CA');
-          }
+          const ojtStartDateStr = getOjtStartDate();
 
           const startOfWeek = new Date(ojtStartDateStr + 'T00:00:00');
           startOfWeek.setDate(startOfWeek.getDate() + (previewData.weekNumber - 1) * 7);
@@ -1371,32 +1412,37 @@ const WeeklyReports = () => {
           const optFmt = { month: 'short', day: '2-digit', year: 'numeric' };
           const datesCoveredLabel = `${startOfWeek.toLocaleDateString('en-US', optFmt)} - ${endOfWeek.toLocaleDateString('en-US', optFmt)}`;
 
-          // Build day-log entries ONLY for dates that have activities in this week
-          const seenDates = new Set();
-          const previewDayLogs = activities
-            .filter(a => {
-              const d = new Date(a.log_date + 'T00:00:00');
-              return d >= startOfWeek && d <= endOfWeek;
-            })
-            .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
-            .reduce((acc, act) => {
-              if (!seenDates.has(act.log_date)) {
-                seenDates.add(act.log_date);
-                const d = new Date(act.log_date + 'T00:00:00');
-                // Collect all descriptions logged on this date
-                const allDescs = activities
-                  .filter(a => a.log_date === act.log_date)
-                  .map(a => a.description)
-                  .filter(Boolean)
-                  .join('\n');
-                acc.push({
-                  date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-                  day: d.toLocaleDateString('en-US', { weekday: 'long' }),
-                  description: allDescs
-                });
-              }
-              return acc;
-            }, []);
+          // Build day-log entries from selected activities metadata, or fallback to date-based calculation
+          const previewDayLogs = previewData.selectedActivities || (() => {
+            const seenDates = new Set();
+            return activities
+              .filter(a => {
+                const d1 = new Date(a.log_date + 'T00:00:00Z');
+                const d2 = new Date(ojtStartDateStr + 'T00:00:00Z');
+                const diffDays = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+                const weekNum = diffDays < 0 ? 1 : Math.floor(diffDays / 7) + 1;
+                return weekNum === previewData.weekNumber;
+              })
+              .sort((a, b) => new Date(a.log_date) - new Date(b.log_date))
+              .reduce((acc, act) => {
+                if (!seenDates.has(act.log_date)) {
+                  seenDates.add(act.log_date);
+                  const d = new Date(act.log_date + 'T00:00:00');
+                  // Collect all descriptions logged on this date
+                  const allDescs = activities
+                    .filter(a => a.log_date === act.log_date)
+                    .map(a => a.description)
+                    .filter(Boolean)
+                    .join('\n');
+                  acc.push({
+                    date: d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+                    day: d.toLocaleDateString('en-US', { weekday: 'long' }),
+                    description: allDescs
+                  });
+                }
+                return acc;
+              }, []);
+          })();
 
           return (
             <div style={{

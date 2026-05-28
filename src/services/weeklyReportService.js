@@ -22,7 +22,24 @@ export const weeklyReportService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(report => {
+      let selectedActs = null;
+      let summaryText = report.summary || '';
+      if (summaryText.includes('---ACTIVITIES_JSON---')) {
+        const parts = summaryText.split('---ACTIVITIES_JSON---');
+        summaryText = parts[0].trim();
+        try {
+          selectedActs = JSON.parse(parts[1].trim());
+        } catch (e) {
+          console.error("Error parsing activities metadata:", e);
+        }
+      }
+      return {
+        ...report,
+        summary: summaryText,
+        selected_activities: selectedActs
+      };
+    });
   },
 
   /**
@@ -92,7 +109,18 @@ export const weeklyReportService = {
         .select();
 
       if (error) throw error;
-      return data[0];
+      
+      const report = data[0];
+      if (report && report.summary && report.summary.includes('---ACTIVITIES_JSON---')) {
+        const parts = report.summary.split('---ACTIVITIES_JSON---');
+        report.summary = parts[0].trim();
+        try {
+          report.selected_activities = JSON.parse(parts[1].trim());
+        } catch (e) {
+          console.error("Error parsing activities metadata:", e);
+        }
+      }
+      return report;
     } catch (err) {
       console.error('Error in submitWeeklyReport:', err);
       throw err;

@@ -33,6 +33,7 @@ const GradeManagementPage = () => {
   const [filterStatus, setFilterStatus] = useState('All');
   const [expandedSectionId, setExpandedSectionId] = useState(null);
   const [localToast, setLocalToast] = useState(null);
+  const [schemaError, setSchemaError] = useState(false);
 
   // Grade Modal State
   const [isGradeModalOpen, setIsGradeModalOpen] = useState(false);
@@ -65,7 +66,7 @@ const GradeManagementPage = () => {
             program_sections ( id, name )
           ),
           student_internships!student_id (
-            current_stage, rendered_hours, supervisor_name, is_deployed, final_grade,
+            current_stage, rendered_hours, supervisor_name, is_deployed, final_grade, stage3_submitted,
             companies ( name )
           )
         `)
@@ -101,14 +102,20 @@ const GradeManagementPage = () => {
           section: profile.program_sections?.name || 'Not Assigned',
           sectionId: profile.section_id || 'unassigned',
           grade: internship.final_grade,
+          stage3Submitted: internship.stage3_submitted || false,
           avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(s.first_name + ' ' + s.last_name)}&background=random`
         };
       });
 
       setStudents(transformed);
+      setSchemaError(false);
     } catch (err) {
       console.error('Error fetching students for grades:', err);
-      notify('Failed to load student grade records.', 'error');
+      if (err.code === '42703' || (err.message && err.message.includes('final_grade'))) {
+        setSchemaError(true);
+      } else {
+        notify('Failed to load student grade records.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -122,6 +129,10 @@ const GradeManagementPage = () => {
   // Edit grade click handler
   const handleOpenGradeModal = (e, student) => {
     e.stopPropagation();
+    if (!student.stage3Submitted) {
+      notify(`Cannot grade ${student.name}. Portfolio must be submitted first.`, 'error');
+      return;
+    }
     setSelectedStudent(student);
     setNewGradeValue(student.grade !== null && student.grade !== undefined ? student.grade.toString() : '');
     setIsGradeModalOpen(true);
@@ -437,7 +448,41 @@ const GradeManagementPage = () => {
 
       {/* Grouped Grading Tables */}
       <div>
-        {loading ? (
+        {schemaError ? (
+          <div style={{ 
+            ...commonStyles.dashboardCard, 
+            padding: '32px', 
+            borderLeft: `6px solid ${theme.colors.error || '#ef4444'}`,
+            backgroundColor: '#fef2f2'
+          }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+              <AlertCircle size={36} color="#ef4444" style={{ flexShrink: 0 }} />
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', fontWeight: 800, color: '#991b1b' }}>
+                  Database Schema Out of Sync
+                </h3>
+                <p style={{ margin: '0 0 16px 0', fontSize: '0.9rem', color: '#7f1d1d', lineHeight: '1.5' }}>
+                  The Grade Management page cannot function because the required columns (<strong>final_grade</strong> and <strong>final_grade_encoded_at</strong>) are missing from your remote database table.
+                </p>
+                <div style={{ backgroundColor: '#1e293b', color: '#f8fafc', padding: '16px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.8rem', overflowX: 'auto', marginBottom: '16px', border: '1px solid #334155' }}>
+                  <span style={{ color: '#94a3b8' }}>-- Copy and run this SQL in your Supabase SQL Editor to fix it:</span><br />
+                  <span style={{ color: '#38bdf8' }}>ALTER TABLE</span> public.student_internships <br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> deployment_approved_at TIMESTAMPTZ,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> required_hours INTEGER NOT NULL DEFAULT 486,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> stage2_validated BOOLEAN NOT NULL DEFAULT FALSE,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> stage2_validated_at TIMESTAMPTZ,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> stage3_submitted BOOLEAN NOT NULL DEFAULT FALSE,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> final_grade NUMERIC(4,2),<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> final_grade_encoded_at TIMESTAMPTZ,<br />
+                  <span style={{ color: '#38bdf8' }}>ADD COLUMN IF NOT EXISTS</span> is_completed BOOLEAN NOT NULL DEFAULT FALSE;
+                </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#991b1b' }}>
+                  Once executed, refresh this page and the grade management features will work perfectly.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : loading ? (
           <PageLoader message="Loading grading records..." />
         ) : filteredStudents.length === 0 ? (
           <div style={{ padding: '3rem', ...commonStyles.dashboardCard, textAlign: 'center', color: theme.colors.textMuted }}>
@@ -544,8 +589,14 @@ const GradeManagementPage = () => {
                                       <FileText size={18} />
                                     </button>
                                     <button 
-                                      style={styles.actionBtn} 
-                                      title="Edit Grade" 
+                                      style={{
+                                        ...styles.actionBtn,
+                                        ...(!student.stage3Submitted ? {
+                                          opacity: 0.4,
+                                          cursor: 'not-allowed',
+                                        } : {})
+                                      }} 
+                                      title={student.stage3Submitted ? "Edit Grade" : "Portfolio not yet submitted"} 
                                       onClick={(e) => handleOpenGradeModal(e, student)}
                                     >
                                       <Award size={18} />

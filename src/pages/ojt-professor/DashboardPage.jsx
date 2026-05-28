@@ -1,14 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, FileCheck, AlertCircle, FileText, ArrowRight, Activity, BarChart2 } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import StatCard from '../../components/layout/ojt-professor/StatCard';
-import { mockNotifications, mockStudents } from '../../services/mocks/ojtProfessorMockData';
+import PageLoader from '../../components/common/PageLoader';
+import { supabase } from '../../services/supabaseClient';
 
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-
 import { useAuth } from '../../context/AuthContext';
+
+const STATUS_MAP = {
+  'PRE_INTERNSHIP': 'Pre-Internship',
+  'DURING_INTERNSHIP': 'Placed',
+  'POST_INTERNSHIP': 'Post-Internship',
+  'COMPLETED': 'Completed'
+};
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -19,12 +26,186 @@ const DashboardPage = () => {
   const [hoveredFeedItem, setHoveredFeedItem] = useState(null);
   const [hoveredShortcut, setHoveredShortcut] = useState(null);
 
-  const stats = [
-    { title: "Total Students", value: mockStudents.length, icon: Users, color: "primary" },
-    { title: "Deployed", value: mockStudents.filter(s => s.isDeployed).length, icon: FileCheck, color: "success" },
-    { title: "Pending Doc Reviews", value: mockStudents.filter(s => !s.isDeployed).length, icon: AlertCircle, color: "warning" },
-    { title: "Evaluations Due", value: mockStudents.filter(s => s.currentStage === 'POST_INTERNSHIP').length, icon: FileText, color: "info" }
-  ];
+  // Dynamic Data State
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState([
+    { title: "Total Students", value: 0, icon: Users, color: "primary" },
+    { title: "Deployed", value: 0, icon: FileCheck, color: "success" },
+    { title: "Pending Doc Reviews", value: 0, icon: AlertCircle, color: "warning" },
+    { title: "Evaluations Due", value: 0, icon: FileText, color: "info" }
+  ]);
+  const [activities, setActivities] = useState([]);
+
+  // Helper function to format timestamps
+  const formatTimeAgo = (date) => {
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 0) return 'just now';
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.program_id) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 1. Fetch Students
+      let studentQuery = supabase
+        .from('users')
+        .select(`
+          id, first_name, last_name,
+          student_profiles!inner (
+            student_id, year_level, program_id, section_id
+          ),
+          student_internships!student_id (
+            id, current_stage, rendered_hours, supervisor_name, is_deployed
+          )
+        `)
+        .eq('role', 'student')
+        .eq('student_profiles.program_id', user.program_id);
+
+      const profSectionIds = user?.professor_sections?.map(ps => ps.section_id) || [];
+      if (profSectionIds.length > 0) {
+        studentQuery = studentQuery.in('student_profiles.section_id', profSectionIds);
+      }
+
+      const { data: studentsData, error: studentError } = await studentQuery;
+      if (studentError) throw studentError;
+
+      const studentInternshipIds = new Set(
+        studentsData.map(s => {
+          const intern = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+          return intern.id;
+        }).filter(Boolean)
+      );
+
+      // 2. Fetch Recent Pre-Internship Documents
+      const { data: recentDocs } = await supabase
+        .from('pre_internship_documents')
+        .select('id, document_name, submitted_at, status, internship_id')
+        .order('submitted_at', { ascending: false })
+        .limit(30);
+
+      // 3. Fetch Recent WARs
+      const { data: recentWARs } = await supabase
+        .from('weekly_activity_reports')
+        .select('id, week_number, week_label, submitted_at, status, internship_id')
+        .order('submitted_at', { ascending: false })
+        .limit(30);
+
+      // Process Stats
+      const totalStudents = studentsData.length;
+      const deployedStudents = studentsData.filter(s => {
+        const intern = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+        return intern.is_deployed;
+      }).length;
+
+      // Filter recent documents that belong to this adviser's students and are PENDING
+      const filteredPendingDocs = (recentDocs || []).filter(
+        d => studentInternshipIds.has(d.internship_id) && d.status === 'PENDING'
+      );
+      const pendingDocCount = filteredPendingDocs.length;
+
+      const evaluationsDue = studentsData.filter(s => {
+        const intern = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+        return intern.current_stage === 'POST_INTERNSHIP';
+      }).length;
+
+      setStats([
+        { title: "Total Students", value: totalStudents, icon: Users, color: "primary" },
+        { title: "Deployed", value: deployedStudents, icon: FileCheck, color: "success" },
+        { title: "Pending Doc Reviews", value: pendingDocCount, icon: AlertCircle, color: "warning" },
+        { title: "Evaluations Due", value: evaluationsDue, icon: FileText, color: "info" }
+      ]);
+
+      // Process Activities Feed (merge and sort recent documents and WARs)
+      const feedItems = [];
+
+      // Map Documents
+      (recentDocs || [])
+        .filter(d => studentInternshipIds.has(d.internship_id))
+        .forEach(d => {
+          const student = studentsData.find(s => {
+            const intern = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+            return intern.id === d.internship_id;
+          });
+          const studentName = student ? `${student.first_name} ${student.last_name}` : 'A student';
+          
+          let message = '';
+          if (d.status === 'PENDING') {
+            message = `${studentName} submitted "${d.document_name}" for review.`;
+          } else if (d.status === 'APPROVED') {
+            message = `${studentName}'s "${d.document_name}" was approved.`;
+          } else if (d.status === 'REJECTED') {
+            message = `${studentName}'s "${d.document_name}" was rejected.`;
+          } else {
+            return;
+          }
+
+          feedItems.push({
+            id: `doc-${d.id}`,
+            type: 'Application',
+            message,
+            timestamp: d.submitted_at ? formatTimeAgo(new Date(d.submitted_at)) : 'Recent',
+            dateObj: d.submitted_at ? new Date(d.submitted_at) : new Date(0),
+            read: d.status !== 'PENDING'
+          });
+        });
+
+      // Map WARs
+      (recentWARs || [])
+        .filter(w => studentInternshipIds.has(w.internship_id))
+        .forEach(w => {
+          const student = studentsData.find(s => {
+            const intern = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
+            return intern.id === w.internship_id;
+          });
+          const studentName = student ? `${student.first_name} ${student.last_name}` : 'A student';
+          
+          let message = '';
+          if (w.status === 'PENDING') {
+            message = `${studentName} submitted ${w.week_label || `Week ${w.week_number}`} WAR.`;
+          } else if (w.status === 'APPROVED') {
+            message = `${studentName}'s ${w.week_label || `Week ${w.week_number}`} WAR was approved.`;
+          } else if (w.status === 'REJECTED') {
+            message = `${studentName}'s ${w.week_label || `Week ${w.week_number}`} WAR was rejected.`;
+          } else {
+            return;
+          }
+
+          feedItems.push({
+            id: `war-${w.id}`,
+            type: 'WAR',
+            message,
+            timestamp: w.submitted_at ? formatTimeAgo(new Date(w.submitted_at)) : 'Recent',
+            dateObj: w.submitted_at ? new Date(w.submitted_at) : new Date(0),
+            read: w.status !== 'PENDING'
+          });
+        });
+
+      // Sort and take top 5
+      feedItems.sort((a, b) => b.dateObj - a.dateObj);
+      setActivities(feedItems.slice(0, 5));
+
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.program_id, user?.professor_sections]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
   const styles = {
     container: {
@@ -189,6 +370,10 @@ const DashboardPage = () => {
     })
   };
 
+  if (loading) {
+    return <PageLoader message="Loading adviser dashboard..." />;
+  }
+
   return (
     <div style={styles.container}>
       {/* Welcome Card */}
@@ -245,26 +430,32 @@ const DashboardPage = () => {
             </button>
           </div>
           <div style={styles.feedList}>
-            {mockNotifications.map((notif) => (
-              <div 
-                key={notif.id} 
-                style={styles.feedItem(hoveredFeedItem === notif.id, notif.read)}
-                onMouseEnter={() => setHoveredFeedItem(notif.id)}
-                onMouseLeave={() => setHoveredFeedItem(null)}
-              >
-                <div style={styles.feedIcon}>
-                  {notif.type === 'Application' && <FileText size={16} />}
-                  {notif.type === 'Listing' && <AlertCircle size={16} />}
-                  {notif.type === 'Progress' && <Activity size={16} />}
-                  {!['Application', 'Listing', 'Progress'].includes(notif.type) && <AlertCircle size={16} />}
-                </div>
-                <div style={styles.feedContent}>
-                  <p style={styles.feedMessage}>{notif.message}</p>
-                  <span style={styles.feedTime}>{notif.timestamp}</span>
-                </div>
-                {!notif.read && <span style={styles.unreadDot}></span>}
+            {activities.length === 0 ? (
+              <div style={{ padding: '3rem 2rem', textAlign: 'center', color: theme.colors.textMuted }}>
+                <Activity size={36} style={{ margin: '0 auto 12px', opacity: 0.3, color: theme.colors.textMuted }} />
+                <p style={{ margin: 0, fontSize: '0.9rem' }}>No recent student activity found.</p>
               </div>
-            ))}
+            ) : (
+              activities.map((notif) => (
+                <div 
+                  key={notif.id} 
+                  style={styles.feedItem(hoveredFeedItem === notif.id, notif.read)}
+                  onMouseEnter={() => setHoveredFeedItem(notif.id)}
+                  onMouseLeave={() => setHoveredFeedItem(null)}
+                >
+                  <div style={styles.feedIcon}>
+                    {notif.type === 'Application' && <FileText size={16} />}
+                    {notif.type === 'WAR' && <Activity size={16} />}
+                    {!['Application', 'WAR'].includes(notif.type) && <AlertCircle size={16} />}
+                  </div>
+                  <div style={styles.feedContent}>
+                    <p style={styles.feedMessage}>{notif.message}</p>
+                    <span style={styles.feedTime}>{notif.timestamp}</span>
+                  </div>
+                  {!notif.read && <span style={styles.unreadDot}></span>}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -289,7 +480,7 @@ const DashboardPage = () => {
                 onClick={() => navigate(item.path)}
               >
                 <item.icon size={24} />
-                <span style={styles.shortcutItem().span}>{item.label}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: 500, textAlign: 'center' }}>{item.label}</span>
               </button>
             ))}
           </div>

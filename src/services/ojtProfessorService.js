@@ -384,11 +384,16 @@ export const ojtProfessorService = {
       const student = war.student_internships?.student || {};
       const profile = Array.isArray(student.student_profiles) ? student.student_profiles[0] : student.student_profiles || {};
 
+      let summaryText = war.summary || '';
+      if (summaryText.includes('---ACTIVITIES_JSON---')) {
+        summaryText = summaryText.split('---ACTIVITIES_JSON---')[0].trim();
+      }
+
       return {
         id: war.id,
         weekNumber: war.week_number,
         weekLabel: war.week_label,
-        summary: war.summary,
+        summary: summaryText,
         skillsLearned: war.skills_learned,
         challenges: war.challenges,
         status: war.status,
