@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Clock, 
@@ -12,12 +13,14 @@ import {
 import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
 import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
+import PageLoader from '../../../components/common/PageLoader';
 import { attendanceService } from '../../../services/attendanceService';
 import { studentService } from '../../../services/studentService';
 import { weeklyReportService } from '../../../services/weeklyReportService';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const [showPromptModal, setShowPromptModal] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
@@ -38,7 +41,10 @@ const Dashboard = () => {
     const fetchDashboardData = async () => {
       if (!user?.internship_id) return;
       try {
-        setLoading(true);
+        // Only trigger full screen page loader on first initial load
+        if (logs.length === 0 && documents.length === 0 && reports.length === 0) {
+          setLoading(true);
+        }
         const [fetchedLogs, fetchedDocs, fetchedReports] = await Promise.all([
           attendanceService.getAttendanceLogs(user.internship_id).catch(() => []),
           studentService.getPreInternshipDocuments(user.internship_id).catch(() => []),
@@ -55,6 +61,10 @@ const Dashboard = () => {
     };
     fetchDashboardData();
   }, [user]);
+
+  if (loading) {
+    return <PageLoader />;
+  }
   
   const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
   const STAGE_LEVELS = {
@@ -124,22 +134,144 @@ const Dashboard = () => {
     }
   ];
 
-  const notifications = [
-    { msg: 'Weekly report for Week 8 approved', time: 'Today', active: true },
-    { msg: 'Document "Resume" rejected. Please re-upload.', time: 'Fri', active: true },
-    { msg: 'You missed attendance last Tuesday', time: 'Mon', active: false },
-  ];
+  const formatTimeAgo = (dateStr) => {
+    if (!dateStr) return 'Recent';
+    try {
+      const now = new Date();
+      const past = new Date(dateStr);
+      const diffMs = now - past;
+      if (isNaN(diffMs)) return 'Recent';
+      
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return 'Yesterday';
+      return `${diffDays}d ago`;
+    } catch {
+      return 'Recent';
+    }
+  };
 
-  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-  const attendanceData = [
-    { day: 'S', status: 'weekend' },
-    { day: 'M', status: 'present' },
-    { day: 'T', status: 'today' },
-    { day: 'W', status: 'future' },
-    { day: 'T', status: 'future' },
-    { day: 'F', status: 'future' },
-    { day: 'S', status: 'weekend' },
-  ];
+  const getDynamicNotifications = () => {
+    const list = [];
+
+    // 1. Scan Weekly Activity Reports
+    reports.forEach(rep => {
+      if (rep.status === 'APPROVED') {
+        list.push({
+          msg: `Weekly Activity Report for Week ${rep.week_number} has been approved.`,
+          time: rep.reviewed_at ? formatTimeAgo(rep.reviewed_at) : 'Recent',
+          active: false
+        });
+      } else if (rep.status === 'REJECTED') {
+        list.push({
+          msg: `Weekly Activity Report for Week ${rep.week_number} was rejected: "${rep.reviewer_comment || 'Please review feedback.'}"`,
+          time: rep.reviewed_at ? formatTimeAgo(rep.reviewed_at) : 'Recent',
+          active: true
+        });
+      } else if (rep.status === 'PENDING') {
+        list.push({
+          msg: `Weekly Activity Report for Week ${rep.week_number} has been submitted and is pending review.`,
+          time: rep.submitted_at ? formatTimeAgo(rep.submitted_at) : 'Recent',
+          active: false
+        });
+      }
+    });
+
+    // 2. Scan Pre-Internship & Additional Documents
+    documents.forEach(doc => {
+      const docName = doc.document_name || doc.name || 'Document';
+      if (doc.status === 'APPROVED') {
+        list.push({
+          msg: `Document "${docName}" has been approved by your adviser.`,
+          time: doc.reviewed_at ? formatTimeAgo(doc.reviewed_at) : 'Recent',
+          active: false
+        });
+      } else if (doc.status === 'REJECTED') {
+        list.push({
+          msg: `Document "${docName}" was rejected. Feedback: "${doc.reviewer_comment || 'Please re-upload.'}"`,
+          time: doc.reviewed_at ? formatTimeAgo(doc.reviewed_at) : 'Recent',
+          active: true
+        });
+      } else if (doc.status === 'PENDING') {
+        list.push({
+          msg: `Document "${docName}" has been submitted for review.`,
+          time: doc.submitted_at ? formatTimeAgo(doc.submitted_at) : 'Recent',
+          active: false
+        });
+      }
+    });
+
+    // 3. Fallbacks if list is empty
+    if (list.length === 0) {
+      list.push({
+        msg: `Welcome to your InternLink Dashboard! Use this panel to track your OJT hours.`,
+        time: 'Today',
+        active: true
+      });
+      list.push({
+        msg: `Configure your OJT schedule and supervisor details to begin logging attendance.`,
+        time: 'Today',
+        active: true
+      });
+    }
+
+    // Sort active notifications first
+    return list.sort((a, b) => (b.active ? 1 : 0) - (a.active ? 1 : 0)).slice(0, 3);
+  };
+
+  const getWeeklyAttendance = () => {
+    const today = new Date();
+    // Get Sunday of current week
+    const sunday = new Date(today);
+    const dayOfWeek = today.getDay();
+    sunday.setDate(today.getDate() - dayOfWeek);
+
+    const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+    const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const workDaysConfig = user?.user_metadata?.work_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+    return weekDays.map((letter, idx) => {
+      const currentDate = new Date(sunday);
+      currentDate.setDate(sunday.getDate() + idx);
+      
+      const dateNum = currentDate.getDate();
+      const isWeekend = idx === 0 || idx === 6;
+      const isToday = currentDate.toDateString() === today.toDateString();
+      const isFuture = currentDate > today && !isToday;
+      const dayName = fullDayNames[idx];
+      const isScheduled = workDaysConfig.includes(dayName);
+
+      // Check if there is an attendance log for this date
+      const hasLog = logs.some(log => {
+        if (!log.log_date) return false;
+        const logDateObj = new Date(log.log_date);
+        return logDateObj.toDateString() === currentDate.toDateString();
+      });
+
+      let status = 'future';
+      if (isToday) {
+        status = 'today';
+      } else if (hasLog) {
+        status = 'present';
+      } else if (isWeekend) {
+        status = 'weekend';
+      } else {
+        status = 'future';
+      }
+
+      return {
+        day: letter,
+        dateNumber: dateNum,
+        status: status
+      };
+    });
+  };
 
   const styles = {
     container: {
@@ -353,7 +485,7 @@ const Dashboard = () => {
         <div style={styles.card}>
           <h3 style={styles.listHeader}>Recent notifications</h3>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {notifications.map((n, idx) => (
+            {getDynamicNotifications().map((n, idx) => (
               <div key={idx} style={styles.notifRow}>
                 <div style={styles.notifDot(n.active)} />
                 <span style={styles.notifText}>{n.msg}</span>
@@ -361,7 +493,10 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
-          <button style={{ ...styles.iconButton, marginTop: '12px', fontSize: '13px', color: studentDesign.colors.primary, fontWeight: studentDesign.typography.weights.semibold, display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer' }}>
+          <button 
+            onClick={() => navigate('/notifications')}
+            style={{ ...styles.iconButton, marginTop: '12px', fontSize: '13px', color: studentDesign.colors.primary, fontWeight: studentDesign.typography.weights.semibold, display: 'flex', alignItems: 'center', border: 'none', background: 'none', cursor: 'pointer' }}
+          >
             View all notifications <ChevronRight size={16} />
           </button>
         </div>
@@ -370,21 +505,21 @@ const Dashboard = () => {
         <div style={styles.card}>
           <h3 style={styles.listHeader}>This week's attendance</h3>
           <div style={styles.calendarGrid}>
-            {attendanceData.map((d, idx) => (
+            {getWeeklyAttendance().map((d, idx) => (
               <div key={idx} style={styles.calDay(d.status)}>
                 <span style={{ opacity: 0.6, fontSize: '10px' }}>{d.day}</span>
-                <span>{10 + idx}</span>
+                <span>{d.dateNumber}</span>
               </div>
             ))}
           </div>
           <div style={styles.legend}>
             <div style={styles.legendItem}><div style={styles.legendDot(studentDesign.colors.status.done.bg)} /> Present</div>
             <div style={styles.legendItem}><div style={styles.legendDot(studentDesign.colors.primary)} /> Today</div>
-            <div style={styles.legendItem}><div style={styles.legendDot(studentDesign.colors.status.error.bg)} /> Missed</div>
           </div>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            onClick={() => navigate('/attendance')}
             style={styles.primaryButton}
           >
             Log time-in / time-out
