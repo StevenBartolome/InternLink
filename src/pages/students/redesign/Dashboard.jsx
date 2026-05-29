@@ -88,7 +88,7 @@ const Dashboard = () => {
   ];
 
   // Compute Metrics dynamically
-  const loggedLogs = logs.filter(l => l.status === 'LOGGED');
+  const loggedLogs = logs.filter(l => l.status === 'LOGGED' || l.status === 'DEDUCTED');
   const uniqueDates = new Set(loggedLogs.map(l => l.log_date));
   const daysPresent = uniqueDates.size;
 

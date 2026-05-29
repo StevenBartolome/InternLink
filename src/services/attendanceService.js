@@ -120,12 +120,11 @@ export const attendanceService = {
 
     if (updateError) throw updateError;
 
-    // 2. Sum ALL logged sessions across all days
     const { data: allLogs, error: fetchError } = await supabase
       .from('attendance_logs')
       .select('hours_rendered')
       .eq('internship_id', internshipId)
-      .eq('status',        'LOGGED');
+      .in('status',        ['LOGGED', 'DEDUCTED']);
 
     if (fetchError) throw fetchError;
 

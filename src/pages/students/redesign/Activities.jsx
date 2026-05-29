@@ -13,7 +13,9 @@ import {
   Plus,
   Send,
   Trash2,
-  Clock
+  Clock,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -40,6 +42,10 @@ const Activities = () => {
 
   // Delete state
   const [deletingId, setDeletingId] = useState(null);
+
+  // Filter state
+  const [monthFilter, setMonthFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('desc');
 
   const internshipId = user?.internship_id;
   const isDeployed   = user?.is_deployed;
@@ -92,6 +98,38 @@ const Activities = () => {
     if (isDeployed) fetchData();
     else setLoading(false);
   }, [internshipId, isDeployed, fetchData]);
+
+  // ── Filter and Sort Groups ──
+  const filteredAndSortedGroups = React.useMemo(() => {
+    let result = [...groups];
+
+    if (monthFilter !== 'all') {
+      const [year, month] = monthFilter.split('-');
+      result = result.filter(g => {
+        const [lYear, lMonth] = g.log_date.split('-');
+        return lYear === year && lMonth === month;
+      });
+    }
+
+    result.sort((a, b) => {
+      const dateA = new Date(a.log_date + 'T00:00:00').getTime();
+      const dateB = new Date(b.log_date + 'T00:00:00').getTime();
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+    });
+
+    return result;
+  }, [groups, monthFilter, sortOrder]);
+
+  const availableMonths = React.useMemo(() => {
+    const months = new Set();
+    groups.forEach(g => {
+      if (g.log_date) {
+        const [year, month] = g.log_date.split('-');
+        months.add(`${year}-${month}`);
+      }
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [groups]);
 
   const todayStr = new Date().toLocaleDateString('en-CA');
 
@@ -309,7 +347,80 @@ const Activities = () => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {groups.map(group => {
+          {/* ── Filters ── */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: studentDesign.colors.textMain }}>History</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <Filter size={14} style={{ position: 'absolute', left: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                <select
+                  value={monthFilter}
+                  onChange={(e) => setMonthFilter(e.target.value)}
+                  style={{
+                    padding: '8px 28px 8px 32px',
+                    borderRadius: '10px',
+                    border: `1px solid ${studentDesign.colors.border}`,
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: studentDesign.colors.textMain,
+                    backgroundColor: '#fff',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = studentDesign.colors.primary}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = studentDesign.colors.border}
+                >
+                  <option value="all">All Months</option>
+                  {availableMonths.map(m => {
+                    const [year, month] = m.split('-');
+                    const date = new Date(year, parseInt(month) - 1, 1);
+                    return (
+                      <option key={m} value={m}>
+                        {date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      </option>
+                    );
+                  })}
+                </select>
+                <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+              </div>
+
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <ArrowUpDown size={14} style={{ position: 'absolute', left: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  style={{
+                    padding: '8px 28px 8px 32px',
+                    borderRadius: '10px',
+                    border: `1px solid ${studentDesign.colors.border}`,
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: studentDesign.colors.textMain,
+                    backgroundColor: '#fff',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    appearance: 'none',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = studentDesign.colors.primary}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = studentDesign.colors.border}
+                >
+                  <option value="desc">Newest First</option>
+                  <option value="asc">Oldest First</option>
+                </select>
+                <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+              </div>
+            </div>
+          </div>
+
+          {filteredAndSortedGroups.length === 0 ? (
+            <div style={{ padding: '30px 20px', textAlign: 'center', color: studentDesign.colors.textMuted, backgroundColor: '#F8FAFC', borderRadius: '12px', border: `1px dashed ${studentDesign.colors.border}` }}>
+              No activities found for the selected filters.
+            </div>
+          ) : (
+            filteredAndSortedGroups.map(group => {
             const isToday    = group.log_date === todayStr;
             const isOpen     = expandedDate === group.log_date;
             const entryCount = group.activities.length;
@@ -520,7 +631,8 @@ const Activities = () => {
                 </AnimatePresence>
               </motion.div>
             );
-          })}
+          })
+          )}
         </div>
       )}
 

@@ -902,14 +902,14 @@ app.post(['/api/professor/unsubmit-moa', '/professor/unsubmit-moa'], async (req,
 
 // POST API to upload signed attendance report and hours
 app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signed-attendance-report'], async (req, res) => {
-    const { internshipId, fileUrl, hours } = req.body;
+    const { internshipId, fileUrl, hours, startDate, endDate } = req.body;
     
     if (!internshipId || !fileUrl || !hours) {
         return res.status(400).json({ error: 'Missing required parameters: internshipId, fileUrl, hours' });
     }
 
     try {
-        console.log(`[Attendance Report] Inserting signed attendance report for internshipId: ${internshipId}, hours: ${hours}`);
+        console.log(`[Attendance Report] Inserting signed attendance report for internshipId: ${internshipId}, hours: ${hours}, range: ${startDate} to ${endDate}`);
 
         // Insert into additional_requirements using service role client
         const { data, error } = await supabaseAdmin
@@ -925,6 +925,26 @@ app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signe
             .select();
 
         if (error) throw error;
+
+        // Mark corresponding daily attendance logs as DEDUCTED to prevent double-deduction
+        if (startDate && endDate) {
+            const { error: updateError } = await supabaseAdmin
+                .from('attendance_logs')
+                .update({ 
+                    status: 'DEDUCTED',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('internship_id', internshipId)
+                .eq('status', 'LOGGED')
+                .gte('log_date', startDate)
+                .lte('log_date', endDate);
+            
+            if (updateError) {
+                console.error('Failed to update attendance logs to DEDUCTED:', updateError.message);
+            } else {
+                console.log(`Successfully updated attendance logs between ${startDate} and ${endDate} to DEDUCTED.`);
+            }
+        }
 
         return res.json({ success: true, report: data[0] });
     } catch (err) {

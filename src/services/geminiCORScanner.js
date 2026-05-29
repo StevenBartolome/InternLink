@@ -172,7 +172,10 @@ export async function scanOJTAttendanceReportWithGemini(pdfFile) {
     const mimeType = pdfFile.type || 'application/pdf';
 
     const prompt = `You are an expert document scanner. Analyze this student OJT (On-the-Job Training) supervisor-signed attendance report sheet or PDF.
-Locate the grand total of OJT hours rendered (often labeled as "Grand Total Hours", "Total Hours Rendered", "Total Hours", or "Cumulative Hours").
+
+Find ONLY the "Total this Period" value — this is the hours rendered SPECIFICALLY for the date range covered by this report sheet, NOT the cumulative or grand total. It is typically labeled as "Total this Period", "Total Hours this Period", or appears in the middle summary row between "Previous Total" and "Total Hours Served".
+
+Do NOT return the "Grand Total", "Total Hours Served", or "Previous Total + this Period" combined value.
 
 Return the result in JSON format ONLY:
 {
@@ -180,7 +183,8 @@ Return the result in JSON format ONLY:
   "daysPresent": 5
 }
 
-If you cannot find the grand total hours, return null. Return only raw JSON without any markdown formatting.`;
+Where "grandTotalHours" must be the "Total this Period" value only (the new hours for this specific report).
+If you cannot find this value, return null. Return only raw JSON without any markdown formatting.`;
 
     const result = await model.generateContent([
       {

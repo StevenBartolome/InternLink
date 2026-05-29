@@ -101,12 +101,11 @@ export default function DuringInternship({ onComplete }) {
 
       if (insertError) throw insertError;
 
-      // Now query and update total rendered_hours
       const { data: allLogs, error: fetchError } = await supabase
         .from('attendance_logs')
         .select('hours_rendered')
         .eq('internship_id', internshipId)
-        .eq('status', 'LOGGED');
+        .in('status', ['LOGGED', 'DEDUCTED']);
 
       if (fetchError) throw fetchError;
 

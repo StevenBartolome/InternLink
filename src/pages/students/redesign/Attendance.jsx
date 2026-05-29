@@ -4,7 +4,6 @@ import {
   Clock, 
   Calendar, 
   Hourglass,
-  ArrowUpRight,
   Play,
   Square,
   AlertTriangle,
@@ -14,7 +13,10 @@ import {
   Pencil,
   Check,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  Filter,
+  ArrowUpDown
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -34,6 +36,8 @@ const Attendance = () => {
   const [reportHours, setReportHours] = useState('');
   const [reportFile, setReportFile] = useState(null);
   const [scanningReport, setScanningReport] = useState(false);
+  const [reportStartDate, setReportStartDate] = useState('');
+  const [reportEndDate, setReportEndDate] = useState('');
   const [reportUploading, setReportUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [activitiesInput, setActivitiesInput] = useState('');
@@ -49,6 +53,63 @@ const Attendance = () => {
   const [remindersEnabled, setRemindersEnabled] = useState(false);
 
   const [currentViewDate, setCurrentViewDate] = useState(new Date());
+
+  // Logs table controls
+  const [currentPage, setCurrentPage] = useState(1);
+  const [monthFilter, setMonthFilter] = useState('all'); // 'all' or 'YYYY-MM'
+  const [sortOrder, setSortOrder] = useState('desc');    // 'desc' or 'asc'
+
+  // Logs Filtering and Pagination Logic
+  const filteredAndSortedLogs = React.useMemo(() => {
+    let result = [...logs];
+    
+    // 1. Filter by month
+    if (monthFilter !== 'all') {
+      const [year, month] = monthFilter.split('-');
+      result = result.filter(log => {
+        if (!log.log_date) return false;
+        const [lYear, lMonth] = log.log_date.split('-');
+        return lYear === year && lMonth === month;
+      });
+    }
+
+    // 2. Sort by date
+    result.sort((a, b) => {
+      const dateA = new Date(a.log_date + 'T00:00:00').getTime();
+      const dateB = new Date(b.log_date + 'T00:00:00').getTime();
+      if (sortOrder === 'desc') {
+        return dateB - dateA;
+      } else {
+        return dateA - dateB;
+      }
+    });
+
+    return result;
+  }, [logs, monthFilter, sortOrder]);
+
+  const logsPerPage = 10;
+  const totalPages = Math.ceil(filteredAndSortedLogs.length / logsPerPage) || 1;
+  const paginatedLogs = filteredAndSortedLogs.slice(
+    (currentPage - 1) * logsPerPage,
+    currentPage * logsPerPage
+  );
+
+  // Generate unique months for the filter dropdown
+  const availableMonths = React.useMemo(() => {
+    const months = new Set();
+    logs.forEach(log => {
+      if (log.log_date) {
+        const [year, month] = log.log_date.split('-');
+        months.add(`${year}-${month}`);
+      }
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [logs]);
+
+  // Reset page when filter or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [monthFilter, sortOrder]);
 
   const handlePrevMonth = () => {
     setCurrentViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
@@ -104,7 +165,7 @@ const Attendance = () => {
   const defaultWeek = getDefaultWeeklyDates();
   const [weeklyStart, setWeeklyStart] = useState(defaultWeek.start);
   const [weeklyEnd, setWeeklyEnd] = useState(defaultWeek.end);
-  const [monthlyMonth, setMonthlyMonth] = useState(new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
+
   const [exportWeekNo, setExportWeekNo] = useState('');
 
   // Auto-calculate Week Number based on start date
@@ -121,8 +182,6 @@ const Attendance = () => {
       referenceDate = dailyDate;
     } else if (exportType === 'weekly') {
       referenceDate = weeklyStart;
-    } else if (exportType === 'monthly') {
-      referenceDate = `${monthlyMonth}-01`;
     }
 
     if (ojtStartDate && referenceDate) {
@@ -139,29 +198,35 @@ const Attendance = () => {
     } else {
       setExportWeekNo('');
     }
-  }, [exportType, dailyDate, weeklyStart, monthlyMonth, user?.start_date, logs]);
+  }, [exportType, dailyDate, weeklyStart, user?.start_date, logs]);
 
   const handleExportPDF = (type, options) => {
     let filtered = [];
-    let periodLabel = '';
+    let dynamicDateValue = '';
 
     if (type === 'daily') {
       filtered = logs.filter(l => l.log_date === options.dailyDate && l.status === 'LOGGED');
-      periodLabel = new Date(options.dailyDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      const dailyDate = new Date(options.dailyDate + 'T00:00:00');
+      dynamicDateValue = dailyDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     } else if (type === 'weekly') {
       filtered = logs.filter(l => l.log_date >= options.weeklyStart && l.log_date <= options.weeklyEnd && l.status === 'LOGGED');
-      const startF = new Date(options.weeklyStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const endF = new Date(options.weeklyEnd + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      periodLabel = `${startF} - ${endF}`;
-    } else if (type === 'monthly') {
-      const [year, month] = options.monthlyMonth.split('-');
-      filtered = logs.filter(l => {
-        if (l.status !== 'LOGGED') return false;
-        const [lYear, lMonth] = l.log_date.split('-');
-        return lYear === year && lMonth === month;
-      });
-      const monthDate = new Date(year, parseInt(month) - 1, 1);
-      periodLabel = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const start = new Date(options.weeklyStart + 'T00:00:00');
+      const end = new Date(options.weeklyEnd + 'T00:00:00');
+      const startMonth = start.toLocaleDateString('en-US', { month: 'long' });
+      const startDay = start.getDate();
+      const startYear = start.getFullYear();
+      
+      const endMonth = end.toLocaleDateString('en-US', { month: 'long' });
+      const endDay = end.getDate();
+      const endYear = end.getFullYear();
+      
+      if (startYear !== endYear) {
+        dynamicDateValue = `${startMonth} ${startDay}, ${startYear} - ${endMonth} ${endDay}, ${endYear}`;
+      } else if (startMonth !== endMonth) {
+        dynamicDateValue = `${startMonth} ${startDay} - ${endMonth} ${endDay}, ${startYear}`;
+      } else {
+        dynamicDateValue = `${startMonth} ${startDay}-${endDay}, ${startYear}`;
+      }
     }
 
     if (filtered.length === 0) {
@@ -174,9 +239,11 @@ const Attendance = () => {
 
     const totalHoursPeriod = filtered.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
 
-    // Calculate previous hours (all logs prior to this range)
+    // Calculate previous hours (all logs prior to this range, including already-submitted/DEDUCTED ones)
+    // DEDUCTED logs represent periods already uploaded and must be counted as prior rendered hours
+    // to avoid showing incorrect cumulative totals on the PDF
     let firstFilteredDate = filtered[0].log_date;
-    const previousLogs = logs.filter(l => l.log_date < firstFilteredDate && l.status === 'LOGGED');
+    const previousLogs = logs.filter(l => l.log_date < firstFilteredDate && (l.status === 'LOGGED' || l.status === 'DEDUCTED'));
     const previousTotal = previousLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
     const grandTotal = previousTotal + totalHoursPeriod;
 
@@ -373,8 +440,8 @@ const Attendance = () => {
               <td style="font-weight: bold;">${user?.company_name || 'N/A'}</td>
             </tr>
             <tr>
-              <td class="metadata-label">Week No.</td>
-              <td style="font-weight: bold;">${options.weekNo || ''}</td>
+              <td class="metadata-label">Date:</td>
+              <td style="font-weight: bold;">${dynamicDateValue}</td>
             </tr>
           </table>
           
@@ -698,7 +765,7 @@ const Attendance = () => {
         .from('attendance_logs')
         .select('hours_rendered')
         .eq('internship_id', internshipId)
-        .eq('status', 'LOGGED');
+        .in('status', ['LOGGED', 'DEDUCTED']);
 
       if (fetchError) throw fetchError;
 
@@ -761,7 +828,7 @@ const Attendance = () => {
         .from('attendance_logs')
         .select('hours_rendered')
         .eq('internship_id', internshipId)
-        .eq('status', 'LOGGED');
+        .in('status', ['LOGGED', 'DEDUCTED']);
 
       const total = (allLogs || []).reduce((s, l) => s + (l.hours_rendered || 0), 0);
       await supabase
@@ -790,34 +857,7 @@ const Attendance = () => {
     }
   };
 
-  // 6. Handle CSV Export
-  const handleExportCSV = () => {
-    if (logs.length === 0) {
-      setToast({ message: 'No logs available to export.', type: 'warning' });
-      return;
-    }
 
-    const headers = ['Date', 'Time In', 'Time Out', 'Hours Rendered', 'Status', 'Tasks / Activities'];
-    const rows = logs.map(l => [
-      l.log_date,
-      l.time_in ? new Date(l.time_in).toLocaleTimeString() : '--',
-      l.time_out ? new Date(l.time_out).toLocaleTimeString() : '--',
-      l.hours_rendered.toFixed(2),
-      l.status,
-      `"${(l.activities || '').replace(/"/g, '""')}"`
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `OJT_Attendance_Logs_${user?.student_id || 'Student'}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   // 7. Handle Signed Attendance Report Upload and Scanning
   const handleReportFileChange = async (file) => {
@@ -888,7 +928,9 @@ const Attendance = () => {
         body: JSON.stringify({
           internshipId,
           fileUrl: publicUrl,
-          hours: parseFloat(reportHours)
+          hours: parseFloat(reportHours),
+          startDate: reportStartDate,
+          endDate: reportEndDate
         })
       });
 
@@ -902,6 +944,8 @@ const Attendance = () => {
       setShowUploadReportModal(false);
       setReportHours('');
       setReportFile(null);
+      setReportStartDate('');
+      setReportEndDate('');
       
       // Refresh documents list
       await fetchLogs(true);
@@ -914,7 +958,7 @@ const Attendance = () => {
   };
 
   // 8. Compute Metrics
-  const loggedLogs = logs.filter(l => l.status === 'LOGGED');
+  const loggedLogs = logs.filter(l => l.status === 'LOGGED' || l.status === 'DEDUCTED');
   const totalRendered = loggedLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
   const uniqueDates = new Set(loggedLogs.map(l => l.log_date));
   const daysPresent = uniqueDates.size;
@@ -1006,6 +1050,7 @@ const Attendance = () => {
     badge: (status) => {
       let colors = studentDesign.colors.status.neutral;
       if (status === 'LOGGED') colors = studentDesign.colors.status.done;
+      if (status === 'DEDUCTED') colors = { bg: '#ECFDF5', text: '#047857', border: '#D1FAE5' }; // Green for Deducted
       if (status === 'IN_PROGRESS') colors = studentDesign.colors.status.active;
       if (status === 'MISSED') colors = studentDesign.colors.status.error;
       
@@ -1181,6 +1226,8 @@ const Attendance = () => {
   }
 
   if (loading) return <PageLoader message="Loading your attendance records..." />;
+
+
 
   const isClockedIn = todayLog && todayLog.status === 'IN_PROGRESS';
 
@@ -1359,7 +1406,7 @@ const Attendance = () => {
               // Find log for this date
               const dayLog = logs.find(l => l.log_date === day.dateStr);
               const hasLog = !!dayLog;
-              const isLogged = dayLog?.status === 'LOGGED';
+              const isLogged = dayLog?.status === 'LOGGED' || dayLog?.status === 'DEDUCTED';
 
               // Check if scheduled shift workday
               const dayDateObj = new Date(day.dateStr + 'T00:00:00');
@@ -1671,22 +1718,72 @@ const Attendance = () => {
         <div style={styles.tableHeader}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: studentDesign.colors.textMain }}>Daily Log History</h3>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <button 
-              onClick={handleExportCSV}
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                color: studentDesign.colors.primary, 
-                fontWeight: studentDesign.typography.weights.semibold, 
-                fontSize: '14px', 
-                cursor: 'pointer', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '4px' 
-              }}
-            >
-              Export CSV <ArrowUpRight size={16} />
-            </button>
+            {logs.length > 0 && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <Filter size={14} style={{ position: 'absolute', left: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                  <select
+                    value={monthFilter}
+                    onChange={(e) => setMonthFilter(e.target.value)}
+                    style={{
+                      padding: '8px 28px 8px 32px',
+                      borderRadius: '10px',
+                      border: `1px solid ${studentDesign.colors.border}`,
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: studentDesign.colors.textMain,
+                      backgroundColor: '#fff',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      appearance: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = studentDesign.colors.primary}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = studentDesign.colors.border}
+                  >
+                    <option value="all">All Months</option>
+                    {availableMonths.map(m => {
+                      const [year, month] = m.split('-');
+                      const date = new Date(year, parseInt(month) - 1, 1);
+                      return (
+                        <option key={m} value={m}>
+                          {date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                </div>
+
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <ArrowUpDown size={14} style={{ position: 'absolute', left: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    style={{
+                      padding: '8px 28px 8px 32px',
+                      borderRadius: '10px',
+                      border: `1px solid ${studentDesign.colors.border}`,
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: studentDesign.colors.textMain,
+                      backgroundColor: '#fff',
+                      outline: 'none',
+                      cursor: 'pointer',
+                      appearance: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = studentDesign.colors.primary}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = studentDesign.colors.border}
+                  >
+                    <option value="desc">Newest First</option>
+                    <option value="asc">Oldest First</option>
+                  </select>
+                  <ChevronDown size={14} style={{ position: 'absolute', right: '10px', color: studentDesign.colors.textMuted, pointerEvents: 'none' }} />
+                </div>
+              </div>
+            )}
+
             <button 
               onClick={() => setShowExportModal(true)}
               style={{ 
@@ -1723,20 +1820,28 @@ const Attendance = () => {
             <p style={{ fontSize: '13px', margin: '4px 0 0' }}>Your completed shift hours will appear here after you clock out.</p>
           </div>
         ) : (
-          <table style={styles.table}>
-            <thead>
-              <tr>
-                <th style={styles.th}>Date</th>
-                <th style={styles.th}>Time in</th>
-                <th style={styles.th}>Time out</th>
-                <th style={styles.th}>Duration</th>
-                <th style={styles.th}>Status</th>
-                <th style={styles.th}>Edit</th>
-              </tr>
-            </thead>
+          <>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Date</th>
+                  <th style={styles.th}>Time in</th>
+                  <th style={styles.th}>Time out</th>
+                  <th style={styles.th}>Duration</th>
+                  <th style={styles.th}>Status</th>
+                  <th style={styles.th}>Edit</th>
+                </tr>
+              </thead>
             <tbody>
-              {logs.map((log, idx) => {
-                const isEditing = editingLog === log.id;
+              {paginatedLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ padding: '40px 20px', textAlign: 'center', color: studentDesign.colors.textMuted, fontSize: '14px' }}>
+                    No logs match the selected filters.
+                  </td>
+                </tr>
+              ) : (
+                paginatedLogs.map((log, idx) => {
+                  const isEditing = editingLog === log.id;
                 return (
                   <tr key={idx} style={{ backgroundColor: log.status === 'IN_PROGRESS' ? '#F8FAFC' : (isEditing ? '#EFF6FF' : 'transparent') }}>
                     {/* Date */}
@@ -1770,7 +1875,7 @@ const Attendance = () => {
                     {/* Status */}
                     <td style={styles.td}>
                       <span style={styles.badge(log.status)}>
-                        {log.status === 'IN_PROGRESS' ? 'In progress' : 'Logged'}
+                        {log.status === 'IN_PROGRESS' ? 'In progress' : (log.status === 'DEDUCTED' ? 'Deducted' : 'Logged')}
                       </span>
                     </td>
                     {/* Edit */}
@@ -1805,9 +1910,56 @@ const Attendance = () => {
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
+          
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderTop: `1px solid ${studentDesign.colors.border}` }}>
+              <span style={{ fontSize: '13px', color: studentDesign.colors.textMuted }}>
+                Showing {((currentPage - 1) * logsPerPage) + 1} to {Math.min(currentPage * logsPerPage, filteredAndSortedLogs.length)} of {filteredAndSortedLogs.length} entries
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${studentDesign.colors.border}`,
+                    backgroundColor: currentPage === 1 ? '#F8FAFC' : '#fff',
+                    color: currentPage === 1 ? '#94A3B8' : studentDesign.colors.textMain,
+                    fontSize: '13px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <ChevronLeft size={16} /> Prev
+                </button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${studentDesign.colors.border}`,
+                    backgroundColor: currentPage === totalPages ? '#F8FAFC' : '#fff',
+                    color: currentPage === totalPages ? '#94A3B8' : studentDesign.colors.textMain,
+                    fontSize: '13px',
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  Next <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
       {/* ── Upload Report Modal ── */}
@@ -1870,6 +2022,54 @@ const Attendance = () => {
 
             {/* Modal Body */}
             <form onSubmit={handleUploadReportSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Log Date Range covered by this report */}
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
+                    LOGS START DATE
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={reportStartDate}
+                    onChange={e => setReportStartDate(e.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '13px',
+                      color: '#1E293B',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      boxSizing: 'border-box',
+                      width: '100%'
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
+                    LOGS END DATE
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={reportEndDate}
+                    onChange={e => setReportEndDate(e.target.value)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '13px',
+                      color: '#1E293B',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      boxSizing: 'border-box',
+                      width: '100%'
+                    }}
+                  />
+                </div>
+              </div>
+
               {/* File Input */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 700, color: studentDesign.colors.textMain }}>
@@ -2098,13 +2298,13 @@ const Attendance = () => {
                 </span>
                 <div style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '10px',
                   backgroundColor: '#F1F5F9',
                   padding: '4px',
                   borderRadius: '12px'
                 }}>
-                  {['daily', 'weekly', 'monthly'].map(type => (
+                  {['daily', 'weekly'].map(type => (
                     <button
                       key={type}
                       type="button"
@@ -2228,28 +2428,7 @@ const Attendance = () => {
                   </div>
                 )}
 
-                {exportType === 'monthly' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
-                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
-                      SELECT MONTH
-                    </label>
-                    <input
-                      type="month"
-                      value={monthlyMonth}
-                      onChange={e => setMonthlyMonth(e.target.value)}
-                      style={{
-                        padding: '10px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #CBD5E1',
-                        fontSize: '14px',
-                        color: '#1E293B',
-                        outline: 'none',
-                        backgroundColor: '#FFFFFF',
-                        cursor: 'pointer'
-                      }}
-                    />
-                  </div>
-                )}
+
               </div>
 
               {/* Action Buttons */}
@@ -2280,7 +2459,7 @@ const Attendance = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    handleExportPDF(exportType, { dailyDate, weeklyStart, weeklyEnd, monthlyMonth, weekNo: exportWeekNo });
+                    handleExportPDF(exportType, { dailyDate, weeklyStart, weeklyEnd, weekNo: exportWeekNo });
                     setShowExportModal(false);
                   }}
                   style={{
