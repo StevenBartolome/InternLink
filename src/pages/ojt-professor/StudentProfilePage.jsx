@@ -44,7 +44,8 @@ const StudentProfilePage = () => {
           ),
           student_internships!student_id (
             *,
-            companies ( id, name, address, industry )
+            companies ( id, name, address, industry ),
+            additional_requirements ( document_name, status, reviewer_comment )
           )
         `)
         .eq('id', id)
@@ -70,6 +71,15 @@ const StudentProfilePage = () => {
       const company = internship.companies || {};
       const section = profile.program_sections || {};
 
+      const reqs = internship.additional_requirements || [];
+      let calculatedHours = 0;
+      reqs.forEach(doc => {
+        if (doc.document_name && doc.document_name.startsWith('Signed Attendance Report') && doc.status !== 'NOT_SUBMITTED') {
+          const match = doc.reviewer_comment ? doc.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/) : null;
+          if (match) calculatedHours += parseFloat(match[1]);
+        }
+      });
+
       setStudent({
         uuid: data.id,
         studentId: profile.student_id || 'Not Set',
@@ -84,7 +94,7 @@ const StudentProfilePage = () => {
         semester: profile.semester || 'Not Set',
         ojtSubject: profile.ojt_subject_name || 'Not Set',
         status: internship.current_stage || 'PRE_INTERNSHIP',
-        hoursRendered: internship.rendered_hours || 0,
+        hoursRendered: calculatedHours || 0,
         hoursRequired: programs.required_hours || 486,
         sectionId: profile.section_id,
         sectionName: section.name || 'Not Assigned',

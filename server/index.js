@@ -913,7 +913,7 @@ app.post(['/api/claude/scan-attendance', '/claude/scan-attendance'], async (req,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': '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',
+                'x-api-key': process.env.CLAUDE_API_KEY,
                 'anthropic-version': '2023-06-01',
                 'anthropic-beta': 'pdfs-2024-09-25'
             },
@@ -1226,7 +1226,7 @@ setInterval(runAttendanceReminderEngine, 5 * 60 * 1000);
 app.post('/api/claude/scan-cor', async (req, res) => {
     try {
         const { base64Data, mimeType } = req.body;
-        const apiKey = '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';
+        const apiKey = process.env.CLAUDE_API_KEY;
         
         const prompt = `You are an academic document parser. Analyze this Certificate of Registration (COR) PDF from a Philippine university and extract the following information in JSON format ONLY. Do not include any explanation or markdown formatting outside the JSON.
 

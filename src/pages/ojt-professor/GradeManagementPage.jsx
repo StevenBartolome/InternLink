@@ -67,7 +67,8 @@ const GradeManagementPage = () => {
           ),
           student_internships!student_id (
             current_stage, rendered_hours, supervisor_name, is_deployed, final_grade, stage3_submitted,
-            companies ( name )
+            companies ( name ),
+            additional_requirements ( document_name, status, reviewer_comment )
           )
         `)
         .eq('role', 'student')
@@ -86,6 +87,15 @@ const GradeManagementPage = () => {
         const profile = (Array.isArray(s.student_profiles) ? s.student_profiles[0] : s.student_profiles) || {};
         const internship = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
         const company = internship.companies || {};
+        const reqs = internship.additional_requirements || [];
+        
+        let calculatedHours = 0;
+        reqs.forEach(doc => {
+          if (doc.document_name && doc.document_name.startsWith('Signed Attendance Report') && doc.status !== 'NOT_SUBMITTED') {
+            const match = doc.reviewer_comment ? doc.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/) : null;
+            if (match) calculatedHours += parseFloat(match[1]);
+          }
+        });
         
         return {
           id: s.id,
@@ -97,7 +107,7 @@ const GradeManagementPage = () => {
           company: company.name || 'Not Applied',
           supervisor: internship.supervisor_name || 'Not Placed',
           isDeployed: internship.is_deployed || false,
-          hoursRendered: internship.rendered_hours || 0,
+          hoursRendered: calculatedHours || 0,
           hoursRequired: profile.programs?.required_hours || 486,
           section: profile.program_sections?.name || 'Not Assigned',
           sectionId: profile.section_id || 'unassigned',
