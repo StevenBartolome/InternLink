@@ -918,7 +918,7 @@ app.post(['/api/claude/scan-attendance', '/claude/scan-attendance'], async (req,
                 'anthropic-beta': 'pdfs-2024-09-25'
             },
             body: JSON.stringify({
-                model: 'claude-3-5-sonnet-20241022',
+                model: 'claude-haiku-4-5-20251001',
                 max_tokens: 1024,
                 messages: [
                     {
@@ -1220,6 +1220,86 @@ setTimeout(runAttendanceReminderEngine, 3000);
 
 // Run every 5 minutes
 setInterval(runAttendanceReminderEngine, 5 * 60 * 1000);
+
+
+
+app.post('/api/claude/scan-cor', async (req, res) => {
+    try {
+        const { base64Data, mimeType } = req.body;
+        const apiKey = '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';
+        
+        const prompt = `You are an academic document parser. Analyze this Certificate of Registration (COR) PDF from a Philippine university and extract the following information in JSON format ONLY. Do not include any explanation or markdown formatting outside the JSON.
+
+Extract:
+{
+  "firstName": "First name of the student",
+  "lastName": "Last name of the student",
+  "studentId": "Student ID number",
+  "course": "Full course name (e.g. Bachelor of Science in Information Technology)",
+  "courseCode": "Short course code (e.g. BSIT, BSCS, BSIS)",
+  "yearLevel": "Year level (e.g. 4th Year)",
+  "ojtSubjectFound": true or false (true if any subject with keywords like OJT, Practicum, On-the-Job Training, Internship, Work Immersion, Field Practice is enrolled),
+  "ojtSubjectName": "Name of the OJT/Practicum subject if found, or null",
+  "academicYear": "Academic year (e.g. 2025-2026)",
+  "semester": "Semester (e.g. 1st Semester)"
+}
+
+If a field cannot be found, use null for that field.
+Be accurate — this is used for student verification.`;
+
+        const contentBlock = [];
+        if (mimeType === 'application/pdf') {
+            contentBlock.push({
+                type: "document",
+                source: {
+                    type: "base64",
+                    media_type: "application/pdf",
+                    data: base64Data
+                }
+            });
+        } else {
+            contentBlock.push({
+                type: "image",
+                source: {
+                    type: "base64",
+                    media_type: mimeType || "image/png",
+                    data: base64Data
+                }
+            });
+        }
+        contentBlock.push({ type: "text", text: prompt });
+
+        const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+                'anthropic-beta': 'pdfs-2024-09-25',
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: 'claude-haiku-4-5-20251001',
+                max_tokens: 1024,
+                messages: [{ role: 'user', content: contentBlock }]
+            })
+        });
+
+        const data = await claudeResponse.json();
+        if (!claudeResponse.ok) {
+            throw new Error(data.error?.message || 'Claude API failed');
+        }
+
+        const text = data.content[0].text.trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Could not parse Claude response as JSON');
+        
+        res.json({ success: true, data: JSON.parse(jsonMatch[0]) });
+
+    } catch (err) {
+        console.error('Claude proxy error (COR):', err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);

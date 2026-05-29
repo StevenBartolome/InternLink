@@ -97,11 +97,44 @@ Be accurate — this is used for student verification.`;
       eligible: hasOJT,
     };
   } catch (err) {
-    console.error('[COR Scanner] Error:', err);
-    return {
-      success: false,
-      error: err.message || 'Failed to scan COR. Please check your API key or try again.',
-    };
+    console.error('[COR Scanner] Gemini failed, attempting Claude fallback:', err);
+    try {
+      const base64Data = await fileToBase64(pdfFile);
+      const mimeType = pdfFile.type || 'application/pdf';
+      const response = await fetch('/api/claude/scan-cor', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ base64Data, mimeType })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'Claude API failed');
+      
+      const parsed = result.data;
+      const hasOJT = parsed.ojtSubjectFound === true;
+
+      return {
+        success: true,
+        data: {
+          firstName: parsed.firstName || '',
+          lastName: parsed.lastName || '',
+          studentId: parsed.studentId || '',
+          course: parsed.course || '',
+          courseCode: parsed.courseCode || '',
+          yearLevel: parsed.yearLevel || '',
+          academicYear: parsed.academicYear || '',
+          semester: parsed.semester || '',
+          ojtSubjectFound: hasOJT,
+          ojtSubjectName: parsed.ojtSubjectName || null,
+        },
+        eligible: hasOJT,
+      };
+    } catch (claudeErr) {
+      console.error('[COR Scanner] Claude fallback also failed:', claudeErr);
+      return {
+        success: false,
+        error: `Gemini Error: ${err.message}. Claude Error: ${claudeErr.message}`,
+      };
+    }
   }
 }
 

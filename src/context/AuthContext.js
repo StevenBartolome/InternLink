@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
           console.log('fetchProfile: Fetching student_profiles for', authUser.id);
           const { data: sProfile, error: sError } = await supabase
             .from('student_profiles')
-            .select('*, program_sections(id, name)')
+            .select('*, program_sections(id, name), programs(id, code, name, required_hours)')
             .eq('id', authUser.id)
             .maybeSingle();
             
@@ -160,15 +160,16 @@ export function AuthProvider({ children }) {
         }
 
         // Flatten the profile data for easy access
+        const activePrograms = specificProfile.programs || baseUser.programs;
         const userData = {
           ...authUser,
           ...baseUser,
-          course_code: baseUser.programs?.code,
-          course_name: baseUser.programs?.name,
-          required_hours: baseUser.programs?.required_hours || 486,
           name: `${baseUser.first_name} ${baseUser.last_name}`,
           ...internshipData,
           ...specificProfile,
+          course_code: activePrograms?.code,
+          course_name: activePrograms?.name,
+          required_hours: activePrograms?.required_hours || 486,
           // Explicitly include internship fields
           internship_id: internshipData?.id,
           // Ensure we don't overwrite user ID with join IDs if they differ
@@ -328,7 +329,8 @@ export function AuthProvider({ children }) {
           id: authData.user.id,
           first_name: studentData.firstName,
           last_name: studentData.lastName,
-          role: 'student'
+          role: 'student',
+          program_id: studentData.programId || studentData.program_id
         });
 
       if (profileError) {

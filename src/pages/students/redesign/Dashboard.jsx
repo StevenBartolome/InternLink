@@ -14,9 +14,11 @@ import { useAuth } from '../../../context/AuthContext';
 import { studentDesign } from '../../../styles/StudentDesign';
 import CompanyInfoForm from '../../../components/student/CompanyInfoForm';
 import PageLoader from '../../../components/common/PageLoader';
+import Toast from '../../../components/common/Toast';
 import { attendanceService } from '../../../services/attendanceService';
 import { studentService } from '../../../services/studentService';
 import { weeklyReportService } from '../../../services/weeklyReportService';
+import { supabase } from '../../../services/supabaseClient';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -24,6 +26,9 @@ const Dashboard = () => {
   
   const [showPromptModal, setShowPromptModal] = React.useState(false);
   const [showForm, setShowForm] = React.useState(false);
+  const [unlocking, setUnlocking] = React.useState(false);
+  const [toast, setToast] = React.useState(null);
+  const [showUnlockSuccess, setShowUnlockSuccess] = React.useState(false);
 
   // Dynamic Metrics States
   const [logs, setLogs] = React.useState([]);
@@ -89,6 +94,7 @@ const Dashboard = () => {
 
   // Compute Metrics dynamically
   const loggedLogs = logs.filter(l => l.status === 'LOGGED' || l.status === 'DEDUCTED');
+  const totalRenderedHours = loggedLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
   const uniqueDates = new Set(loggedLogs.map(l => l.log_date));
   const daysPresent = uniqueDates.size;
 
@@ -99,11 +105,37 @@ const Dashboard = () => {
   };
 
   const uploadedReportHours = documents
-    .filter(d => d.name && d.name.startsWith('Signed Attendance Report'))
+    .filter(d => d.name && d.name.startsWith('Signed Attendance Report') && d.status !== 'Not submitted')
     .reduce((sum, d) => sum + parseReportHours(d), 0);
 
   const requiredHours = user?.required_hours || 486;
   const remainingHours = Math.max(0, requiredHours - uploadedReportHours);
+  
+  const isHoursCompleted = uploadedReportHours >= requiredHours;
+
+  const handleUnlockPostInternship = async () => {
+    try {
+      setUnlocking(true);
+      const { error } = await supabase
+        .from('student_internships')
+        .update({
+          current_stage: 'POST_INTERNSHIP',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.internship_id);
+
+      if (error) throw error;
+      
+      setShowUnlockSuccess(true);
+      setTimeout(() => {
+        window.location.reload();
+      }, 3500);
+
+    } catch (err) {
+      setToast({ message: 'Failed to unlock stage: ' + err.message, type: 'error' });
+      setUnlocking(false);
+    }
+  };
 
   // WARs calculations
   const totalWARs = reports.length;
@@ -122,15 +154,15 @@ const Dashboard = () => {
     },
     { 
       label: 'WARs submitted', 
-      value: `${totalWARs} / ${requiredWARs}`, 
-      progress: Math.min(100, (totalWARs / requiredWARs) * 100), 
-      footer: `${remainingWARs} weeks remaining` 
+      value: `${totalWARs}`, 
+      hideProgress: true,
+      footer: 'Total submissions' 
     },
     { 
       label: 'Days present', 
-      value: `${daysPresent} / ${requiredDays}`, 
-      progress: Math.min(100, (daysPresent / requiredDays) * 100), 
-      footer: `Present: ${daysPresent} days` 
+      value: `${daysPresent}`, 
+      hideProgress: true,
+      footer: 'Total days logged' 
     }
   ];
 
@@ -447,6 +479,8 @@ const Dashboard = () => {
       animate={{ opacity: 1, y: 0 }}
       style={styles.container}
     >
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      
       {/* Stage Tracker */}
       <div style={styles.tracker}>
         {stages.map((stage, idx) => (
@@ -460,20 +494,77 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* Unlock Post-Internship Banner */}
+      <AnimatePresence>
+        {isHoursCompleted && currentStage === 'DURING_INTERNSHIP' && !showUnlockSuccess && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              padding: '24px 32px',
+              borderRadius: '20px',
+              background: 'linear-gradient(135deg, #4F46E5 0%, #3B82F6 100%)',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: '0 10px 25px rgba(59, 130, 246, 0.3)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+          >
+            <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.1 }}>
+              <CheckCircle2 size={150} />
+            </div>
+            <div style={{ zIndex: 1 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 800 }}>Congratulations! 🎉</h3>
+              <p style={{ margin: 0, color: '#E0E7FF', fontSize: '14px', maxWidth: '500px', lineHeight: 1.5 }}>
+                You have officially completed your required {requiredHours} OJT hours. You are now eligible to unlock the Post-Internship stage and begin your portfolio phase!
+              </p>
+            </div>
+            <button 
+              disabled={unlocking}
+              onClick={handleUnlockPostInternship}
+              style={{
+                backgroundColor: '#FFFFFF',
+                color: '#4F46E5',
+                border: 'none',
+                padding: '12px 24px',
+                borderRadius: '12px',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
+                zIndex: 1,
+                opacity: unlocking ? 0.7 : 1
+              }}
+            >
+              {unlocking ? 'Unlocking...' : 'Unlock Post-Internship'}
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Metrics Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px' }}>
         {metrics.map((m, idx) => (
           <div key={idx} style={styles.card}>
             <span style={{ fontSize: '14px', fontWeight: studentDesign.typography.weights.medium, color: studentDesign.colors.textMuted }}>{m.label}</span>
             <span style={styles.metricValue}>{m.value}</span>
-            <div style={styles.progressBar}>
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${m.progress}%` }}
-                transition={{ duration: 1, delay: 0.2 }}
-                style={styles.progressFill(m.progress)} 
-              />
-            </div>
+            {!m.hideProgress && (
+              <div style={styles.progressBar}>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${m.progress}%` }}
+                  transition={{ duration: 1, delay: 0.2 }}
+                  style={styles.progressFill(m.progress)} 
+                />
+              </div>
+            )}
             <span style={styles.cardFooter}>{m.footer}</span>
           </div>
         ))}
@@ -661,6 +752,61 @@ const Dashboard = () => {
           }}
         />
       )}
+
+      {/* Unlock Success Modal */}
+      <AnimatePresence>
+        {showUnlockSuccess && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            backgroundColor: 'rgba(15, 23, 42, 0.4)',
+            backdropFilter: 'blur(8px)',
+          }}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              style={{
+                width: '100%',
+                maxWidth: '400px',
+                backgroundColor: '#FFFFFF',
+                borderRadius: '24px',
+                padding: '40px 32px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '16px'
+              }}
+            >
+              <div style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '50%',
+                backgroundColor: '#DCFCE7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#16A34A',
+                marginBottom: '8px'
+              }}>
+                <CheckCircle2 size={36} />
+              </div>
+              <h3 style={{ margin: 0, fontSize: '24px', fontWeight: 800, color: '#1E293B' }}>
+                Stage Unlocked!
+              </h3>
+              <p style={{ margin: 0, color: '#64748B', lineHeight: 1.5 }}>
+                You have successfully unlocked the <strong>Post-Internship</strong> stage. Redirecting you shortly to refresh your dashboard...
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

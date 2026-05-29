@@ -1018,7 +1018,7 @@ const Attendance = () => {
   };
 
   const uploadedReportHours = documents
-    .filter(d => d.name && d.name.startsWith('Signed Attendance Report'))
+    .filter(d => d.name && d.name.startsWith('Signed Attendance Report') && d.status !== 'Not submitted')
     .reduce((sum, d) => sum + parseReportHours(d), 0);
 
   const remainingHours = Math.max(0, requiredHours - uploadedReportHours);
