@@ -1,55 +1,50 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  Shield, Edit2, ShieldCheck, Save, X, 
-  Terminal, Activity, Database, Users, 
-  Settings, Cpu, Globe
+  Mail, Edit, ShieldCheck, Save, X, Terminal, Globe, 
+  Activity, Users, Database, Shield, Key
 } from 'lucide-react';
-import { theme } from '../../styles/theme';
-import { commonStyles } from '../../styles/commonStyles';
-import Toast from '../../components/common/Toast';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 
 const AdminProfilePage = () => {
   const { user, updateUser } = useAuth();
+  
+  const initialData = {
+    firstName: user?.first_name || 'System',
+    lastName: user?.last_name || 'Admin',
+    email: user?.email || 'admin@internlink.com',
+    role: 'System Administrator',
+    id: user?.id || 'ADM-0000',
+  };
+
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
-    email: user?.email || '',
-  });
-  const [toast, setToast] = useState(null);
+  const [profile, setProfile] = useState(initialData);
+  const [tempProfile, setTempProfile] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [systemStats, setSystemStats] = useState({
     activeUsers: 0,
     totalPlacements: 0,
-    linkedDatabases: 1, // Static for now
     uptime: '99.9%'
   });
 
-  // Mock Admin-Specific Statistics
-  const adminStats = [
-    { label: 'Total Placements', value: systemStats.totalPlacements, icon: Globe, color: theme.colors.primary },
-    { label: 'System Uptime', value: systemStats.uptime, icon: Activity, color: theme.colors.success },
-    { label: 'Active Users', value: systemStats.activeUsers, icon: Users, color: theme.colors.warning },
-    { label: 'Linked Databases', value: systemStats.linkedDatabases, icon: Database, color: theme.colors.info },
-  ];
-
-  const showToast = (message, type = 'success') => setToast({ message, type });
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        email: user.email || prev.email,
+        id: user.id || prev.id,
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchSystemStats = async () => {
       try {
-        // Count active users
-        const { count: userCount } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-        
-        // Count internships (placements)
-        const { count: placementCount } = await supabase
-          .from('student_internships')
-          .select('*', { count: 'exact', head: true });
-
+        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: placementCount } = await supabase.from('student_internships').select('*', { count: 'exact', head: true });
         setSystemStats(prev => ({
           ...prev,
           activeUsers: userCount || 0,
@@ -59,314 +54,322 @@ const AdminProfilePage = () => {
         console.error('Error fetching system stats:', err);
       }
     };
-
     fetchSystemStats();
   }, []);
 
-  const handleEditToggle = () => {
-    if (isEditing) {
-      setFormData({
-        firstName: user?.first_name || '',
-        lastName: user?.last_name || '',
-        email: user?.email || '',
-      });
-    }
-    setIsEditing(prev => !prev);
-  };
-
   const handleSave = async () => {
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      const { error } = await updateUser({
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-      });
-
-      if (error) throw error;
-
+      if (updateUser) {
+        await updateUser({
+          first_name: tempProfile.firstName,
+          last_name: tempProfile.lastName,
+        });
+      }
+      setProfile({...tempProfile});
       setIsEditing(false);
-      showToast('Admin profile updated successfully.', 'success');
     } catch (err) {
-      showToast(err.message, 'error');
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setTempProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getInitials = (first, last) => {
+    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase();
+  };
+
+  const sc = {
+    primary: '#1E40AF',
+    primaryLight: '#EFF6FF',
+    textMain: '#1E293B',
+    textDark: '#0F172A',
+    textMuted: '#64748B',
+    border: '#E2E8F0',
   };
 
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px',
-      maxWidth: '1000px',
-      margin: '0 auto',
-      animation: 'fadeIn 0.5s ease-out',
+      gap: '32px',
+      fontFamily: "'Inter', sans-serif",
     },
-    hero: {
-      ...commonStyles.dashboardCard,
-      padding: '40px',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-      color: '#fff',
-      position: 'relative',
-      overflow: 'hidden',
+    headerCard: {
+      borderRadius: '24px',
+      border: `1px solid ${sc.border}`,
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
       display: 'flex',
       alignItems: 'center',
       gap: '32px',
-      border: 'none',
-    },
-    avatarWrapper: {
-      position: 'relative',
-      zIndex: 2,
+      padding: '40px',
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
     },
     avatar: {
       width: '120px',
       height: '120px',
-      borderRadius: '30px',
-      backgroundColor: 'rgba(59, 130, 246, 0.2)',
-      color: theme.colors.primary,
+      borderRadius: '32px',
+      backgroundColor: sc.primary,
+      color: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      border: '2px solid rgba(59, 130, 246, 0.4)',
-      boxShadow: '0 0 20px rgba(59, 130, 246, 0.2)',
+      fontSize: '40px',
+      fontWeight: 700,
+      boxShadow: '0 20px 25px -5px rgba(30, 64, 175, 0.2)',
     },
-    statusBadge: {
-      position: 'absolute',
-      bottom: '-8px',
-      right: '-8px',
-      backgroundColor: theme.colors.success,
+    badge: {
       padding: '6px 12px',
       borderRadius: '20px',
-      fontSize: '0.7rem',
-      fontWeight: 800,
-      color: '#fff',
-      boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
-    },
-    statsRow: {
-       display: 'grid',
-       gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-       gap: '20px',
-    },
-    statCard: {
-      ...commonStyles.dashboardCard,
-      padding: '24px',
-      display: 'flex',
+      backgroundColor: sc.primaryLight,
+      color: sc.primary,
+      fontSize: '12px',
+      fontWeight: 600,
+      display: 'inline-flex',
       alignItems: 'center',
-      gap: '16px',
-      transition: 'transform 0.2s',
-      ':hover': { transform: 'translateY(-4px)' }
-    },
-    statIcon: (color) => ({
-      width: '44px',
-      height: '44px',
-      borderRadius: '12px',
-      backgroundColor: `${color}15`,
-      color: color,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }),
-    mainGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1.5fr 1fr',
-      gap: '24px',
+      gap: '6px',
     },
     section: {
-      ...commonStyles.dashboardCard,
-      padding: '28px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
+      backgroundColor: '#FFFFFF',
+      borderRadius: '24px',
+      border: `1px solid ${sc.border}`,
+      padding: '32px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+      height: '100%',
     },
-    infoRow: {
+    sectionTitle: {
+      fontSize: '16px',
+      fontWeight: 700,
+      color: sc.textMain,
       display: 'flex',
       alignItems: 'center',
-      gap: '16px',
-      paddingBottom: '20px',
-      borderBottom: `1px solid ${theme.colors.bgSecondary}`,
+      gap: '10px',
+      marginBottom: '24px',
     },
-    label: {
-      fontSize: '0.75rem',
-      fontWeight: 700,
-      color: theme.colors.textMuted,
-      textTransform: 'uppercase',
-      display: 'block',
-      marginBottom: '4px',
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 2fr',
+      gap: '32px',
     },
-    value: {
-      fontSize: '1rem',
-      fontWeight: 600,
-      color: theme.colors.textMain,
-    },
-    input: {
-      width: '100%',
-      padding: '10px 14px',
-      borderRadius: '10px',
-      border: `2px solid ${theme.colors.border}`,
-      fontSize: '0.95rem',
-      outline: 'none',
-      backgroundColor: '#f8fafc',
-      transition: 'border-color 0.2s',
-      ':focus': { borderColor: theme.colors.primary }
-    },
-    permissionBox: {
-      padding: '12px 16px',
-      borderRadius: '10px',
-      backgroundColor: theme.colors.bgSecondary,
+    infoItem: {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      fontSize: '0.85rem',
+      padding: '12px 0',
+      borderBottom: `1px solid ${sc.border}`,
+    },
+    infoLabel: {
+      fontSize: '12px',
+      color: sc.textMuted,
+      width: '120px',
+    },
+    infoValue: {
+      fontSize: '14px',
+      color: sc.textDark,
+      fontWeight: 500,
+    },
+    input: {
+      width: '100%',
+      padding: '12px 16px',
+      borderRadius: '12px',
+      border: `1px solid ${sc.border}`,
+      fontSize: '14px',
+      outline: 'none',
+      transition: 'border-color 0.2s ease',
+      backgroundColor: '#F8FAFC',
+    },
+    primaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: sc.primary,
+      color: '#FFFFFF',
+      border: 'none',
       fontWeight: 600,
-      color: theme.colors.textMain,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
+    },
+    secondaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: 'transparent',
+      color: sc.textDark,
+      border: `1px solid ${sc.border}`,
+      fontWeight: 600,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
+    },
+    statBadge: {
+      padding: '16px',
+      borderRadius: '16px',
+      backgroundColor: '#F8FAFC',
+      border: `1px solid ${sc.border}`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      flex: 1
     }
   };
 
   return (
-    <div style={styles.container}>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-
-      {/* System Hero Header */}
-      <div style={styles.hero}>
-        <div style={styles.avatarWrapper}>
-          <div style={styles.avatar}>
-            <Shield size={56} />
-          </div>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.container}>
+      {/* Header */}
+      <div style={styles.headerCard}>
+        <div style={styles.avatar}>
+          {getInitials(profile.firstName, profile.lastName)}
         </div>
-        
-        <div style={{ zIndex: 2, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             {isEditing ? (
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input
-                  style={{ ...styles.input, fontSize: '1.75rem', fontWeight: 900, width: '200px', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  value={formData.firstName}
-                  onChange={e => setFormData(f => ({ ...f, firstName: e.target.value }))}
-                />
-                <input
-                  style={{ ...styles.input, fontSize: '1.75rem', fontWeight: 900, width: '200px', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  value={formData.lastName}
-                  onChange={e => setFormData(f => ({ ...f, lastName: e.target.value }))}
-                />
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input style={{...styles.input, width: '200px'}} name="firstName" value={tempProfile.firstName} onChange={handleChange} />
+                <input style={{...styles.input, width: '200px'}} name="lastName" value={tempProfile.lastName} onChange={handleChange} />
               </div>
             ) : (
-              <h1 style={{ fontSize: '2.5rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{user?.name}</h1>
+              <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>{profile.firstName} {profile.lastName}</h1>
             )}
-            <ShieldCheck size={28} color={theme.colors.success} />
+            <div style={styles.badge}>
+              <ShieldCheck size={14} /> Super Administrator
+            </div>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.1rem', margin: 0 }}>System Administrator • System Engineering & Management</p>
-          
-          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-            <button 
-              style={{ 
-                ...commonStyles.dashboardBtn, 
-                backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                color: '#fff', 
-                border: '1px solid rgba(255,255,255,0.3)',
-                backdropFilter: 'blur(4px)'
-              }}
-              onClick={handleEditToggle}
-            >
-              {isEditing ? <><X size={18} /> Discard Changes</> : <><Edit2 size={18} /> Modify Admin Record</>}
-            </button>
-            {isEditing && (
-              <button
-                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary }}
-                onClick={handleSave}
-                disabled={isSaving}
+          <p style={{ color: sc.textMuted, fontSize: '16px', margin: '0 0 24px 0' }}>{profile.role}</p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {!isEditing ? (
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setTempProfile({...profile});
+                  setIsEditing(true);
+                }}
+                style={styles.primaryButton}
               >
-                <Save size={18} /> {isSaving ? 'Processing...' : 'Deploy Updates'}
-              </button>
+                <Edit size={16} /> Edit Profile
+              </motion.button>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={handleSave} style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                </button>
+                <button onClick={() => setIsEditing(false)} style={styles.secondaryButton}>
+                  <X size={16} /> Cancel
+                </button>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Decorative Circuit Background */}
-        <div style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', zIndex: 1 }}></div>
-        <div style={{ position: 'absolute', bottom: -50, left: '30%', width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,0.03)', zIndex: 1 }}></div>
       </div>
 
-      {/* Statistics Cards */}
-      <div style={styles.statsRow}>
-        {adminStats.map((stat, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={styles.statIcon(stat.color)}>
-              <stat.icon size={22} />
-            </div>
-            <div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800, color: theme.colors.textMain }}>{stat.value}</div>
-              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: theme.colors.textMuted, textTransform: 'uppercase' }}>{stat.label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div style={styles.mainGrid}>
-        {/* Core Credentials Section */}
-        <div style={styles.section}>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: theme.colors.textMain, display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Terminal size={20} /> System Credentials
-          </h3>
-          
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={styles.infoRow}>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Admin Identifier (Email)</label>
-                {isEditing ? (
-                  <input
-                    style={styles.input}
-                    value={formData.email}
-                    onChange={e => setFormData(f => ({ ...f, email: e.target.value }))}
-                  />
-                ) : (
-                  <div style={styles.value}>{user?.email}</div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ ...styles.infoRow, marginTop: '20px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Account ID (Internal)</label>
-                <div style={styles.value}>{user?.id}</div>
-              </div>
-            </div>
-
-            <div style={{ ...styles.infoRow, marginTop: '20px', borderBottom: 'none' }}>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Instance Status</label>
-                <div style={{ ...styles.value, color: theme.colors.success, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Cpu size={16} /> Highly Available - Active Cluster 04
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Deployment Modules Section */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={styles.grid}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           <div style={styles.section}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: theme.colors.textMain, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Shield size={20} /> Verified Modules
-            </h3>
-            <div style={{ display: 'grid', gap: '10px' }}>
-              {['System Integrity Oversight', 'Multi-tenant Audit', 'Database Matching Engine', 'Global Notifications Platform'].map(mod => (
-                <div key={mod} style={styles.permissionBox}>
-                  <ShieldCheck size={16} color={theme.colors.primary} />
-                  {mod}
+            <h3 style={styles.sectionTitle}><Terminal size={18} color={sc.primary} /> Credentials Info</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Email</span>
+                <span style={styles.infoValue}>{profile.email}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Internal ID</span>
+                <span style={styles.infoValue} title={profile.id}>{profile.id.substring(0,8)}...</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Access Level</span>
+                <span style={styles.infoValue}>Full Access</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Shield size={18} color={sc.primary} /> Permissions</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {['System Oversight', 'User Management', 'Database Access', 'Configuration'].map((perm, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: sc.textDark, fontSize: '14px', fontWeight: 500 }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ShieldCheck size={14} style={{ margin: 'auto' }} />
+                  </div>
+                  {perm}
                 </div>
               ))}
             </div>
           </div>
+        </div>
 
-          <div style={{ ...styles.section, background: theme.colors.bgSecondary, border: `1px dashed ${theme.colors.border}`, display: 'flex', alignItems: 'center', textAlign: 'center' }}>
-            <Settings size={32} color={theme.colors.textMuted} style={{ marginBottom: '12px' }} />
-            <p style={{ color: theme.colors.textMuted, fontSize: '0.85rem', margin: 0, lineHeight: 1.6 }}>
-              Administrator accounts have full oversight authority for all verification tiers and can manage core application logic.
-            </p>
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Activity size={18} color={sc.primary} /> System Overview</h3>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={styles.statBadge}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: sc.primaryLight, color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800 }}>{systemStats.activeUsers}</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Total Users</div>
+                </div>
+              </div>
+              <div style={styles.statBadge}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Globe size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800 }}>{systemStats.totalPlacements}</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Total Placements</div>
+                </div>
+              </div>
+              <div style={styles.statBadge}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#F0FDF4', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Database size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800 }}>{systemStats.uptime}</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>System Uptime</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Key size={18} color={sc.primary} /> Security Settings</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${sc.border}` }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <Key size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>Password Reset</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Enforce strict password policies</div>
+                </div>
+                <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>Update</button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${sc.border}` }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>MFA / Two-Factor</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Mandatory for Admin roles</div>
+                </div>
+                <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>Manage</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

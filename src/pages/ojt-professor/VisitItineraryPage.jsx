@@ -28,6 +28,8 @@ export default function VisitItineraryPage() {
   const [newVisit, setNewVisit] = useState({ date: '', location: '', notes: '' });
   const [editingNotes, setEditingNotes] = useState({});
   const [wizardAssignments, setWizardAssignments] = useState({});
+  const [editingVisitId, setEditingVisitId] = useState(null);
+  const [editFormData, setEditFormData] = useState({ date: '', location: '' });
 
   const notify = (msg, type = 'success') => {
     if (showToast) showToast(msg, type);
@@ -333,6 +335,39 @@ export default function VisitItineraryPage() {
     localStorage.setItem('visit_itineraries', JSON.stringify(updated));
   };
 
+  const handleEditClick = (visit) => {
+    setEditingVisitId(visit.id);
+    setEditFormData({ date: visit.date, location: visit.location });
+  };
+
+  const handleSaveEdit = async (id) => {
+    if (!editFormData.date || !editFormData.location) {
+      notify('Date and Location are required', 'warning');
+      return;
+    }
+    if (isDbMode) {
+      try {
+        const { error } = await supabase
+          .from('visit_itineraries')
+          .update({ date: editFormData.date, location: editFormData.location })
+          .eq('id', id);
+        if (error) throw error;
+        setVisits(prev => prev.map(v => v.id !== id ? v : { ...v, date: editFormData.date, location: editFormData.location }));
+        setEditingVisitId(null);
+        notify('✅ Visit updated successfully!');
+      } catch (err) {
+        console.error('Failed to update visit in DB:', err);
+        updateVisitLocally(id, { date: editFormData.date, location: editFormData.location });
+        setEditingVisitId(null);
+        notify('✅ Visit updated locally!');
+      }
+    } else {
+      updateVisitLocally(id, { date: editFormData.date, location: editFormData.location });
+      setEditingVisitId(null);
+      notify('✅ Visit updated locally!');
+    }
+  };
+
   // Google Maps Directions link handler
   const handleGetDirections = (lat, lng) => {
     if (!lat || !lng) {
@@ -444,14 +479,7 @@ export default function VisitItineraryPage() {
             </div>
           </div>
         )
-      ) : (
-        <div style={styles.successAlert}>
-          <Info size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div>
-            <strong>Connected to Supabase Database:</strong> Successfully storing and synchronizing grouped visits in real-time on the cloud.
-          </div>
-        </div>
-      )}
+      ) : null}
 
       {/* Metrics overview */}
       <div style={styles.metricsRow}>
@@ -646,33 +674,67 @@ export default function VisitItineraryPage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <Calendar size={18} color="#1E40AF" />
-                    <span style={{ fontWeight: 850, fontSize: '1.05rem', color: theme.colors.textMain }}>
-                      {new Date(visit.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </span>
-                    <span style={{ 
-                      display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
-                      backgroundColor: visit.status === 'COMPLETED' ? '#dcfce7' : '#EFF6FF',
-                      color: visit.status === 'COMPLETED' ? '#15803d' : '#1E40AF' 
-                    }}>
-                      {visit.status === 'COMPLETED' ? <CheckCircle size={11} /> : <Clock size={11} />}
-                      {visit.status}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: theme.colors.textMuted, fontSize: '0.9rem' }}>
-                    <MapPin size={15} /> {visit.location}
-                  </div>
+                  {editingVisitId === visit.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: theme.colors.textMuted }}>DATE</label>
+                      <input 
+                        type="date" 
+                        style={{ ...commonStyles.input, padding: '6px 10px', fontSize: '13px' }} 
+                        value={editFormData.date} 
+                        onChange={e => setEditFormData(p => ({ ...p, date: e.target.value }))} 
+                      />
+                      <label style={{ fontSize: '11px', fontWeight: 700, color: theme.colors.textMuted, marginTop: '4px' }}>LOCATION</label>
+                      <input 
+                        type="text" 
+                        style={{ ...commonStyles.input, padding: '6px 10px', fontSize: '13px' }} 
+                        value={editFormData.location} 
+                        onChange={e => setEditFormData(p => ({ ...p, location: e.target.value }))} 
+                        placeholder="Location"
+                      />
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                        <button onClick={() => handleSaveEdit(visit.id)} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '6px 16px', fontSize: '12px' }}>Save Changes</button>
+                        <button onClick={() => setEditingVisitId(null)} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '6px 16px', fontSize: '12px' }}>Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                        <Calendar size={18} color="#1E40AF" />
+                        <span style={{ fontWeight: 850, fontSize: '1.05rem', color: theme.colors.textMain }}>
+                          {new Date(visit.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        <span style={{ 
+                          display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700,
+                          backgroundColor: visit.status === 'COMPLETED' ? '#dcfce7' : '#EFF6FF',
+                          color: visit.status === 'COMPLETED' ? '#15803d' : '#1E40AF' 
+                        }}>
+                          {visit.status === 'COMPLETED' ? <CheckCircle size={11} /> : <Clock size={11} />}
+                          {visit.status}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: theme.colors.textMuted, fontSize: '0.9rem' }}>
+                        <MapPin size={15} /> {visit.location}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {visit.status !== 'COMPLETED' && (
-                    <button 
-                      onClick={() => handleComplete(visit.id)} 
-                      style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, backgroundColor: '#16a34a', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', boxShadow: 'none' }}
-                    >
-                      <CheckCircle size={14} /> Mark Completed
-                    </button>
+                    <>
+                      <button 
+                        onClick={() => handleComplete(visit.id)} 
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, backgroundColor: '#16a34a', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', boxShadow: 'none' }}
+                      >
+                        <CheckCircle size={14} /> Mark Completed
+                      </button>
+                      <button 
+                        onClick={() => handleEditClick(visit)}
+                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px' }}
+                      >
+                        <MapPin size={14} /> Edit
+                      </button>
+                    </>
                   )}
                   <button 
                     onClick={() => handleDeleteVisit(visit.id)} 

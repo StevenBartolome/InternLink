@@ -124,7 +124,8 @@ const GradeManagementPage = () => {
 
   useEffect(() => {
     fetchStudents();
-  }, [fetchStudents]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.program_id]);
 
   // Edit grade click handler
   const handleOpenGradeModal = (e, student) => {

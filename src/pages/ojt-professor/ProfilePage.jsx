@@ -1,37 +1,52 @@
-import React, { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { 
-  Mail, Phone, MapPin, 
-  Building, GraduationCap, Award, 
-  Key, Shield, Camera, Save, X, Edit,
-  Users, CheckCircle2, AlertCircle, Briefcase
+  Mail, Phone, MapPin, Edit, ShieldCheck, Save, X, Building,
+  Users, CheckCircle2, AlertCircle, Briefcase, Key, Shield,
+  ExternalLink
 } from 'lucide-react';
-import { theme } from '../../styles/theme';
-import { commonStyles } from '../../styles/commonStyles';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 
-
 const ProfilePage = () => {
-  const { showToast } = useOutletContext() || {};
   const { user, updateUser } = useAuth();
+  
+  const initialData = {
+    firstName: user?.first_name || 'Coordinator',
+    lastName: user?.last_name || 'Name',
+    email: user?.email || 'coordinator@example.com',
+    role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || 'Adviser',
+    department: user?.course_code || 'Information Technology',
+    phone: '+63 912 345 6789',
+    office: 'Room 302, Main Building',
+    links: [
+      { id: 1, url: 'nu-baliwag.edu.ph' }
+    ]
+  };
+
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
-    email: user?.email || '',
-    role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
-    department: user?.course_code || '',
-    phone: '',
-    office: '',
-  });
+  const [profile, setProfile] = useState(initialData);
+  const [tempProfile, setTempProfile] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [managedCount, setManagedCount] = useState(0);
 
-  // Fetch real-time stats
-  React.useEffect(() => {
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        firstName: user.first_name || prev.firstName,
+        lastName: user.last_name || prev.lastName,
+        email: user.email || prev.email,
+        role: user.role === 'ojt_head' ? 'Coordinator' : user.role || prev.role,
+        department: user.course_code || prev.department,
+      }));
+    }
+  }, [user]);
+
+  useEffect(() => {
     const fetchStats = async () => {
       try {
+        if (!user?.id) return;
         const { count } = await supabase
           .from('student_internships')
           .select('*', { count: 'exact', head: true })
@@ -42,47 +57,22 @@ const ProfilePage = () => {
         console.error('Error fetching stats:', err);
       }
     };
-
-    if (user?.id) fetchStats();
+    fetchStats();
   }, [user]);
 
-  // Mock stats for the coordinator (mixed with real managed count)
-  const stats = [
-    { label: 'Managed Students', value: managedCount, icon: Users, color: theme.colors.primary },
-    { label: 'Active Internships', value: Math.floor(managedCount * 0.7), icon: Briefcase, color: theme.colors.success },
-    { label: 'Pending Approvals', value: '0', icon: AlertCircle, color: theme.colors.warning },
-    { label: 'Placements Done', value: '0', icon: CheckCircle2, color: theme.colors.info },
-  ];
-
-  const toggleEdit = () => {
-    setFormData({
-      firstName: user?.first_name || '',
-      lastName: user?.last_name || '',
-      email: user?.email || '',
-      role: user?.role === 'ojt_head' ? 'Coordinator' : user?.role || '',
-      department: user?.course_code || '',
-      phone: '',
-      office: '',
-    });
-    setIsEditing(true);
-  };
-
-  const cancelEdit = () => setIsEditing(false);
-
   const handleSave = async () => {
+    setIsSaving(true);
     try {
-      setIsSaving(true);
-      const { error } = await updateUser({
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-      });
-
-      if (error) throw error;
-      
+      if (updateUser) {
+        await updateUser({
+          first_name: tempProfile.firstName,
+          last_name: tempProfile.lastName,
+        });
+      }
+      setProfile({...tempProfile});
       setIsEditing(false);
-      if (showToast) showToast('Profile updated successfully!', 'success');
     } catch (err) {
-      if (showToast) showToast(err.message, 'error');
+      console.error(err);
     } finally {
       setIsSaving(false);
     }
@@ -90,359 +80,299 @@ const ProfilePage = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setTempProfile(prev => ({ ...prev, [name]: value }));
+  };
+
+  const getInitials = (first, last) => {
+    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase();
+  };
+
+  // Using Student Design Theme colors for exact matching
+  const sc = {
+    primary: '#1E40AF',
+    primaryLight: '#EFF6FF',
+    textMain: '#1E293B',
+    textDark: '#0F172A',
+    textMuted: '#64748B',
+    border: '#E2E8F0',
   };
 
   const styles = {
     container: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '24px',
-      maxWidth: '1000px',
-      margin: '0 auto',
-      animation: 'fadeIn 0.5s ease-out',
+      gap: '32px',
+      fontFamily: "'Inter', sans-serif",
     },
-    heroCard: {
-      ...commonStyles.dashboardCard,
-      padding: '40px',
-      background: `linear-gradient(135deg, ${theme.colors.primary} 0%, #1e40af 100%)`,
-      color: '#fff',
-      position: 'relative',
-      overflow: 'hidden',
+    headerCard: {
+      borderRadius: '24px',
+      border: `1px solid ${sc.border}`,
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
       display: 'flex',
       alignItems: 'center',
       gap: '32px',
-      border: 'none',
-      boxShadow: '0 10px 25px rgba(30, 64, 175, 0.15)',
-    },
-    avatarWrapper: {
-      position: 'relative',
-      zIndex: 2,
+      padding: '40px',
+      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
     },
     avatar: {
-      width: '140px',
-      height: '140px',
-      borderRadius: '40px',
-      border: '6px solid rgba(255, 255, 255, 0.2)',
-      objectFit: 'cover',
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    cameraBtn: {
-      position: 'absolute',
-      bottom: '-6px',
-      right: '-6px',
-      backgroundColor: '#fff',
-      color: theme.colors.primary,
-      padding: '10px',
-      borderRadius: '16px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      cursor: 'pointer',
-      border: 'none',
+      width: '120px',
+      height: '120px',
+      borderRadius: '32px',
+      backgroundColor: sc.primary,
+      color: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      transition: 'transform 0.2s',
-      ':hover': { transform: 'scale(1.1)' }
-    },
-    statsGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-      gap: '20px',
-    },
-    statCard: {
-      ...commonStyles.dashboardCard,
-      padding: '24px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '20px',
-      backgroundColor: 'rgba(255, 255, 255, 0.7)',
-      backdropFilter: 'blur(10px)',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      transition: 'transform 0.2s',
-      ':hover': { transform: 'translateY(-4px)' }
-    },
-    statIcon: (color) => ({
-      width: '48px',
-      height: '48px',
-      borderRadius: '14px',
-      backgroundColor: `${color}15`,
-      color: color,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }),
-    mainGrid: {
-      display: 'grid',
-      gridTemplateColumns: '1.5fr 1fr',
-      gap: '24px',
-    },
-    sectionCard: {
-      ...commonStyles.dashboardCard,
-      padding: '28px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '24px',
-    },
-    detailItem: {
-      display: 'flex',
-      alignItems: 'flex-start',
-      gap: '16px',
-    },
-    iconBox: {
-      width: '42px',
-      height: '42px',
-      borderRadius: '12px',
-      backgroundColor: theme.colors.bgSecondary,
-      color: theme.colors.primary,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flexShrink: 0,
-    },
-    label: {
-      fontSize: '0.75rem',
+      fontSize: '40px',
       fontWeight: 700,
-      color: theme.colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      display: 'block',
-      marginBottom: '4px',
+      boxShadow: '0 20px 25px -5px rgba(30, 64, 175, 0.2)',
     },
-    value: {
-      fontSize: '1rem',
+    badge: {
+      padding: '6px 12px',
+      borderRadius: '20px',
+      backgroundColor: sc.primaryLight,
+      color: sc.primary,
+      fontSize: '12px',
       fontWeight: 600,
-      color: theme.colors.textMain,
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+    },
+    section: {
+      backgroundColor: '#FFFFFF',
+      borderRadius: '24px',
+      border: `1px solid ${sc.border}`,
+      padding: '32px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+      height: '100%',
+    },
+    sectionTitle: {
+      fontSize: '16px',
+      fontWeight: 700,
+      color: sc.textMain,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      marginBottom: '24px',
+    },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 2fr',
+      gap: '32px',
+    },
+    infoItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      padding: '12px 0',
+      borderBottom: `1px solid ${sc.border}`,
+    },
+    infoLabel: {
+      fontSize: '12px',
+      color: sc.textMuted,
+      width: '100px',
+    },
+    infoValue: {
+      fontSize: '14px',
+      color: sc.textDark,
+      fontWeight: 500,
     },
     input: {
       width: '100%',
       padding: '12px 16px',
       borderRadius: '12px',
-      border: `2px solid ${theme.colors.border}`,
-      fontSize: '0.95rem',
+      border: `1px solid ${sc.border}`,
+      fontSize: '14px',
       outline: 'none',
-      backgroundColor: '#f8fafc',
-      transition: 'border-color 0.2s',
-      ':focus': { borderColor: theme.colors.primary }
+      transition: 'border-color 0.2s ease',
+      backgroundColor: '#F8FAFC',
     },
-    saveActions: {
-      gridColumn: '1 / -1',
+    primaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: sc.primary,
+      color: '#FFFFFF',
+      border: 'none',
+      fontWeight: 600,
+      cursor: 'pointer',
       display: 'flex',
-      justifyContent: 'center',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
+    },
+    secondaryButton: {
+      padding: '10px 24px',
+      borderRadius: '12px',
+      backgroundColor: 'transparent',
+      color: sc.textDark,
+      border: `1px solid ${sc.border}`,
+      fontWeight: 600,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '14px',
+    },
+    statBadge: {
+      padding: '16px',
+      borderRadius: '16px',
+      backgroundColor: '#F8FAFC',
+      border: `1px solid ${sc.border}`,
+      display: 'flex',
+      alignItems: 'center',
       gap: '16px',
-      padding: '20px',
+      flex: 1
     }
   };
 
   return (
-    <div style={styles.container}>
-      {/* Hero Header */}
-      <div style={styles.heroCard}>
-        <div style={styles.avatarWrapper}>
-          <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.id}`} alt="Profile" style={styles.avatar} />
-          <button 
-            style={styles.cameraBtn}
-            onClick={() => showToast && showToast('Image upload coming soon', 'info')}
-          >
-            <Camera size={20} />
-          </button>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.container}>
+      {/* Header */}
+      <div style={styles.headerCard}>
+        <div style={styles.avatar}>
+          {getInitials(profile.firstName, profile.lastName)}
         </div>
-        
-        <div style={{ zIndex: 2, flex: 1 }}>
-          {isEditing ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '400px' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                  style={{ ...styles.input, fontSize: '1.5rem', fontWeight: 800, color: '#333', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  placeholder="First Name"
-                />
-                <input 
-                  style={{ ...styles.input, fontSize: '1.5rem', fontWeight: 800, color: '#333', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  placeholder="Last Name"
-                />
-              </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+            {isEditing ? (
               <div style={{ display: 'flex', gap: '8px' }}>
-                <input 
-                  style={{ ...styles.input, fontSize: '0.9rem', color: '#444', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  name="role"
-                  value={formData.role}
-                  onChange={handleChange}
-                  placeholder="Role"
-                />
-                <input 
-                  style={{ ...styles.input, fontSize: '0.9rem', color: '#444', backgroundColor: 'rgba(255,255,255,0.9)' }}
-                  name="department"
-                  value={formData.department}
-                  onChange={handleChange}
-                  placeholder="Department"
-                />
+                <input style={{...styles.input, width: '200px'}} name="firstName" value={tempProfile.firstName} onChange={handleChange} />
+                <input style={{...styles.input, width: '200px'}} name="lastName" value={tempProfile.lastName} onChange={handleChange} />
               </div>
-            </div>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-                <h1 style={{ fontSize: '2.2rem', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{user?.name}</h1>
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.2)', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Verified OJT Adviser</div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', opacity: 0.9 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <GraduationCap size={20} />
-                  <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.role === 'ojt_head' ? 'Coordinator' : user?.role}</span>
-                </div>
-                <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#fff', opacity: 0.5 }}></div>
-                <span style={{ fontSize: '1.1rem', fontWeight: 500 }}>{user?.course_code} Department</span>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Decorative Background Elements */}
-        <div style={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', zIndex: 1 }}></div>
-        <div style={{ position: 'absolute', bottom: -50, left: '20%', width: 150, height: 150, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', zIndex: 1 }}></div>
-      </div>
-
-      {/* Stats Quick View */}
-      <div style={styles.statsGrid}>
-        {stats.map((stat, i) => (
-          <div key={i} style={styles.statCard}>
-            <div style={styles.statIcon(stat.color)}>
-              <stat.icon size={24} />
-            </div>
-            <div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 800, color: theme.colors.textMain }}>{stat.value}</div>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: theme.colors.textMuted }}>{stat.label}</div>
+            ) : (
+              <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>{profile.firstName} {profile.lastName}</h1>
+            )}
+            <div style={styles.badge}>
+              <ShieldCheck size={14} /> Verified {profile.role}
             </div>
           </div>
-        ))}
-      </div>
-
-      <div style={styles.mainGrid}>
-        {/* Profile Details */}
-        <div style={styles.sectionCard}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: theme.colors.textMain }}>Personal Information</h3>
-            {!isEditing && (
-              <button 
-                onClick={toggleEdit}
-                style={{ 
-                  ...commonStyles.dashboardBtn, 
-                  backgroundColor: theme.colors.bgSecondary,
-                  border: `1px solid ${theme.colors.border}`,
-                  padding: '8px 16px', 
-                  fontSize: '0.8rem' 
+          <p style={{ color: sc.textMuted, fontSize: '16px', margin: '0 0 24px 0' }}>{profile.department} Department</p>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {!isEditing ? (
+              <motion.button 
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setTempProfile({...profile});
+                  setIsEditing(true);
                 }}
+                style={styles.primaryButton}
               >
-                <Edit size={16} /> Edit Info
-              </button>
+                <Edit size={16} /> Edit Profile
+              </motion.button>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button onClick={handleSave} style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                </button>
+                <button onClick={() => setIsEditing(false)} style={styles.secondaryButton}>
+                  <X size={16} /> Cancel
+                </button>
+              </div>
             )}
           </div>
+        </div>
+      </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div style={styles.detailItem}>
-              <div style={styles.iconBox}><Mail size={22} /></div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Email Address</label>
+      <div style={styles.grid}>
+        {/* Left Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Mail size={18} color={sc.primary} /> Contact Info</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Email</span>
+                <span style={styles.infoValue}>{profile.email}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Phone</span>
                 {isEditing ? (
-                  <input style={styles.input} name="email" value={formData.email} onChange={handleChange} disabled />
+                  <input style={{...styles.input, padding: '4px 8px'}} name="phone" value={tempProfile.phone} onChange={handleChange} />
                 ) : (
-                  <div style={styles.value}>{user?.email}</div>
+                  <span style={styles.infoValue}>{profile.phone}</span>
                 )}
               </div>
-            </div>
-
-            <div style={styles.detailItem}>
-              <div style={styles.iconBox}><Building size={22} /></div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Institution</label>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>Office</span>
                 {isEditing ? (
-                  <input style={styles.input} name="school" value={formData.school || 'National University Baliwag'} onChange={handleChange} />
+                  <input style={{...styles.input, padding: '4px 8px'}} name="office" value={tempProfile.office} onChange={handleChange} />
                 ) : (
-                  <div style={styles.value}>National University Baliwag</div>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.detailItem}>
-              <div style={styles.iconBox}><Phone size={22} /></div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Contact Number</label>
-                {isEditing ? (
-                  <input style={styles.input} name="phone" value={formData.phone} onChange={handleChange} placeholder="+63 9xx xxx xxxx" />
-                ) : (
-                  <div style={styles.value}>{formData.phone || 'Not set'}</div>
-                )}
-              </div>
-            </div>
-
-            <div style={styles.detailItem}>
-              <div style={styles.iconBox}><MapPin size={22} /></div>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Office Location</label>
-                {isEditing ? (
-                  <input style={styles.input} name="office" value={formData.office} onChange={handleChange} placeholder="Room / Building" />
-                ) : (
-                  <div style={styles.value}>{formData.office || 'Not set'}</div>
+                  <span style={styles.infoValue}>{profile.office}</span>
                 )}
               </div>
             </div>
           </div>
 
-          {isEditing && (
-            <div style={styles.saveActions}>
-              <button 
-                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, padding: '12px 32px' }}
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving Changes...' : <><Save size={18} /> Save Profile</>}
-              </button>
-              <button 
-                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, padding: '12px 32px' }}
-                onClick={cancelEdit}
-              >
-                <X size={18} /> Cancel
-              </button>
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><ExternalLink size={18} color={sc.primary} /> Links</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {profile.links.map(link => (
+                <a key={link.id} href={`https://${link.url}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: sc.textDark, textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Building size={14} style={{ margin: 'auto' }} />
+                  </div>
+                  {link.url}
+                </a>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Security / Sidebar Card */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div style={styles.sectionCard}>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: theme.colors.textMain }}>Account Security</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button 
-                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start', padding: '14px' }}
-                onClick={() => showToast && showToast('Security code sent to your email.', 'success')}
-              >
-                <Key size={18} /> Change Password
-              </button>
-              <button 
-                style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, justifyContent: 'flex-start', padding: '14px' }}
-                onClick={() => showToast && showToast('Proceeding to 2FA setup...', 'info')}
-              >
-                <Shield size={18} /> Two-Factor Login
-              </button>
+        {/* Right Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Users size={18} color={sc.primary} /> Advisory Overview</h3>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              <div style={styles.statBadge}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: sc.primaryLight, color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800 }}>{managedCount}</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Managed Students</div>
+                </div>
+              </div>
+              <div style={styles.statBadge}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: '#ECFDF5', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Briefcase size={24} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '24px', fontWeight: 800 }}>{Math.floor(managedCount * 0.7)}</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Active Placements</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div style={{ ...styles.sectionCard, backgroundColor: theme.colors.bgSecondary, border: `1px dashed ${theme.colors.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: theme.colors.textMuted }}>
-              <Award size={20} />
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Coordinator Verification</span>
+          <div style={styles.section}>
+            <h3 style={styles.sectionTitle}><Shield size={18} color={sc.primary} /> Account Security</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${sc.border}` }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <Key size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>Password</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Last changed 3 months ago</div>
+                </div>
+                <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>Update</button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${sc.border}` }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: sc.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                  <ShieldCheck size={20} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '14px' }}>Two-Factor Authentication</div>
+                  <div style={{ fontSize: '12px', color: sc.textMuted }}>Add an extra layer of security</div>
+                </div>
+                <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>Enable</button>
+              </div>
             </div>
-            <p style={{ fontSize: '0.8rem', color: theme.colors.textMuted, margin: 0 }}>
-              Your account is verified by the National University Baliwag Academic Affairs office.
-            </p>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
