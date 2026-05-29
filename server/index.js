@@ -15,7 +15,7 @@ const port = process.env.SERVER_PORT || 8080;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Request Logger
 app.use((req, res, next) => {
@@ -900,16 +900,101 @@ app.post(['/api/professor/unsubmit-moa', '/professor/unsubmit-moa'], async (req,
     }
 });
 
+app.post(['/api/claude/scan-attendance', '/claude/scan-attendance'], async (req, res) => {
+    const { base64Data, mimeType } = req.body;
+    
+    if (!base64Data) {
+        return res.status(400).json({ error: 'Missing base64Data' });
+    }
+
+    try {
+        console.log('[Claude Scanner] Sending document to Claude 3.5 Sonnet...');
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': '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',
+                'anthropic-version': '2023-06-01',
+                'anthropic-beta': 'pdfs-2024-09-25'
+            },
+            body: JSON.stringify({
+                model: 'claude-3-5-sonnet-20241022',
+                max_tokens: 1024,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'document',
+                                source: {
+                                    type: 'base64',
+                                    media_type: mimeType || 'application/pdf',
+                                    data: base64Data
+                                }
+                            },
+                            {
+                                type: 'text',
+                                text: `You are an expert document scanner. Analyze this student OJT (On-the-Job Training) supervisor-signed attendance report sheet or PDF.
+
+Find ONLY the "Total this Period" value — this is the hours rendered SPECIFICALLY for the date range covered by this report sheet, NOT the cumulative or grand total. It is typically labeled as "Total this Period", "Total Hours this Period", or appears in the middle summary row between "Previous Total" and "Total Hours Served".
+
+Do NOT return the "Grand Total", "Total Hours Served", or "Previous Total + this Period" combined value.
+
+Also find the date range covered by this report. It is typically found at the top near the Name and Company fields. Return the start date and end date in YYYY-MM-DD format.
+
+Finally, extract the exact list of all individual dates that have logged hours recorded in the table rows and return them in "loggedDates" as an array of YYYY-MM-DD strings.
+
+Return the result in JSON format ONLY:
+{
+  "grandTotalHours": 40.5,
+  "daysPresent": 5,
+  "startDate": "2025-01-01",
+  "endDate": "2025-01-07",
+  "loggedDates": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07"]
+}
+
+Where "grandTotalHours" must be the "Total this Period" value only (the new hours for this specific report).
+Also, extract the exact list of all individual dates that have logged hours recorded in the table rows and return them in "loggedDates" as an array of YYYY-MM-DD strings.
+If you cannot find a value, return null for that field (or empty array for loggedDates). Return only raw JSON without any markdown formatting.`
+                            }
+                        ]
+                    }
+                ]
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('[Claude Scanner] API Error:', errBody);
+            throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const text = data.content[0].text.trim();
+        
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Could not parse AI response as JSON');
+        }
+
+        const parsed = JSON.parse(jsonMatch[0]);
+        res.json({ success: true, data: parsed });
+    } catch (err) {
+        console.error('[Claude Scanner] Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // POST API to upload signed attendance report and hours
 app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signed-attendance-report'], async (req, res) => {
-    const { internshipId, fileUrl, hours, startDate, endDate } = req.body;
+    const { internshipId, fileUrl, hours, startDate, endDate, loggedDates } = req.body;
     
     if (!internshipId || !fileUrl || !hours) {
         return res.status(400).json({ error: 'Missing required parameters: internshipId, fileUrl, hours' });
     }
 
     try {
-        console.log(`[Attendance Report] Inserting signed attendance report for internshipId: ${internshipId}, hours: ${hours}, range: ${startDate} to ${endDate}`);
+        console.log(`[Attendance Report] Received:`, { internshipId, hours, startDate, endDate, loggedDatesCount: Array.isArray(loggedDates) ? loggedDates.length : 'none', loggedDates });
 
         // Insert into additional_requirements using service role client
         const { data, error } = await supabaseAdmin
@@ -927,26 +1012,72 @@ app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signe
         if (error) throw error;
 
         // Mark corresponding daily attendance logs as DEDUCTED to prevent double-deduction
-        if (startDate && endDate) {
-            const { error: updateError } = await supabaseAdmin
+        let updatedCount = 0;
+
+        // Try exact date matching first (Gemini-extracted dates from the PDF)
+        if (loggedDates && Array.isArray(loggedDates) && loggedDates.length > 0) {
+            // Normalize dates to YYYY-MM-DD to guard against Gemini format variations
+            const normalizedDates = loggedDates.map(d => {
+                const parsed = new Date(d + 'T00:00:00');
+                if (isNaN(parsed.getTime())) return d;
+                const y = parsed.getFullYear();
+                const m = String(parsed.getMonth() + 1).padStart(2, '0');
+                const day = String(parsed.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            });
+
+            const { data: updatedLogs, error: updateError } = await supabaseAdmin
                 .from('attendance_logs')
-                .update({ 
+                .update({
+                    status: 'DEDUCTED',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('internship_id', internshipId)
+                .eq('status', 'LOGGED')
+                .in('log_date', normalizedDates)
+                .select();
+
+            if (updateError) {
+                console.error('Failed to update attendance logs to DEDUCTED:', updateError.message);
+            } else {
+                updatedCount = updatedLogs ? updatedLogs.length : 0;
+                console.log(`Updated ${updatedCount} logs to DEDUCTED using exact dates.`);
+            }
+        }
+
+        // Debug: show what LOGGED logs exist for this internship
+        if (updatedCount === 0) {
+            const { data: existingLogs } = await supabaseAdmin
+                .from('attendance_logs')
+                .select('log_date, status')
+                .eq('internship_id', internshipId)
+                .eq('status', 'LOGGED');
+            console.log(`[Debug] LOGGED logs in DB for internship ${internshipId}:`, existingLogs?.map(l => l.log_date));
+        }
+
+        // Fall back to date range if exact date match found nothing (or no dates provided)
+        if (updatedCount === 0 && startDate && endDate) {
+            const { data: updatedLogs, error: updateError } = await supabaseAdmin
+                .from('attendance_logs')
+                .update({
                     status: 'DEDUCTED',
                     updated_at: new Date().toISOString()
                 })
                 .eq('internship_id', internshipId)
                 .eq('status', 'LOGGED')
                 .gte('log_date', startDate)
-                .lte('log_date', endDate);
-            
+                .lte('log_date', endDate)
+                .select();
+
             if (updateError) {
                 console.error('Failed to update attendance logs to DEDUCTED:', updateError.message);
             } else {
-                console.log(`Successfully updated attendance logs between ${startDate} and ${endDate} to DEDUCTED.`);
+                updatedCount = updatedLogs ? updatedLogs.length : 0;
+                console.log(`Updated ${updatedCount} logs to DEDUCTED using date range ${startDate} to ${endDate}.`);
             }
         }
 
-        return res.json({ success: true, report: data[0] });
+        return res.json({ success: true, report: data[0], updatedCount });
     } catch (err) {
         console.error('Failed to save signed attendance report:', err);
         return res.status(500).json({ error: err.message || 'Failed to save signed attendance report' });

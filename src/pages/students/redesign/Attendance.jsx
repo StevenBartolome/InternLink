@@ -38,6 +38,7 @@ const Attendance = () => {
   const [scanningReport, setScanningReport] = useState(false);
   const [reportStartDate, setReportStartDate] = useState('');
   const [reportEndDate, setReportEndDate] = useState('');
+  const [reportLoggedDates, setReportLoggedDates] = useState([]);
   const [reportUploading, setReportUploading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [activitiesInput, setActivitiesInput] = useState('');
@@ -239,11 +240,17 @@ const Attendance = () => {
 
     const totalHoursPeriod = filtered.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
 
-    // Calculate previous hours (all logs prior to this range, including already-submitted/DEDUCTED ones)
+    // Calculate previous hours
     // DEDUCTED logs represent periods already uploaded and must be counted as prior rendered hours
     // to avoid showing incorrect cumulative totals on the PDF
-    let firstFilteredDate = filtered[0].log_date;
-    const previousLogs = logs.filter(l => l.log_date < firstFilteredDate && (l.status === 'LOGGED' || l.status === 'DEDUCTED'));
+    const rangeStart = type === 'daily' ? options.dailyDate : options.weeklyStart;
+    const rangeEnd = type === 'daily' ? options.dailyDate : options.weeklyEnd;
+    const previousLogs = logs.filter(l => {
+      if (l.status !== 'LOGGED' && l.status !== 'DEDUCTED') return false;
+      if (l.log_date < rangeStart) return true;
+      if (l.log_date >= rangeStart && l.log_date <= rangeEnd && l.status === 'DEDUCTED') return true;
+      return false;
+    });
     const previousTotal = previousLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
     const grandTotal = previousTotal + totalHoursPeriod;
 
@@ -770,9 +777,16 @@ const Attendance = () => {
       if (fetchError) throw fetchError;
 
       const totalHours = allLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
+      const roundedHours = Math.round(totalHours);
+      
+      const updatePayload = { rendered_hours: roundedHours, updated_at: new Date().toISOString() };
+      if (roundedHours >= requiredHours && user?.current_stage === 'DURING_INTERNSHIP') {
+        updatePayload.current_stage = 'POST_INTERNSHIP';
+      }
+
       await supabase
         .from('student_internships')
-        .update({ rendered_hours: Math.round(totalHours), updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', internshipId);
 
       setMissedLog(null);
@@ -831,9 +845,16 @@ const Attendance = () => {
         .in('status', ['LOGGED', 'DEDUCTED']);
 
       const total = (allLogs || []).reduce((s, l) => s + (l.hours_rendered || 0), 0);
+      const roundedTotal = Math.round(total);
+
+      const updatePayload = { rendered_hours: roundedTotal, updated_at: new Date().toISOString() };
+      if (roundedTotal >= requiredHours && user?.current_stage === 'DURING_INTERNSHIP') {
+        updatePayload.current_stage = 'POST_INTERNSHIP';
+      }
+
       await supabase
         .from('student_internships')
-        .update({ rendered_hours: Math.round(total), updated_at: new Date().toISOString() })
+        .update(updatePayload)
         .eq('id', internshipId);
 
       setEditingLog(null);
@@ -865,15 +886,31 @@ const Attendance = () => {
     setReportFile(file);
     setScanningReport(true);
     setReportHours(''); // Clear previous parsed hours during scanning
-    setToast({ message: '🔍 AI is scanning your report for total rendered hours...', type: 'info' });
+    setReportStartDate('');
+    setReportEndDate('');
+    setReportLoggedDates([]);
+    setToast({ message: '🔍 AI is scanning your report for total rendered hours and dates... (may retry if model is busy)', type: 'info' });
 
     try {
       const res = await scanOJTAttendanceReportWithGemini(file);
       if (res.success) {
         setReportHours(res.grandTotalHours.toString());
-        setToast({ 
-          message: `✨ Gemini scanned successfully! Detected ${res.grandTotalHours} OJT hours rendered.`, 
-          type: 'success' 
+
+        const dates = Array.isArray(res.loggedDates) && res.loggedDates.length > 0
+          ? [...res.loggedDates].sort()
+          : [];
+
+        // Derive start/end from logged dates (more reliable than header text parsing)
+        const derivedStart = dates.length > 0 ? dates[0] : (res.startDate || '');
+        const derivedEnd   = dates.length > 0 ? dates[dates.length - 1] : (res.endDate || '');
+
+        if (derivedStart) setReportStartDate(derivedStart);
+        if (derivedEnd)   setReportEndDate(derivedEnd);
+        if (dates.length > 0) setReportLoggedDates(dates);
+
+        setToast({
+          message: `✨ Gemini scanned successfully! Detected ${res.grandTotalHours} OJT hours${derivedStart && derivedEnd ? ` from ${derivedStart} to ${derivedEnd}` : ''}.`,
+          type: 'success'
         });
       } else {
         setReportHours('40.0'); // default fallback if scanner returned success:false
@@ -902,10 +939,16 @@ const Attendance = () => {
       return;
     }
 
+    if (!reportStartDate || !reportEndDate) {
+      setToast({ message: '⚠️ Start and end dates are missing. Please re-upload the PDF or fill them manually.', type: 'error' });
+      return;
+    }
+
     try {
       setReportUploading(true);
+      console.log('[Upload] Submitting report:', { internshipId, reportStartDate, reportEndDate, loggedDates: reportLoggedDates });
       const { supabase } = await import('../../../services/supabaseClient');
-      
+
       const fileExt = reportFile.name.split('.').pop();
       const filePath = `pre-internship/signed-attendance-${internshipId}-${Date.now()}.${fileExt}`;
 
@@ -930,7 +973,8 @@ const Attendance = () => {
           fileUrl: publicUrl,
           hours: parseFloat(reportHours),
           startDate: reportStartDate,
-          endDate: reportEndDate
+          endDate: reportEndDate,
+          loggedDates: reportLoggedDates
         })
       });
 
@@ -940,12 +984,16 @@ const Attendance = () => {
         throw new Error(resData.error || 'Failed to submit report');
       }
 
-      setToast({ message: '✨ Signed attendance report uploaded and hours deducted successfully!', type: 'success' });
+      setToast({ 
+        message: `✨ Signed attendance report uploaded! ${resData.updatedCount > 0 ? `Deducted ${resData.updatedCount} log${resData.updatedCount > 1 ? 's' : ''}.` : 'No matching LOGGED logs were found to deduct.'}`, 
+        type: 'success' 
+      });
       setShowUploadReportModal(false);
       setReportHours('');
       setReportFile(null);
       setReportStartDate('');
       setReportEndDate('');
+      setReportLoggedDates([]);
       
       // Refresh documents list
       await fetchLogs(true);

@@ -112,13 +112,19 @@ export default function DuringInternship({ onComplete }) {
       const totalHoursSum = allLogs.reduce((sum, log) => sum + (log.hours_rendered || 0), 0);
       const roundedHours = Math.round(totalHoursSum);
 
+      const updatePayload = {
+        rendered_hours: roundedHours,
+        updated_at: new Date().toISOString()
+      };
+
+      if (roundedHours >= requiredHours && user?.current_stage === 'DURING_INTERNSHIP') {
+        updatePayload.current_stage = 'POST_INTERNSHIP';
+      }
+
       // Update student_internships
       const { error: internError } = await supabase
         .from('student_internships')
-        .update({
-          rendered_hours: roundedHours,
-          updated_at: new Date().toISOString()
-        })
+        .update(updatePayload)
         .eq('id', internshipId);
 
       if (internError) throw internError;

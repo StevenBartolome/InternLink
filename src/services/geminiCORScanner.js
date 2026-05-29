@@ -160,63 +160,105 @@ export async function scanOJTAttendanceReportWithGemini(pdfFile) {
     return {
       success: true,
       grandTotalHours: fallbackHours,
-      daysPresent: 5
+      daysPresent: 5,
+      startDate: null,
+      endDate: null,
+      loggedDates: []
     };
   }
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
-    const base64Data = await fileToBase64(pdfFile);
-    const mimeType = pdfFile.type || 'application/pdf';
-
-    const prompt = `You are an expert document scanner. Analyze this student OJT (On-the-Job Training) supervisor-signed attendance report sheet or PDF.
+  const prompt = `You are an expert document scanner. Analyze this student OJT (On-the-Job Training) supervisor-signed attendance report sheet or PDF.
 
 Find ONLY the "Total this Period" value — this is the hours rendered SPECIFICALLY for the date range covered by this report sheet, NOT the cumulative or grand total. It is typically labeled as "Total this Period", "Total Hours this Period", or appears in the middle summary row between "Previous Total" and "Total Hours Served".
 
 Do NOT return the "Grand Total", "Total Hours Served", or "Previous Total + this Period" combined value.
 
+Also find the date range covered by this report. It is typically found at the top near the Name and Company fields. Return the start date and end date in YYYY-MM-DD format.
+
 Return the result in JSON format ONLY:
 {
   "grandTotalHours": 40.5,
-  "daysPresent": 5
+  "daysPresent": 5,
+  "startDate": "2025-01-01",
+  "endDate": "2025-01-07",
+  "loggedDates": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07"]
 }
 
 Where "grandTotalHours" must be the "Total this Period" value only (the new hours for this specific report).
-If you cannot find this value, return null. Return only raw JSON without any markdown formatting.`;
+Also, extract the exact list of all individual dates that have logged hours recorded in the table rows and return them in "loggedDates" as an array of YYYY-MM-DD strings.
+If you cannot find a value, return null for that field (or empty array for loggedDates). Return only raw JSON without any markdown formatting.`;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType,
-          data: base64Data,
-        },
-      },
-      prompt,
-    ]);
+  let lastError = null;
 
-    const response = await result.response;
-    const text = response.text().trim();
+  for (const modelName of GEMINI_MODELS) {
+    try {
+      console.log(`[Attendance Scanner] Trying model: ${modelName}`);
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('Could not parse AI response as JSON');
+      const base64Data = await fileToBase64(pdfFile);
+      const mimeType = pdfFile.type || 'application/pdf';
+
+      const result = await model.generateContent([
+        { inlineData: { mimeType, data: base64Data } },
+        prompt,
+      ]);
+
+      const text = result.response.text().trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log(`[Attendance Scanner] Success with model: ${modelName}`);
+      return {
+        success: true,
+        grandTotalHours: parsed.grandTotalHours || fallbackHours,
+        daysPresent: parsed.daysPresent || 5,
+        startDate: parsed.startDate || null,
+        endDate: parsed.endDate || null,
+        loggedDates: Array.isArray(parsed.loggedDates) ? parsed.loggedDates : []
+      };
+    } catch (err) {
+      const is503 = err.message && (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('overloaded'));
+      console.warn(`[Attendance Scanner] Model ${modelName} failed${is503 ? ' (503 overloaded)' : ''}: ${err.message}`);
+      lastError = err;
+      if (!is503) break; // Only retry on 503 overload — other errors won't be fixed by switching models
     }
+  }
 
-    const parsed = JSON.parse(jsonMatch[0]);
+  // If all Gemini models failed, attempt Claude fallback
+  console.error('[Attendance Scanner] Gemini models failed, attempting Claude fallback...', lastError?.message);
+  try {
+    const base64Data = await fileToBase64(pdfFile);
+    const mimeType = pdfFile.type || 'application/pdf';
+    const response = await fetch('/api/claude/scan-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data, mimeType })
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw new Error(result.error || 'Claude API failed');
+    
     return {
-      success: true,
-      grandTotalHours: parsed.grandTotalHours || fallbackHours,
-      daysPresent: parsed.daysPresent || 5
+        success: true,
+        grandTotalHours: result.data.grandTotalHours || fallbackHours,
+        daysPresent: result.data.daysPresent || 5,
+        startDate: result.data.startDate || null,
+        endDate: result.data.endDate || null,
+        loggedDates: Array.isArray(result.data.loggedDates) ? result.data.loggedDates : []
     };
-  } catch (err) {
-    console.error('[Attendance Scanner] Error:', err);
+  } catch (claudeErr) {
+    console.error('[Attendance Scanner] Claude fallback also failed:', claudeErr);
     return {
       success: false,
       grandTotalHours: fallbackHours,
       daysPresent: 5,
-      error: err.message
+      startDate: null,
+      endDate: null,
+      loggedDates: [],
+      error: `Gemini Error: ${lastError?.message}. Claude Error: ${claudeErr.message}`
     };
   }
 }

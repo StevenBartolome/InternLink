@@ -131,10 +131,22 @@ export const attendanceService = {
     const totalHours   = allLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
     const roundedHours = Math.round(totalHours);
 
+    const { data: internData } = await supabase
+      .from('student_internships')
+      .select('required_hours, current_stage')
+      .eq('id', internshipId)
+      .single();
+
+    const updatePayload = { rendered_hours: roundedHours, updated_at: nowStr };
+
+    if (internData && roundedHours >= internData.required_hours && internData.current_stage === 'DURING_INTERNSHIP') {
+      updatePayload.current_stage = 'POST_INTERNSHIP';
+    }
+
     // 3. Sync to the internship record
     const { error: internError } = await supabase
       .from('student_internships')
-      .update({ rendered_hours: roundedHours, updated_at: nowStr })
+      .update(updatePayload)
       .eq('id', internshipId);
 
     if (internError) throw internError;

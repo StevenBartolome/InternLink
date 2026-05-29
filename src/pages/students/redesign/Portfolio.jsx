@@ -2,8 +2,22 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Lock } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
+import PostInternship from '../../../components/student/stages/PostInternship';
+import { useAuth } from '../../../context/AuthContext';
 
 const Portfolio = () => {
+  const { user } = useAuth();
+  const currentStage = user?.current_stage || 'PRE_INTERNSHIP';
+  const isUnlocked = currentStage === 'POST_INTERNSHIP' || currentStage === 'COMPLETED';
+
+  if (isUnlocked) {
+    return (
+      <div style={{ padding: '0' }}>
+        <PostInternship />
+      </div>
+    );
+  }
+
   const styles = {
     container: {
       display: 'flex',

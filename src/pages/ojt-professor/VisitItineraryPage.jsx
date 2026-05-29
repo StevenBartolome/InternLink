@@ -598,6 +598,35 @@ export default function VisitItineraryPage() {
                 <input type="text" required placeholder="e.g. Bulacan / BGC, Taguig" style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }} value={newVisit.location} onChange={e => setNewVisit(p => ({ ...p, location: e.target.value }))} />
               </div>
             </div>
+            {/* Quick Fill Section */}
+            {deployedStudents.length > 0 && (
+              <div style={{ marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: theme.colors.textMuted, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Quick Fill Location from Deployed Students
+                </label>
+                <select
+                  style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box' }}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    if (selectedId) {
+                      const student = deployedStudents.find(s => s.id === selectedId);
+                      if (student) {
+                        setNewVisit(p => ({ ...p, location: student.address }));
+                      }
+                    }
+                  }}
+                  defaultValue=""
+                >
+                  <option value="" disabled>-- Select a deployed student to autofill location --</option>
+                  {deployedStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.name} @ {student.company}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: theme.colors.textMuted, marginBottom: '6px' }}>Pre-visit Notes / Objectives</label>
               <textarea placeholder="e.g. Check student attendance reports and inspect physical work environment..." style={{ ...commonStyles.input, width: '100%', boxSizing: 'border-box', minHeight: '70px', resize: 'vertical' }}
