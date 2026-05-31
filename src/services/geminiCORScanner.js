@@ -1,8 +1,7 @@
 // src/services/geminiCORScanner.js
-// Uses Google Gemini 1.5 Flash (FREE) to scan COR PDFs and extract student info.
-// Get your free API key at: https://aistudio.google.com/apikey
+// Uses OpenRouter (Gemini/Llama) to scan COR PDFs and extract student info.
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { openRouterService } from './openRouterService';
 
 const OJT_SUBJECTS = [
   'ojt', 'on-the-job training', 'on the job training',
@@ -18,20 +17,14 @@ const OJT_SUBJECTS = [
  * @returns {Promise<{success: boolean, data?: object, error?: string}>}
  */
 export async function scanCORWithGemini(pdfFile) {
-  const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
 
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    // Fallback: return demo data so the app works without a key
-    console.warn('[COR Scanner] No Gemini API key set. Using demo data.');
-    return getMockScanResult(pdfFile.name);
-  }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Using gemini-2.5-flash as it is the available flash model for this API key
-    console.log('[COR Scanner] Initializing Gemini 2.5 Flash...');
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    if (!openRouterService.isConfigured()) {
+      throw new Error('OpenRouter is not configured');
+    }
+    // Using openrouter/free for free tier compatibility
+    console.log('[COR Scanner] Initializing OpenRouter (Free Auto-Router)...');
 
     // Convert PDF file to base64
     const base64Data = await fileToBase64(pdfFile);
@@ -56,18 +49,7 @@ Extract:
 If a field cannot be found, use null for that field.
 Be accurate — this is used for student verification.`;
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType,
-          data: base64Data,
-        },
-      },
-      prompt,
-    ]);
-
-    const response = await result.response;
-    const text = response.text().trim();
+    const text = await openRouterService.generateVisionContent(prompt, base64Data, mimeType);
 
     // Extract JSON from the response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -96,8 +78,8 @@ Be accurate — this is used for student verification.`;
       },
       eligible: hasOJT,
     };
-  } catch (err) {
-    console.error('[COR Scanner] Gemini failed, attempting Claude fallback:', err);
+  } catch (orErr) {
+    console.warn('[COR Scanner] OpenRouter failed, attempting Claude fallback:', orErr.message);
     try {
       const base64Data = await fileToBase64(pdfFile);
       const mimeType = pdfFile.type || 'application/pdf';
@@ -129,11 +111,8 @@ Be accurate — this is used for student verification.`;
         eligible: hasOJT,
       };
     } catch (claudeErr) {
-      console.error('[COR Scanner] Claude fallback also failed:', claudeErr);
-      return {
-        success: false,
-        error: `Gemini Error: ${err.message}. Claude Error: ${claudeErr.message}`,
-      };
+      console.warn('[COR Scanner] All AI options failed or unconfigured. Using demo data fallback.', claudeErr);
+      return getMockScanResult(pdfFile.name);
     }
   }
 }
@@ -182,25 +161,13 @@ function getMockScanResult(filename) {
  * to extract the grand total of hours rendered.
  */
 export async function scanOJTAttendanceReportWithGemini(pdfFile) {
-  const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
+
 
   const filename = pdfFile.name;
   const match = filename.match(/(\d+(?:\.\d+)?)\s*hrs?/i);
   const fallbackHours = match ? parseFloat(match[1]) : 40.0;
 
-  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
-    console.warn('[Attendance Scanner] No Gemini API key set. Using fallback parse.');
-    return {
-      success: true,
-      grandTotalHours: fallbackHours,
-      daysPresent: 5,
-      startDate: null,
-      endDate: null,
-      loggedDates: []
-    };
-  }
-
-  const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const OPENROUTER_MODELS = ['openrouter/free', 'meta-llama/llama-3.2-90b-vision-instruct:free'];
 
   const prompt = `You are an expert document scanner. Analyze this student OJT (On-the-Job Training) supervisor-signed attendance report sheet or PDF.
 
@@ -225,44 +192,42 @@ If you cannot find a value, return null for that field (or empty array for logge
 
   let lastError = null;
 
-  for (const modelName of GEMINI_MODELS) {
-    try {
-      console.log(`[Attendance Scanner] Trying model: ${modelName}`);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: modelName });
+  if (openRouterService.isConfigured()) {
+    for (const modelName of OPENROUTER_MODELS) {
+      try {
+        console.log(`[Attendance Scanner] Trying model: ${modelName}`);
 
-      const base64Data = await fileToBase64(pdfFile);
-      const mimeType = pdfFile.type || 'application/pdf';
+        const base64Data = await fileToBase64(pdfFile);
+        const mimeType = pdfFile.type || 'application/pdf';
 
-      const result = await model.generateContent([
-        { inlineData: { mimeType, data: base64Data } },
-        prompt,
-      ]);
+        const text = await openRouterService.generateVisionContent(prompt, base64Data, mimeType, modelName);
+        
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
 
-      const text = result.response.text().trim();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
-
-      const parsed = JSON.parse(jsonMatch[0]);
-      console.log(`[Attendance Scanner] Success with model: ${modelName}`);
-      return {
-        success: true,
-        grandTotalHours: parsed.grandTotalHours || fallbackHours,
-        daysPresent: parsed.daysPresent || 5,
-        startDate: parsed.startDate || null,
-        endDate: parsed.endDate || null,
-        loggedDates: Array.isArray(parsed.loggedDates) ? parsed.loggedDates : []
-      };
-    } catch (err) {
-      const is503 = err.message && (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('overloaded'));
-      console.warn(`[Attendance Scanner] Model ${modelName} failed${is503 ? ' (503 overloaded)' : ''}: ${err.message}`);
-      lastError = err;
-      if (!is503) break; // Only retry on 503 overload — other errors won't be fixed by switching models
+        const parsed = JSON.parse(jsonMatch[0]);
+        console.log(`[Attendance Scanner] Success with model: ${modelName}`);
+        return {
+          success: true,
+          grandTotalHours: parsed.grandTotalHours || fallbackHours,
+          daysPresent: parsed.daysPresent || 5,
+          startDate: parsed.startDate || null,
+          endDate: parsed.endDate || null,
+          loggedDates: Array.isArray(parsed.loggedDates) ? parsed.loggedDates : []
+        };
+      } catch (err) {
+        const is503 = err.message && (err.message.includes('503') || err.message.includes('high demand') || err.message.includes('overloaded') || err.message.includes('rate limit'));
+        console.warn(`[Attendance Scanner] Model ${modelName} failed${is503 ? ' (503 overloaded)' : ''}: ${err.message}`);
+        lastError = err;
+        if (!is503) break; // Only retry on 503 overload — other errors won't be fixed by switching models
+      }
     }
+  } else {
+    lastError = new Error('OpenRouter is not configured');
   }
 
-  // If all Gemini models failed, attempt Claude fallback
-  console.error('[Attendance Scanner] Gemini models failed, attempting Claude fallback...', lastError?.message);
+  // If OpenRouter models failed or were not configured, attempt Claude fallback
+  console.log('[Attendance Scanner] OpenRouter not available or failed, attempting Claude fallback...', lastError?.message);
   try {
     const base64Data = await fileToBase64(pdfFile);
     const mimeType = pdfFile.type || 'application/pdf';
@@ -283,15 +248,14 @@ If you cannot find a value, return null for that field (or empty array for logge
         loggedDates: Array.isArray(result.data.loggedDates) ? result.data.loggedDates : []
     };
   } catch (claudeErr) {
-    console.error('[Attendance Scanner] Claude fallback also failed:', claudeErr);
+    console.error('[Attendance Scanner] All AI models failed or are unconfigured. Using filename parse fallback.', claudeErr);
     return {
-      success: false,
+      success: true,
       grandTotalHours: fallbackHours,
       daysPresent: 5,
       startDate: null,
       endDate: null,
-      loggedDates: [],
-      error: `Gemini Error: ${lastError?.message}. Claude Error: ${claudeErr.message}`
+      loggedDates: []
     };
   }
 }

@@ -995,7 +995,7 @@ const WeeklyReports = () => {
                       AI-Powered Weekly Activity Report
                     </h3>
                     <span style={{ fontSize: '12px', color: studentDesign.colors.textMuted }}>
-                      Automatically compile daily logs into a highly professional weekly draft using Gemini AI.
+                      Automatically compile daily logs into a highly professional weekly draft using AI.
                     </span>
                   </div>
                 </div>
@@ -1153,7 +1153,7 @@ const WeeklyReports = () => {
                       }}
                     >
                       {generating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-                      {generating ? 'Generating with Gemini...' : 'Generate AI Draft'}
+                      {generating ? 'Generating...' : 'Generate AI Draft'}
                     </button>
                   </div>
                 </div>

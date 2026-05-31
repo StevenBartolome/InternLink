@@ -33,7 +33,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
       display: 'flex',
       alignItems: 'flex-start',
       gap: '12px',
-      zIndex: 9999,
+      zIndex: 100000,
       border: `1px solid ${theme.colors.border}`,
       transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
       opacity: isVisible ? 1 : 0,

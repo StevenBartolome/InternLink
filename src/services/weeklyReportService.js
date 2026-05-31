@@ -1,8 +1,5 @@
 import { supabase } from './supabaseClient';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-const genAI = apiKey && apiKey !== 'your_gemini_api_key_here' ? new GoogleGenerativeAI(apiKey) : null;
+import { openRouterService } from './openRouterService';
 
 export const weeklyReportService = {
   /**
@@ -10,7 +7,7 @@ export const weeklyReportService = {
    */
   async getWeeklyReports(internshipId) {
     if (!internshipId) return [];
-    
+
     const { data, error } = await supabase
       .from('weekly_activity_reports')
       .select('*')
@@ -109,7 +106,7 @@ export const weeklyReportService = {
         .select();
 
       if (error) throw error;
-      
+
       const report = data[0];
       if (report && report.summary && report.summary.includes('---ACTIVITIES_JSON---')) {
         const parts = report.summary.split('---ACTIVITIES_JSON---');
@@ -132,19 +129,11 @@ export const weeklyReportService = {
    * based on the selected daily activities
    */
   async generateWARWithAI(activities) {
-    if (!genAI) {
-      console.warn('[WAR Generator] No Gemini API key set. Using fallback mock data.');
-      return this.getMockWARGeneration();
-    }
+    const activitiesText = activities
+      .map(act => `Date: ${act.log_date}\nActivity: ${act.description}`)
+      .join('\n\n');
 
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-      
-      const activitiesText = activities
-        .map(act => `Date: ${act.log_date}\nActivity: ${act.description}`)
-        .join('\n\n');
-
-      const prompt = `You are an AI assistant designed to help college students write highly professional Weekly Activity Reports (WAR) for their On-the-Job Training (OJT) or internship.
+    let prompt = `You are an AI assistant designed to help college students write highly professional Weekly Activity Reports (WAR) for their On-the-Job Training (OJT) or internship.
 Analyze the following daily activities logged by the student during this week:
 
 ${activitiesText}
@@ -158,19 +147,57 @@ Generate a weekly report containing the following three parts in JSON format ONL
 
 Do not include any explanation or markdown formatting outside the JSON block. Ensure the tone is extremely professional, clear, and academic.`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
-
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not parse AI response as JSON');
+    try {
+      if (openRouterService.isConfigured()) {
+        try {
+          console.log('[WAR Generator] Initializing OpenRouter (Free Auto-Router)...');
+          const text = await openRouterService.generateContent(prompt);
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
+          console.log('[WAR Generator] OpenRouter succeeded.');
+          return JSON.parse(jsonMatch[0]);
+        } catch (orErr) {
+          console.warn('[WAR Generator] OpenRouter failed, attempting Claude fallback:', orErr.message);
+          throw orErr;
+        }
+      } else {
+        throw new Error('OpenRouter not configured');
       }
+    } catch (primaryErr) {
+      // Claude Fallback
+      try {
+        console.log('[WAR Generator] Trying Claude backup...');
+        const response = await fetch('/api/claude/generate-war', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: `You are an AI assistant designed to help college students write highly professional Weekly Activity Reports (WAR) for their On-the-Job Training (OJT) or internship.
+Analyze the following daily activities logged by the student during this week:
 
-      return JSON.parse(jsonMatch[0]);
-    } catch (err) {
-      console.error('[WAR Generator] Error:', err);
-      throw new Error(err.message || 'Failed to generate weekly report with Gemini AI.');
+${activities.map(act => `Date: ${act.log_date}\nActivity: ${act.description}`).join('\n\n')}
+
+Generate a weekly report containing the following three parts in JSON format ONLY:
+{
+  "summary": "A concise, formal, and professionally written summary paragraph that aggregates the tasks, duties, and achievements accomplished during the week.",
+  "skills_learned": "A bulleted or structured list of professional, technical, or soft skills acquired or reinforced through these activities.",
+  "challenges": "A brief reflection on minor obstacles, learning curves, or challenges encountered during the week and how they were handled or resolved constructively."
+}
+
+Do not include any explanation or markdown formatting outside the JSON block. Ensure the tone is extremely professional, clear, and academic.` })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Claude API failed');
+
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Could not parse Claude AI response as JSON');
+
+        console.log('[WAR Generator] Claude backup succeeded.');
+        return JSON.parse(jsonMatch[0]);
+      } catch (claudeErr) {
+        console.error('[WAR Generator] All AI options failed or unconfigured. Using mock data fallback.', claudeErr);
+        return this.getMockWARGeneration();
+      }
     }
   },
 
@@ -178,15 +205,8 @@ Do not include any explanation or markdown formatting outside the JSON block. En
    * Refine the existing Weekly Activity Report based on custom user feedback instructions
    */
   async refineWARWithAI(currentReport, instruction) {
-    if (!genAI) {
-      console.warn('[WAR Generator] No Gemini API key set. Cannot refine.');
-      throw new Error('Gemini API key is required to refine report.');
-    }
 
-    try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-      const prompt = `You are a professional academic writing assistant. You have already generated a Weekly Activity Report for a student's internship:
+      let prompt = `You are a professional academic writing assistant. You have already generated a Weekly Activity Report for a student's internship:
 
 Current Report:
 Summary: ${currentReport.summary}
@@ -205,21 +225,64 @@ Refine the report according to their instruction. Return the updated report in J
 
 Do not include any explanation or markdown formatting outside the JSON block. Preserve the professional, academic tone.`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text().trim();
+      try {
+        if (openRouterService.isConfigured()) {
+          try {
+            console.log('[WAR Refiner] Initializing OpenRouter (Free Auto-Router)...');
+            const text = await openRouterService.generateContent(prompt);
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Could not parse AI response as JSON');
+            console.log('[WAR Refiner] OpenRouter succeeded.');
+            return JSON.parse(jsonMatch[0]);
+          } catch (orErr) {
+            console.warn('[WAR Refiner] OpenRouter failed, attempting Claude fallback:', orErr.message);
+            throw orErr;
+          }
+        } else {
+          throw new Error('OpenRouter not configured');
+        }
+      } catch (primaryErr) {
+        // Claude Fallback
+        try {
+          console.log('[WAR Refiner] Trying Claude backup...');
+          const response = await fetch('/api/claude/generate-war', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: `You are a professional academic writing assistant. You have already generated a Weekly Activity Report for a student's internship:
 
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('Could not parse AI response as JSON');
+Current Report:
+Summary: ${currentReport.summary}
+Skills Learned: ${currentReport.skills_learned}
+Challenges: ${currentReport.challenges}
+
+The student wants to modify or refine this report with the following specific instruction:
+"${instruction}"
+
+Refine the report according to their instruction. Return the updated report in JSON format ONLY:
+{
+  "summary": "The updated/refined summary",
+  "skills_learned": "The updated/refined skills learned",
+  "challenges": "The updated/refined challenges faced"
+}
+
+Do not include any explanation or markdown formatting outside the JSON block. Preserve the professional, academic tone.` })
+          });
+
+          const result = await response.json();
+          if (!response.ok || !result.success) throw new Error(result.error || 'Claude API failed');
+
+          const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) throw new Error('Could not parse Claude AI response as JSON');
+
+          console.log('[WAR Refiner] Claude backup succeeded.');
+          return JSON.parse(jsonMatch[0]);
+        } catch (claudeErr) {
+          console.error('[WAR Refiner] Claude fallback also failed:', claudeErr);
+          throw new Error(primaryErr.message || 'Failed to refine report with AI.');
+        }
       }
-
-      return JSON.parse(jsonMatch[0]);
-    } catch (err) {
-      console.error('[WAR Refiner] Error:', err);
-      throw new Error(err.message || 'Failed to refine report with Gemini AI.');
-    }
-  },
+    },
 
   /**
    * Realistic fallback mock data when no API key is configured

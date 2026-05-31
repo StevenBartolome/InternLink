@@ -883,6 +883,88 @@ const Attendance = () => {
   // 7. Handle Signed Attendance Report Upload and Scanning
   const handleReportFileChange = async (file) => {
     if (!file) return;
+
+    // Check if the selected file name matches any already uploaded file in documents
+    const isSameName = (documents || []).some(doc => {
+      if (doc.name && doc.name.startsWith('Signed Attendance Report')) {
+        if (doc.comment && doc.comment.includes(`(File: ${file.name})`)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (isSameName) {
+      setToast({
+        message: `⚠️ You have already uploaded this exact file (${file.name}). Please select a different report.`,
+        type: 'error'
+      });
+      setReportFile(null);
+      const fileInput = document.getElementById('report-file-input');
+      if (fileInput) fileInput.value = '';
+      return;
+    }
+
+    // 2. Check if the selected file name matches the storage URL filename (instant check)
+    const isSameStorageName = (documents || []).some(doc => {
+      if (doc.name && doc.name.startsWith('Signed Attendance Report') && doc.fileUrl) {
+        const urlParts = doc.fileUrl.split('/');
+        const urlFileName = urlParts[urlParts.length - 1];
+        // Match exact name, or if one contains the other (e.g. downloaded files with prepended path/UUIDs)
+        if (urlFileName === file.name || urlFileName.includes(file.name) || file.name.includes(urlFileName)) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (isSameStorageName) {
+      setToast({
+        message: `⚠️ You have already uploaded this exact file. Please select a different report.`,
+        type: 'error'
+      });
+      setReportFile(null);
+      const fileInput = document.getElementById('report-file-input');
+      if (fileInput) fileInput.value = '';
+      return;
+    }
+
+    // 3. Check by file size in parallel using GET (to catch renamed copies and bypass CORS HEAD request limits)
+    try {
+      const targetDocs = (documents || []).filter(doc => doc.name && doc.name.startsWith('Signed Attendance Report') && doc.fileUrl);
+      if (targetDocs.length > 0) {
+        const sizeChecks = await Promise.all(
+          targetDocs.map(async (doc) => {
+            try {
+              // Using GET instead of HEAD as some CORS setups block HEAD by default
+              const res = await fetch(doc.fileUrl, { method: 'GET' });
+              if (res.ok) {
+                const blob = await res.blob();
+                if (blob && blob.size === file.size) {
+                  return true;
+                }
+              }
+            } catch (err) {
+              console.warn('Error checking file size for document:', doc.name, err);
+            }
+            return false;
+          })
+        );
+        if (sizeChecks.some(matched => matched)) {
+          setToast({
+            message: `⚠️ You have already uploaded this exact file. Please select a different report.`,
+            type: 'error'
+          });
+          setReportFile(null);
+          const fileInput = document.getElementById('report-file-input');
+          if (fileInput) fileInput.value = '';
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Error performing duplicate size check:', err);
+    }
+
     setReportFile(file);
     setScanningReport(true);
     setReportHours(''); // Clear previous parsed hours during scanning
@@ -894,8 +976,6 @@ const Attendance = () => {
     try {
       const res = await scanOJTAttendanceReportWithGemini(file);
       if (res.success) {
-        setReportHours(res.grandTotalHours.toString());
-
         const dates = Array.isArray(res.loggedDates) && res.loggedDates.length > 0
           ? [...res.loggedDates].sort()
           : [];
@@ -904,18 +984,45 @@ const Attendance = () => {
         const derivedStart = dates.length > 0 ? dates[0] : (res.startDate || '');
         const derivedEnd   = dates.length > 0 ? dates[dates.length - 1] : (res.endDate || '');
 
+        // Check if there is already an approved report with the exact same date range
+        const isSameDateRange = (documents || []).some(doc => {
+          if (doc.name && doc.name.startsWith('Signed Attendance Report')) {
+            const match = doc.name.match(/\[([0-9-]+)\s+to\s+([0-9-]+)\]/);
+            if (match) {
+              const [_, existingStart, existingEnd] = match;
+              if (existingStart === derivedStart && existingEnd === derivedEnd) {
+                return true;
+              }
+            }
+          }
+          return false;
+        });
+
+        if (isSameDateRange) {
+          setToast({
+            message: `⚠️ A report for the period ${derivedStart} to ${derivedEnd} has already been uploaded.`,
+            type: 'error'
+          });
+          setReportFile(null);
+          const fileInput = document.getElementById('report-file-input');
+          if (fileInput) fileInput.value = '';
+          return;
+        }
+
+        setReportHours(res.grandTotalHours.toString());
+
         if (derivedStart) setReportStartDate(derivedStart);
         if (derivedEnd)   setReportEndDate(derivedEnd);
         if (dates.length > 0) setReportLoggedDates(dates);
 
         setToast({
-          message: `✨ Gemini scanned successfully! Detected ${res.grandTotalHours} OJT hours${derivedStart && derivedEnd ? ` from ${derivedStart} to ${derivedEnd}` : ''}.`,
+          message: `✨ Scan successful! Detected ${res.grandTotalHours} OJT hours${derivedStart && derivedEnd ? ` from ${derivedStart} to ${derivedEnd}` : ''}.`,
           type: 'success'
         });
       } else {
         setReportHours('40.0'); // default fallback if scanner returned success:false
         setToast({ 
-          message: `⚠️ Gemini scan failed: ${res.error || 'fallback default 40.0 hrs set.'}`, 
+          message: `⚠️ Scan failed: ${res.error || 'fallback default 40.0 hrs set.'}`, 
           type: 'warning' 
         });
       }
@@ -974,7 +1081,8 @@ const Attendance = () => {
           hours: parseFloat(reportHours),
           startDate: reportStartDate,
           endDate: reportEndDate,
-          loggedDates: reportLoggedDates
+          loggedDates: reportLoggedDates,
+          originalFileName: reportFile.name
         })
       });
 
@@ -2151,6 +2259,9 @@ const Attendance = () => {
                     {reportFile ? `${(reportFile.size / 1024).toFixed(1)} KB` : 'Accepts PDF or Image up to 10MB'}
                   </span>
                 </div>
+                <span style={{ fontSize: '11px', color: '#dc2626', marginTop: '4px', display: 'block', fontWeight: 500 }}>
+                  * Duplicate uploads (same file name or same date range) are not allowed.
+                </span>
               </div>
 
               {/* AI Hour Detection Status Box */}
@@ -2170,7 +2281,7 @@ const Attendance = () => {
                     fontWeight: 600
                   }}>
                     <Loader2 className="animate-spin" size={18} />
-                    <span>Analyzing document with Gemini AI... Please wait...</span>
+                    <span>Analyzing document... Please wait...</span>
                   </div>
                 ) : reportHours ? (
                   <div style={{
@@ -2211,7 +2322,7 @@ const Attendance = () => {
                     fontSize: '12px',
                     textAlign: 'center'
                   }}>
-                    Select a signed report sheet above. Gemini AI will automatically read your PDF/Image and extract the hours completed.
+                    Select a signed report sheet above. AI will automatically read your PDF/Image and extract the hours completed.
                   </div>
                 )}
               </div>
@@ -2241,17 +2352,21 @@ const Attendance = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={reportUploading}
+                  disabled={reportUploading || !reportFile || !reportHours || scanningReport}
                   style={{
                     flex: 1,
                     padding: '12px',
                     borderRadius: '10px',
-                    backgroundColor: studentDesign.colors.success,
-                    color: '#FFFFFF',
+                    backgroundColor: (reportUploading || !reportFile || !reportHours || scanningReport)
+                      ? '#E2E8F0'
+                      : studentDesign.colors.success,
+                    color: (reportUploading || !reportFile || !reportHours || scanningReport)
+                      ? '#94A3B8'
+                      : '#FFFFFF',
                     border: 'none',
                     fontWeight: 700,
                     fontSize: '13px',
-                    cursor: 'pointer',
+                    cursor: (reportUploading || !reportFile || !reportHours || scanningReport) ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

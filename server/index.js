@@ -987,24 +987,65 @@ If you cannot find a value, return null for that field (or empty array for logge
 
 // POST API to upload signed attendance report and hours
 app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signed-attendance-report'], async (req, res) => {
-    const { internshipId, fileUrl, hours, startDate, endDate, loggedDates } = req.body;
+    const { internshipId, fileUrl, hours, startDate, endDate, loggedDates, originalFileName } = req.body;
     
     if (!internshipId || !fileUrl || !hours) {
         return res.status(400).json({ error: 'Missing required parameters: internshipId, fileUrl, hours' });
     }
 
     try {
-        console.log(`[Attendance Report] Received:`, { internshipId, hours, startDate, endDate, loggedDatesCount: Array.isArray(loggedDates) ? loggedDates.length : 'none', loggedDates });
+        console.log(`[Attendance Report] Received:`, { internshipId, hours, startDate, endDate, loggedDatesCount: Array.isArray(loggedDates) ? loggedDates.length : 'none', loggedDates, originalFileName });
+
+        // Check for duplicates in backend
+        const { data: existingReqs, error: fetchError } = await supabaseAdmin
+            .from('additional_requirements')
+            .select('*')
+            .eq('internship_id', internshipId);
+
+        if (fetchError) throw fetchError;
+
+        const isDuplicateFile = existingReqs.some(req => {
+            if (req.document_name && req.document_name.startsWith('Signed Attendance Report')) {
+                if (req.reviewer_comment && originalFileName) {
+                    const match = req.reviewer_comment.match(/\(File:\s*(.*?)\)/);
+                    if (match && match[1] === originalFileName) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+
+        if (isDuplicateFile) {
+            return res.status(400).json({ error: `You have already uploaded a file named "${originalFileName}".` });
+        }
+
+        const isDuplicateDate = existingReqs.some(req => {
+            if (req.document_name && req.document_name.startsWith('Signed Attendance Report')) {
+                const match = req.document_name.match(/\[([0-9-]+)\s+to\s+([0-9-]+)\]/);
+                if (match && startDate && endDate) {
+                    const [_, existingStart, existingEnd] = match;
+                    if (existingStart === startDate && existingEnd === endDate) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        });
+
+        if (isDuplicateDate) {
+            return res.status(400).json({ error: `A report for the period ${startDate} to ${endDate} has already been uploaded.` });
+        }
 
         // Insert into additional_requirements using service role client
         const { data, error } = await supabaseAdmin
             .from('additional_requirements')
             .insert([{
                 internship_id: internshipId,
-                document_name: `Signed Attendance Report (${parseFloat(hours).toFixed(2)} hrs)`,
+                document_name: `Signed Attendance Report (${parseFloat(hours).toFixed(2)} hrs) [${startDate || 'N/A'} to ${endDate || 'N/A'}]`,
                 file_url: fileUrl,
                 status: 'APPROVED', // Immediately approved as requested
-                reviewer_comment: `[HOURS:${parseFloat(hours).toFixed(2)}] Approved signed attendance report.`,
+                reviewer_comment: `[HOURS:${parseFloat(hours).toFixed(2)}] Approved signed attendance report (File: ${originalFileName || 'Unknown'}).`,
                 submitted_at: new Date().toISOString()
             }])
             .select();
@@ -1344,6 +1385,47 @@ app.post(['/api/claude/generate-reflection', '/claude/generate-reflection'], asy
         res.json({ success: true, text });
     } catch (err) {
         console.error('[Claude Reflection] Error:', err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+// WAR Generator Route: Generate WAR using Claude
+app.post(['/api/claude/generate-war', '/claude/generate-war'], async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: 'Missing prompt' });
+
+    const apiKey = process.env.CLAUDE_API_KEY;
+    if (!apiKey) return res.status(500).json({ error: 'Claude API key not configured on server.' });
+
+    try {
+        console.log('[Claude WAR] Generating weekly report...');
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey,
+                'anthropic-version': '2023-06-01',
+            },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-6',
+                max_tokens: 4096,
+                messages: [{ role: 'user', content: prompt }],
+            }),
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('[Claude WAR] API Error:', errBody);
+            throw new Error(`Claude API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const text = data.content?.[0]?.text?.trim();
+        if (!text) throw new Error('Empty response from Claude');
+
+        console.log('[Claude WAR] Successfully generated report.');
+        res.json({ success: true, text });
+    } catch (err) {
+        console.error('[Claude WAR] Error:', err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });

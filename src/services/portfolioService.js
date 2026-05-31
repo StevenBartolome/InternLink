@@ -1,11 +1,7 @@
 import { supabase } from './supabaseClient';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { openRouterService } from './openRouterService';
 import jsPDF from 'jspdf';
-
-const apiKey = process.env.REACT_APP_GEMINI_API_KEY;
-const genAI = apiKey && apiKey !== 'your_gemini_api_key_here'
-  ? new GoogleGenerativeAI(apiKey)
-  : null;
+import { PDFDocument } from 'pdf-lib';
 
 // A4 layout constants (mm). Font: Helvetica (nearest to Arial in jsPDF)
 const PW = 210; const PH = 297;
@@ -53,12 +49,12 @@ export const portfolioService = {
 
     const reportsText = weeklyReports.length
       ? weeklyReports.map(r => {
-          let t = `Week ${r.week_number}${r.week_label ? ` (${r.week_label})` : ''}`;
-          if (r.summary) t += `\nSummary: ${r.summary}`;
-          if (r.skills_learned) t += `\nSkills: ${r.skills_learned}`;
-          if (r.challenges) t += `\nChallenges: ${r.challenges}`;
-          return t;
-        }).join('\n\n')
+        let t = `Week ${r.week_number}${r.week_label ? ` (${r.week_label})` : ''}`;
+        if (r.summary) t += `\nSummary: ${r.summary}`;
+        if (r.skills_learned) t += `\nSkills: ${r.skills_learned}`;
+        if (r.challenges) t += `\nChallenges: ${r.challenges}`;
+        return t;
+      }).join('\n\n')
       : 'No weekly reports available.';
 
     return `You are an academic writing assistant. Write a formal 5-page Personal Reflection for a student's internship portfolio.
@@ -91,25 +87,24 @@ Requirements:
   async generateReflection(student, data) {
     const prompt = this._buildReflectionPrompt(student, data);
 
-    // ── Try Gemini first ──────────────────────────────────────────────────
-    if (genAI) {
-      try {
-        console.log('[Portfolio] Generating reflection with Gemini 2.5 Flash...');
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-        const result = await model.generateContent(prompt);
-        const text = result.response.text().trim();
-        console.log('[Portfolio] Gemini succeeded.');
-        return text;
-      } catch (geminiErr) {
-        console.warn('[Portfolio] Gemini failed, falling back to Claude:', geminiErr.message);
-      }
-    } else {
-      console.warn('[Portfolio] Gemini not configured. Trying Claude...');
-    }
-
-    // ── Fallback: Claude via server proxy ─────────────────────────────────
+    // ── Try OpenRouter first ──────────────────────────────────────────────────
     try {
-      console.log('[Portfolio] Generating reflection with Claude (claude-sonnet-4-6)...');
+      if (openRouterService.isConfigured()) {
+        try {
+          console.log('[Portfolio] Generating reflection with OpenRouter...');
+          const text = await openRouterService.generateContent(prompt);
+          console.log('[Portfolio] OpenRouter succeeded.');
+          return text;
+        } catch (openRouterErr) {
+          console.warn('[Portfolio] OpenRouter failed, falling back to Claude:', openRouterErr.message);
+          throw openRouterErr;
+        }
+      } else {
+        throw new Error('OpenRouter not configured');
+      }
+    } catch (primaryErr) {
+      // ── Fallback: Claude via server proxy ─────────────────────────────────
+      console.log('[Portfolio] Trying Claude via backend proxy...');
       const response = await fetch('/api/claude/generate-reflection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,8 +126,6 @@ Requirements:
       if (!response.ok || !result.success) throw new Error(result.error || 'Claude API failed');
       console.log('[Portfolio] Claude succeeded.');
       return result.text;
-    } catch (claudeErr) {
-      throw new Error(`Claude fallback failed: ${claudeErr.message}`);
     }
   },
 
@@ -149,27 +142,37 @@ Requirements:
 
     const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(path);
 
-    // Best-effort metadata save (table may not exist yet)
-    try {
-      await supabase.from('portfolio_documents').upsert(
-        { internship_id: internshipId, doc_type: docType, document_name: docLabel, file_url: publicUrl, submitted_at: new Date().toISOString() },
-        { onConflict: 'internship_id,doc_type' }
-      );
-    } catch (_) {}
+    // Save document metadata to the database (required for persistence across sessions)
+    const { error: dbErr } = await supabase.from('portfolio_documents').upsert(
+      {
+        internship_id: internshipId,
+        doc_type: docType,
+        document_name: docLabel,
+        file_url: publicUrl,
+        submitted_at: new Date().toISOString(),
+      },
+      { onConflict: 'internship_id,doc_type' }
+    );
+    if (dbErr) throw new Error(`File uploaded but failed to save record: ${dbErr.message}`);
 
     return publicUrl;
   },
 
   async loadPortfolioDocs(internshipId) {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('portfolio_documents')
         .select('*')
         .eq('internship_id', internshipId);
+      if (error) {
+        console.error('[Portfolio] Failed to load portfolio_documents:', error.message);
+        return {};
+      }
       const map = {};
       (data || []).forEach(d => { map[d.doc_type] = { url: d.file_url, name: d.document_name, source: 'upload' }; });
       return map;
-    } catch (_) {
+    } catch (err) {
+      console.error('[Portfolio] Unexpected error loading portfolio_documents:', err);
       return {};
     }
   },
@@ -179,14 +182,14 @@ Requirements:
   _matchDocToSlot(docName) {
     const n = docName.toLowerCase();
     const rules = [
-      { id: 'resume',                  keywords: ['resume', 'curriculum vitae', ' cv'] },
-      { id: 'certificate_completion',  keywords: ['certificate of completion'] },
-      { id: 'medical_certificate',     keywords: ['medical certificate', 'medical cert'] },
-      { id: 'parent_consent',          keywords: ['parent consent', 'guardian consent', 'parental consent', 'parent/guardian'] },
-      { id: 'recommendation_letter',   keywords: ['recommendation letter', 'letter of recommendation'] },
-      { id: 'ccit_orientation_cert',   keywords: ['ccit orientation', 'orientation certificate', 'orientation cert'] },
-      { id: 'student_evaluation',      keywords: ['student evaluation', 'internship evaluation', 'evaluation of the internship', 'evaluation form'] },
-      { id: 'evidence_achievements',   keywords: ['evidence of achievement', 'certificate of recognition', 'certificate of award'] },
+      { id: 'resume', keywords: ['resume', 'curriculum vitae', ' cv'] },
+      { id: 'certificate_completion', keywords: ['certificate of completion'] },
+      { id: 'medical_certificate', keywords: ['medical certificate', 'medical cert'] },
+      { id: 'parent_consent', keywords: ['parent consent', 'guardian consent', 'parental consent', 'parent/guardian'] },
+      { id: 'recommendation_letter', keywords: ['recommendation letter', 'letter of recommendation'] },
+      { id: 'ccit_orientation_cert', keywords: ['ccit orientation', 'orientation certificate', 'orientation cert'] },
+      { id: 'student_evaluation', keywords: ['student evaluation', 'internship evaluation', 'evaluation of the internship', 'evaluation form'] },
+      { id: 'evidence_achievements', keywords: ['evidence of achievement', 'certificate of recognition', 'certificate of award'] },
       { id: 'cert_attendance_seminar', keywords: ['certificate of attendance', 'seminar', 'workshop for interns'] },
     ];
     for (const rule of rules) {
@@ -216,9 +219,6 @@ Requirements:
       allDocs.forEach(doc => {
         const slotId = this._matchDocToSlot(doc.document_name);
         if (slotId && !map[slotId]) {
-          // Extract a friendly file name from the URL
-          const urlParts = doc.file_url.split('/');
-          const rawName = decodeURIComponent(urlParts[urlParts.length - 1]) || doc.document_name;
           map[slotId] = {
             url: doc.file_url,
             name: doc.document_name,   // use the document label as the display name
@@ -231,6 +231,36 @@ Requirements:
     }
 
     return map;
+  },
+
+  // Upserts pre-stage files (from previous internship stages) into portfolio_documents
+  // for any slots that the student has NOT already uploaded their own file to.
+  // This ensures pre-populated docs persist across sessions in the DB.
+  async syncPreStageDocsToPortfolio(internshipId, preStageMap, savedPortfolioMap) {
+    // Only sync slots that aren't already covered by a proper portfolio upload
+    const slotsToSync = Object.entries(preStageMap).filter(
+      ([slotId]) => !savedPortfolioMap[slotId]
+    );
+
+    if (slotsToSync.length === 0) return;
+
+    const rows = slotsToSync.map(([slotId, doc]) => ({
+      internship_id: internshipId,
+      doc_type: slotId,
+      document_name: doc.name,
+      file_url: doc.url,
+      submitted_at: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase
+      .from('portfolio_documents')
+      .upsert(rows, { onConflict: 'internship_id,doc_type' });
+
+    if (error) {
+      console.warn('[Portfolio] Failed to sync pre-stage docs to portfolio_documents:', error.message);
+    } else {
+      console.log(`[Portfolio] Synced ${rows.length} pre-stage doc(s) to portfolio_documents.`);
+    }
   },
 
   // ─── PDF FILE NAME ────────────────────────────────────────────────────────
@@ -251,9 +281,13 @@ Requirements:
 
   // ─── PDF BUILDER ──────────────────────────────────────────────────────────
 
-  buildPDF(user, internship, company, weeklyReports, attendance, reflection) {
+  buildPDF(user, internship, company, weeklyReports, attendance, reflection, uploadedDocs = {}) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
     let pageNum = 0;
+
+    let companyProfileStartPage = null;
+    let weeklyReportsStartPage = null;
+    let attendanceReportStartPage = null;
 
     const addPageNumber = () => {
       pageNum++;
@@ -270,15 +304,32 @@ Requirements:
     // Writes text with manual line-break / page-break handling.
     // Returns the new Y cursor.
     const writeText = (str, x, y, maxW, opts = {}) => {
-      const { bold = false, fontSize = 11, color = [0, 0, 0] } = opts;
+      const { bold = false, fontSize = 11, color = [0, 0, 0], align = 'left' } = opts;
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
-      const lines = doc.splitTextToSize(String(str || ''), maxW);
+      
+      // Clean up accidentally spaced-out text (e.g. copied from a justified PDF)
+      let cleanStr = String(str || '').replace(/(?:\b[a-zA-Z0-9] )+[a-zA-Z0-9]\b/g, m => m.replace(/ /g, ''));
+      
+      const lines = doc.splitTextToSize(cleanStr, maxW);
       let cy = y;
-      for (const line of lines) {
-        if (cy > PH - MB - LH) { newPage(); cy = MT; }
-        doc.text(line, x, cy);
+      for (let i = 0; i < lines.length; i++) {
+        if (cy > PH - MB - LH) {
+          newPage();
+          cy = MT;
+          doc.setFont('helvetica', bold ? 'bold' : 'normal');
+          doc.setFontSize(fontSize);
+          doc.setTextColor(...color);
+        }
+        
+        const line = lines[i].trim();
+        // Justify text if requested, except for the last line of a paragraph
+        if (align === 'justify' && i < lines.length - 1 && line.length > 20) {
+          doc.text(line, x, cy, { maxWidth: maxW, align: 'justify' });
+        } else {
+          doc.text(line, x, cy);
+        }
         cy += LH;
       }
       return cy;
@@ -332,33 +383,7 @@ Requirements:
     doc.text('TABLE OF CONTENTS', ML, MT + 10);
     hLine(MT + 16, 0, 0, 0);
 
-    const tocRows = [
-      ['Title Page', '1'],
-      ['Table of Contents', '2'],
-      ['Resume', '—'],
-      ['Personal Reflection', '3'],
-      ['Certificate of Completion', '—'],
-      ['Company Profile', '—'],
-      ['Internship Agreement', '—'],
-      ['Internship Plan', '—'],
-      ['Weekly Activity Reports', '—'],
-      ['Attendance Reports / Daily Time Record', '—'],
-      ['Evidence of Achievements or Activities', '—'],
-      ['Other Documents', '—'],
-    ];
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(11);
-    let ty = MT + 28;
-    tocRows.forEach(([label, pg]) => {
-      doc.text(label, ML, ty);
-      doc.text(pg, PW - MR, ty, { align: 'right' });
-      ty += LH + 1;
-    });
-
-    doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Note: Items marked "—" are compiled from uploaded documents and pre-internship records.', ML, ty + 8);
+    // Dynamic TOC rows will be filled in at page 2 at the very end of PDF generation.
 
     // ── PERSONAL REFLECTION ─────────────────────────────────────────────────
     newPage();
@@ -391,7 +416,7 @@ Requirements:
         paragraphs.forEach(para => {
           const cleaned = para.replace(/\n/g, ' ').trim();
           if (!cleaned) return;
-          ry = writeText(cleaned, ML, ry, CW, { fontSize: 11 });
+          ry = writeText(cleaned, ML, ry, CW, { fontSize: 11, align: 'justify' });
           ry += LH * 0.4; // paragraph spacing
         });
       }
@@ -399,6 +424,7 @@ Requirements:
 
     // ── COMPANY PROFILE ─────────────────────────────────────────────────────
     newPage();
+    companyProfileStartPage = pageNum + 1;
 
     let cy = sectionHeading('COMPANY PROFILE', MT + 10);
     hLine(cy - 2, 0, 0, 0);
@@ -424,7 +450,13 @@ Requirements:
       const valLines = doc.splitTextToSize(String(value), CW - labelW);
       doc.setFont('helvetica', 'normal');
       valLines.forEach((vl, vi) => {
-        if (vi > 0 && cy > PH - MB - LH) { newPage(); cy = MT; }
+        if (vi > 0 && cy > PH - MB - LH) {
+          newPage();
+          cy = MT;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(11);
+          doc.setTextColor(0, 0, 0);
+        }
         doc.text(vl, ML + labelW, cy);
         if (vi < valLines.length - 1) cy += LH;
       });
@@ -433,6 +465,7 @@ Requirements:
 
     // ── WEEKLY ACTIVITY REPORTS ─────────────────────────────────────────────
     newPage();
+    weeklyReportsStartPage = pageNum + 1;
 
     let wy = sectionHeading('WEEKLY ACTIVITY REPORTS', MT + 10);
     hLine(wy - 2, 0, 0, 0);
@@ -457,17 +490,17 @@ Requirements:
 
         if (r.summary) {
           wy = writeText('Summary:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.summary, ML + 4, wy, CW - 4, { fontSize: 11 });
+          wy = writeText(r.summary.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
           wy += 2;
         }
         if (r.skills_learned) {
           wy = writeText('Skills Learned:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.skills_learned, ML + 4, wy, CW - 4, { fontSize: 11 });
+          wy = writeText(r.skills_learned.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
           wy += 2;
         }
         if (r.challenges) {
           wy = writeText('Challenges:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.challenges, ML + 4, wy, CW - 4, { fontSize: 11 });
+          wy = writeText(r.challenges.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
           wy += 2;
         }
 
@@ -483,6 +516,7 @@ Requirements:
 
     // ── ATTENDANCE REPORT ────────────────────────────────────────────────────
     newPage();
+    attendanceReportStartPage = pageNum + 1;
 
     let ay = sectionHeading('ATTENDANCE REPORT / DAILY TIME RECORD', MT + 10);
     hLine(ay - 2, 0, 0, 0);
@@ -550,6 +584,112 @@ Requirements:
     // Final page number
     addPageNumber();
 
+    // ── DYNAMIC TABLE OF CONTENTS GENERATION (Page 2) ────────────────────────
+    doc.setPage(2);
+
+    const hasAgreement = uploadedDocs['internship_agreement'] || Object.keys(uploadedDocs).some(k => k.toLowerCase().includes('agreement'));
+    const hasPlan = uploadedDocs['internship_plan'] || Object.keys(uploadedDocs).some(k => k.toLowerCase().includes('plan'));
+
+    const otherKeys = ['cert_attendance_seminar', 'student_evaluation', 'recommendation_letter', 'medical_certificate', 'parent_consent', 'ccit_orientation_cert'];
+    const hasOther = otherKeys.some(k => uploadedDocs[k]);
+
+    const tocRows = [
+      ['Title Page', '1'],
+      ['Table of Contents', '2'],
+      ['Resume', uploadedDocs['resume'] ? 'Attached' : '—'],
+      ['Personal Reflection', '3'],
+      ['Certificate of Completion', uploadedDocs['certificate_completion'] ? 'Attached' : '—'],
+      ['Company Profile', companyProfileStartPage ? String(companyProfileStartPage) : '—'],
+      ['Internship Agreement', hasAgreement ? 'Attached' : '—'],
+      ['Internship Plan', hasPlan ? 'Attached' : '—'],
+      ['Weekly Activity Reports', weeklyReportsStartPage ? String(weeklyReportsStartPage) : '—'],
+      ['Attendance Reports / Daily Time Record', attendanceReportStartPage ? String(attendanceReportStartPage) : '—'],
+      ['Evidence of Achievements or Activities', uploadedDocs['evidence_achievements'] ? 'Attached' : '—'],
+      ['Other Documents', hasOther ? 'Attached' : '—'],
+    ];
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    let ty = MT + 28;
+    tocRows.forEach(([label, pg]) => {
+      doc.text(label, ML, ty);
+      doc.text(pg, PW - MR, ty, { align: 'right' });
+      ty += LH + 1;
+    });
+
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text('Note: Items marked "—" are compiled from uploaded documents and pre-internship records.', ML, ty + 8);
+
     return doc;
   },
+
+  // ─── ATTACHMENT MERGING ───────────────────────────────────────────────────
+
+  async mergeAttachments(generatedPdfArrayBuffer, uploadedDocs) {
+    const mainPdf = await PDFDocument.load(generatedPdfArrayBuffer);
+    
+    // We want to add the attachments in a logical order, preferably matching TOC.
+    const orderedKeys = [
+      'resume',
+      'certificate_completion',
+      'internship_agreement',
+      'internship_plan',
+      'evidence_achievements',
+      'cert_attendance_seminar',
+      'student_evaluation',
+      'recommendation_letter',
+      'medical_certificate',
+      'parent_consent',
+      'ccit_orientation_cert'
+    ];
+    
+    const allKeys = Object.keys(uploadedDocs);
+    const extraKeys = allKeys.filter(k => !orderedKeys.includes(k));
+    const finalKeys = [...orderedKeys, ...extraKeys];
+    
+    for (const key of finalKeys) {
+      if (!uploadedDocs[key] || !uploadedDocs[key].url) continue;
+      
+      try {
+        console.log(`[Portfolio] Fetching attachment: ${key} from ${uploadedDocs[key].url}`);
+        const response = await fetch(uploadedDocs[key].url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const buffer = await response.arrayBuffer();
+        
+        const contentType = response.headers.get('content-type') || '';
+        const urlLower = uploadedDocs[key].url.toLowerCase();
+        
+        if (contentType.includes('pdf') || urlLower.includes('.pdf')) {
+          const attachPdf = await PDFDocument.load(buffer);
+          const copiedPages = await mainPdf.copyPages(attachPdf, attachPdf.getPageIndices());
+          copiedPages.forEach(page => mainPdf.addPage(page));
+        } else if (contentType.includes('image') || urlLower.match(/\.(png|jpg|jpeg)$/)) {
+          let image;
+          if (contentType.includes('png') || urlLower.includes('.png')) {
+            image = await mainPdf.embedPng(buffer);
+          } else {
+            image = await mainPdf.embedJpg(buffer);
+          }
+          // Create an A4 page
+          const page = mainPdf.addPage([595.28, 841.89]);
+          // Scale image to fit within A4 margins (padding of 40 on all sides)
+          const { width, height } = image.scaleToFit(595.28 - 80, 841.89 - 80);
+          page.drawImage(image, {
+            x: page.getWidth() / 2 - width / 2,
+            y: page.getHeight() / 2 - height / 2,
+            width,
+            height,
+          });
+        } else {
+          console.warn(`[Portfolio] Unsupported file type for ${key}: ${contentType}`);
+        }
+      } catch (err) {
+        console.error(`[Portfolio] Failed to merge attachment ${key}:`, err);
+      }
+    }
+    
+    return await mainPdf.save();
+  }
 };
