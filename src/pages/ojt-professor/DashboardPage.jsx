@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { Users, FileCheck, AlertCircle, FileText, ArrowRight, Activity, BarChart2 } from 'lucide-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import StatCard from '../../components/layout/ojt-professor/StatCard';
@@ -206,6 +207,11 @@ const DashboardPage = () => {
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  useRealtimeSubscription(
+    ['users', 'student_internships', 'pre_internship_documents', 'weekly_activity_reports', 'attendance_logs'],
+    fetchDashboardData
+  );
 
   const styles = {
     container: {
@@ -469,7 +475,6 @@ const DashboardPage = () => {
               { label: 'View Students', icon: Users, path: '/ojt-professor/students', id: 'students' },
               { label: 'Approve Listings', icon: FileCheck, path: '/ojt-professor/approvals', id: 'approvals' },
               { label: 'Track Applications', icon: FileText, path: '/ojt-professor/applications', id: 'apps' },
-              { label: 'Monitoring & Logs', icon: Activity, path: '/ojt-professor/monitoring', id: 'monitoring' },
               { label: 'View Reports', icon: BarChart2, path: '/ojt-professor/reports', id: 'reports' }
             ].map((item) => (
               <button 

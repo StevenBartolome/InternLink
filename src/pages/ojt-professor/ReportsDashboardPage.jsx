@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext } from 'react-router-dom';
-import { BarChart2, TrendingUp, Users, CheckCircle, Download } from 'lucide-react';
+import { BarChart2, Users, CheckCircle, Download } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import Toast from '../../components/common/Toast';
@@ -105,6 +106,11 @@ const ReportsDashboardPage = () => {
     fetchReportsData();
   }, [fetchReportsData]);
 
+  useRealtimeSubscription(
+    ['users', 'student_internships', 'attendance_logs'],
+    fetchReportsData
+  );
+
   // Export CSV Handler
   const handleExportCSV = () => {
     if (students.length === 0) {
@@ -149,9 +155,6 @@ const ReportsDashboardPage = () => {
   const deployed = students.filter(s => s.isDeployed).length;
   const completed = students.filter(s => s.status === 'Completed').length;
   
-  // Dynamic At-Risk definition: Deployed but has logged 0 hours
-  const atRisk = students.filter(s => s.isDeployed && s.hoursRendered === 0).length;
-  
   const graded = students.filter(s => s.grade !== null && s.grade !== undefined).map(s => parseFloat(s.grade));
   const avgGrade = graded.length > 0 ? (graded.reduce((a,b) => a + b, 0) / graded.length).toFixed(2) : 'No Grades';
 
@@ -191,7 +194,6 @@ const ReportsDashboardPage = () => {
           { label: 'Total Students', value: totalStudents, icon: <Users size={22} />, color: '#3b82f6', bg: '#dbeafe' },
           { label: 'Deployed', value: deployed, icon: <CheckCircle size={22} />, color: '#16a34a', bg: '#dcfce7' },
           { label: 'Completed', value: completed, icon: <BarChart2 size={22} />, color: '#7c3aed', bg: '#f3e8ff' },
-          { label: 'At-Risk', value: atRisk, icon: <TrendingUp size={22} />, color: '#dc2626', bg: '#fee2e2' },
           { label: 'Avg Final Grade', value: avgGrade, icon: <BarChart2 size={22} />, color: '#d97706', bg: '#fef9c3' },
         ].map(s => (
           <div key={s.label} style={{ ...commonStyles.dashboardCard, padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>

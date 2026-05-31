@@ -1,5 +1,6 @@
 // src/pages/ojt-professor/VisitItineraryPage.jsx
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext } from 'react-router-dom';
 import { 
   Map, Plus, Calendar, Building2, MapPin, FileText, CheckCircle, Clock, 
@@ -146,7 +147,12 @@ export default function VisitItineraryPage() {
   useEffect(() => {
     fetchStudentsAndClusters();
     loadVisits();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['visit_itineraries', 'student_internships'],
+    () => { fetchStudentsAndClusters(); loadVisits(); }
+  );
 
   // Save / persist single visit helper (DB or Local)
   const saveVisit = async (visit) => {

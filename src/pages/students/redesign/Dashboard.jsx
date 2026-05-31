@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { 
   Clock, 
   CheckCircle2, 
@@ -42,30 +43,35 @@ const Dashboard = () => {
     }
   }, [user]);
 
-  React.useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user?.internship_id) return;
-      try {
-        // Only trigger full screen page loader on first initial load
-        if (logs.length === 0 && documents.length === 0 && reports.length === 0) {
-          setLoading(true);
-        }
-        const [fetchedLogs, fetchedDocs, fetchedReports] = await Promise.all([
-          attendanceService.getAttendanceLogs(user.internship_id).catch(() => []),
-          studentService.getPreInternshipDocuments(user.internship_id).catch(() => []),
-          weeklyReportService.getWeeklyReports(user.internship_id).catch(() => [])
-        ]);
-        setLogs(fetchedLogs);
-        setDocuments(fetchedDocs);
-        setReports(fetchedReports);
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-      } finally {
-        setLoading(false);
+  const fetchDashboardData = useCallback(async () => {
+    if (!user?.internship_id) return;
+    try {
+      if (logs.length === 0 && documents.length === 0 && reports.length === 0) {
+        setLoading(true);
       }
-    };
+      const [fetchedLogs, fetchedDocs, fetchedReports] = await Promise.all([
+        attendanceService.getAttendanceLogs(user.internship_id).catch(() => []),
+        studentService.getPreInternshipDocuments(user.internship_id).catch(() => []),
+        weeklyReportService.getWeeklyReports(user.internship_id).catch(() => [])
+      ]);
+      setLogs(fetchedLogs);
+      setDocuments(fetchedDocs);
+      setReports(fetchedReports);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.internship_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  React.useEffect(() => {
     fetchDashboardData();
-  }, [user]);
+  }, [fetchDashboardData]);
+
+  useRealtimeSubscription(
+    ['attendance_logs', 'pre_internship_documents', 'weekly_activity_reports', 'student_internships'],
+    fetchDashboardData
+  );
 
   if (loading) {
     return <PageLoader />;

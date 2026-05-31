@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { 
   Search, Download, 
   Filter, Calendar,
@@ -39,7 +40,12 @@ const AuditLogsPage = () => {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['audit_logs'],
+    fetchLogs
+  );
 
   const allTypes = ['All Types', ...new Set(logs.map(l => l.type))];
   const allActions = ['All Actions', ...new Set(logs.map(l => l.action))];

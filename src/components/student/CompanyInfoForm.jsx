@@ -478,6 +478,7 @@ const CompanyInfoForm = ({ initialData, onClose, onSave, userId }) => {
                   ) : (
                     <GoogleMapPicker 
                       initialLocation={formData.company_latitude ? { lat: formData.company_latitude, lng: formData.company_longitude } : null}
+                      initialAddress={formData.company_address}
                       onLocationSelect={handleLocationSelect}
                     />
                   )}

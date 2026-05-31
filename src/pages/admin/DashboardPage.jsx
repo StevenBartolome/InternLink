@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
 import { Users, CheckCircle, Briefcase, AlertTriangle, ArrowRight, UserPlus, FileText } from 'lucide-react';
 import { dashboardStats, auditLogs, systemReports } from '../../services/mocks/adminMockData';
@@ -56,53 +57,58 @@ const DashboardPage = () => {
   const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // 1. Fetch Student Counts by Stage
+      const { data: internshipData, error: iError } = await supabase
+        .from('student_internships')
+        .select('current_stage');
+
+      if (iError) throw iError;
+
+      const counts = {
+        totalStudents: internshipData.length,
+        studentsInPreInternship: internshipData.filter(i => i.current_stage === 'PRE_INTERNSHIP').length,
+        studentsInDuringInternship: internshipData.filter(i => i.current_stage === 'DURING_INTERNSHIP').length,
+        studentsInPostInternship: internshipData.filter(i => i.current_stage === 'POST_INTERNSHIP').length,
+        studentsCompleted: internshipData.filter(i => i.current_stage === 'COMPLETED').length,
+      };
+
+      setStats(counts);
+
+      // 2. Fetch Course Breakdown
+      const { data: profileData, error: pError } = await supabase
+        .from('student_profiles')
+        .select('programs ( code )');
+
+      if (pError) throw pError;
+
+      const breakdown = profileData.reduce((acc, curr) => {
+        const course = curr.programs?.code || 'Unassigned';
+        acc[course] = (acc[course] || 0) + 1;
+        return acc;
+      }, {});
+
+      setCourseStats(Object.entries(breakdown).map(([course, enrolled]) => ({ course, enrolled })));
+
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      showToast('Failed to load real-time stats', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   React.useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        
-        // 1. Fetch Student Counts by Stage
-        const { data: internshipData, error: iError } = await supabase
-          .from('student_internships')
-          .select('current_stage');
-
-        if (iError) throw iError;
-
-        const counts = {
-          totalStudents: internshipData.length,
-          studentsInPreInternship: internshipData.filter(i => i.current_stage === 'PRE_INTERNSHIP').length,
-          studentsInDuringInternship: internshipData.filter(i => i.current_stage === 'DURING_INTERNSHIP').length,
-          studentsInPostInternship: internshipData.filter(i => i.current_stage === 'POST_INTERNSHIP').length,
-          studentsCompleted: internshipData.filter(i => i.current_stage === 'COMPLETED').length,
-        };
-
-        setStats(counts);
-
-        // 2. Fetch Course Breakdown
-        const { data: profileData, error: pError } = await supabase
-          .from('student_profiles')
-          .select('programs ( code )');
-
-        if (pError) throw pError;
-
-        const breakdown = profileData.reduce((acc, curr) => {
-          const course = curr.programs?.code || 'Unassigned';
-          acc[course] = (acc[course] || 0) + 1;
-          return acc;
-        }, {});
-
-        setCourseStats(Object.entries(breakdown).map(([course, enrolled]) => ({ course, enrolled })));
-
-      } catch (err) {
-        console.error('Error fetching dashboard stats:', err);
-        showToast('Failed to load real-time stats', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
+
+  useRealtimeSubscription(
+    ['student_internships', 'student_profiles'],
+    fetchDashboardData
+  );
 
   // Get top 5 recent audit logs
   const recentActivity = auditLogs.slice(0, 5);

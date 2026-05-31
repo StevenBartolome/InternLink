@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Building2, 
@@ -68,7 +69,12 @@ const CompanyInfo = () => {
 
   useEffect(() => {
     fetchInternship();
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['student_internships', 'companies'],
+    () => { if (user?.id) fetchInternship(); }
+  );
 
   const handleRemove = () => {
     setConfirmModal({

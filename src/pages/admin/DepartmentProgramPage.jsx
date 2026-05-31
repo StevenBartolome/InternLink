@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { Building2, GraduationCap, Plus, Edit2, Trash2, Save, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -28,7 +29,12 @@ const DepartmentProgramPage = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['departments', 'programs', 'program_sections'],
+    fetchData
+  );
 
   const fetchData = async () => {
     try {

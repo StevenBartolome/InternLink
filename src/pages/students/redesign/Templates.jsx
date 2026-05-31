@@ -1,4 +1,5 @@
 import React from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -97,7 +98,12 @@ const Templates = () => {
 
   React.useEffect(() => {
     fetchInternship();
-  }, [user?.id]);
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['student_internships', 'companies'],
+    () => { if (user?.id) fetchInternship(); }
+  );
 
   const openGenerator = (type, defaultStyle) => {
     const hasInternship = internship && internship.company_name;

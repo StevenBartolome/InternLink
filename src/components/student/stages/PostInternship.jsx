@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import {
   Award, Upload, CheckCircle, Clock, FileText, Send, Star,
   Sparkles, Download, Eye, EyeOff, Loader2, AlertCircle, RefreshCw, X,
@@ -141,42 +142,39 @@ export default function PostInternship() {
   // Session storage key tied to the current user/internship
   const sessionKey = user?.internship_id ? `portfolio_reflection_draft_${user.internship_id}` : null;
 
+  const loadPortfolioData = useCallback(async () => {
+    if (!user?.internship_id) return;
+    try {
+      const data = await portfolioService.fetchAllData(user.internship_id);
+      setPortfolioData(data);
+
+      const sessionDraft = sessionKey ? sessionStorage.getItem(sessionKey) : null;
+      if (sessionDraft) {
+        setReflection(sessionDraft);
+        setShowReflection(true);
+      } else if (data.internship?.portfolio_reflection) {
+        setReflection(data.internship.portfolio_reflection);
+        setShowReflection(true);
+      }
+    } catch (err) {
+      console.error('Failed to load portfolio data:', err);
+    }
+
+    const savedPortfolioDocs = await portfolioService.loadPortfolioDocs(user.internship_id);
+    const preStageFiles = await portfolioService.fetchPreStageFiles(user.internship_id);
+    portfolioService.syncPreStageDocsToPortfolio(user.internship_id, preStageFiles, savedPortfolioDocs);
+    setUploadedDocs({ ...preStageFiles, ...savedPortfolioDocs });
+  }, [user?.internship_id, sessionKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load existing saved data and pre-populate from previous stages on mount
   useEffect(() => {
-    if (!user?.internship_id) return;
-    (async () => {
-      try {
-        const data = await portfolioService.fetchAllData(user.internship_id);
-        setPortfolioData(data);
+    loadPortfolioData();
+  }, [loadPortfolioData]);
 
-        // Priority 1: session-temporary draft (generated but not yet saved to DB)
-        const sessionDraft = sessionKey ? sessionStorage.getItem(sessionKey) : null;
-        if (sessionDraft) {
-          setReflection(sessionDraft);
-          setShowReflection(true);
-        } else if (data.internship?.portfolio_reflection) {
-          // Priority 2: previously saved draft in Supabase
-          setReflection(data.internship.portfolio_reflection);
-          setShowReflection(true);
-        }
-      } catch (err) {
-        console.error('Failed to load portfolio data:', err);
-      }
-
-      // Load docs already uploaded for this portfolio (takes priority)
-      const savedPortfolioDocs = await portfolioService.loadPortfolioDocs(user.internship_id);
-
-      // Load files from pre-internship stage to auto-populate empty slots
-      const preStageFiles = await portfolioService.fetchPreStageFiles(user.internship_id);
-
-      // Persist any pre-stage files that aren't already in portfolio_documents so they
-      // survive across sessions without needing to re-query pre-internship tables each time.
-      portfolioService.syncPreStageDocsToPortfolio(user.internship_id, preStageFiles, savedPortfolioDocs);
-
-      // Merge: portfolio uploads override pre-stage files for the same slot
-      setUploadedDocs({ ...preStageFiles, ...savedPortfolioDocs });
-    })();
-  }, [user?.internship_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  useRealtimeSubscription(
+    ['student_internships', 'portfolio_documents', 'pre_internship_documents', 'additional_requirements'],
+    loadPortfolioData
+  );
 
   // Remove a doc from the portfolio slot (does not delete the original file)
   const handleRemoveDoc = (docId) => {

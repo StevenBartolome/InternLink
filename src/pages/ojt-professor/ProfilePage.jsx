@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
-import { 
+import {
   Mail, Phone, MapPin, Edit, ShieldCheck, Save, X, Building,
   Users, CheckCircle2, AlertCircle, Briefcase, Key, Shield,
-  ExternalLink
+  ExternalLink, Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
+import Toast from '../../components/common/Toast';
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -29,6 +31,7 @@ const ProfilePage = () => {
   const [tempProfile, setTempProfile] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
   const [managedCount, setManagedCount] = useState(0);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -43,36 +46,43 @@ const ProfilePage = () => {
     }
   }, [user]);
 
+  const fetchStats = useCallback(async () => {
+    try {
+      if (!user?.id) return;
+      const { count } = await supabase
+        .from('student_internships')
+        .select('*', { count: 'exact', head: true })
+        .eq('ojt_head_id', user.id);
+
+      setManagedCount(count || 0);
+    } catch (err) {
+      console.error('Error fetching stats:', err);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        if (!user?.id) return;
-        const { count } = await supabase
-          .from('student_internships')
-          .select('*', { count: 'exact', head: true })
-          .eq('ojt_head_id', user.id);
-        
-        setManagedCount(count || 0);
-      } catch (err) {
-        console.error('Error fetching stats:', err);
-      }
-    };
     fetchStats();
-  }, [user]);
+  }, [fetchStats]);
+
+  useRealtimeSubscription(
+    ['student_internships'],
+    fetchStats
+  );
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      if (updateUser) {
-        await updateUser({
-          first_name: tempProfile.firstName,
-          last_name: tempProfile.lastName,
-        });
-      }
-      setProfile({...tempProfile});
+      const { error } = await updateUser({
+        first_name: tempProfile.firstName.trim(),
+        last_name: tempProfile.lastName.trim(),
+      });
+      if (error) throw error;
+      setProfile({ ...tempProfile });
       setIsEditing(false);
+      setToast({ message: 'Profile updated successfully.', type: 'success' });
     } catch (err) {
       console.error(err);
+      setToast({ message: err.message || 'Failed to save profile.', type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -227,6 +237,7 @@ const ProfilePage = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {/* Header */}
       <div style={styles.headerCard}>
         <div style={styles.avatar}>
@@ -263,9 +274,9 @@ const ProfilePage = () => {
             ) : (
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handleSave} style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                  {isSaving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={16} /> Save Changes</>}
                 </button>
-                <button onClick={() => setIsEditing(false)} style={styles.secondaryButton}>
+                <button onClick={() => { setIsEditing(false); setTempProfile({...profile}); }} style={styles.secondaryButton}>
                   <X size={16} /> Cancel
                 </button>
               </div>

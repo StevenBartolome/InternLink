@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload, Layers } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload, Layers, Loader2 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { ojtProfessorService } from '../../services/ojtProfessorService';
 import { adminService } from '../../services/adminService';
+import { portfolioService } from '../../services/portfolioService';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../../components/common/Toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
@@ -28,6 +30,7 @@ export default function DocumentReviewPage() {
   const { showToast: showOutletToast } = useOutletContext() || {};
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [downloadingPortfolioId, setDownloadingPortfolioId] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [expandedSectionId, setExpandedSectionId] = useState(null);
   const [activeDoc, setActiveDoc] = useState(null); // For the side panel review
@@ -328,6 +331,11 @@ export default function DocumentReviewPage() {
     fetchQueue();
   }, [fetchQueue]);
 
+  useRealtimeSubscription(
+    ['pre_internship_documents', 'additional_requirements', 'student_internships', 'student_moas'],
+    () => fetchQueue(true)
+  );
+
   const handleDocAction = async (studentId, docId, action) => {
     if (action === 'REJECTED' && !rejectComment[docId]?.trim()) {
       notify('Please enter a comment before rejecting.', 'error');
@@ -530,6 +538,56 @@ export default function DocumentReviewPage() {
       notify('Failed to sync checklist.', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadPortfolio = async (student, internshipId) => {
+    try {
+      setDownloadingPortfolioId(student.studentId);
+      notify(`Generating portfolio for ${student.firstName}... This might take a few seconds.`, 'info');
+
+      // Fetch all required data using portfolioService
+      const allData = await portfolioService.fetchAllData(internshipId);
+      const preStageDocs = await portfolioService.fetchPreStageFiles(internshipId);
+      const uploadedDocs = await portfolioService.loadPortfolioDocs(internshipId);
+
+      // Merge docs properly
+      const mergedDocs = { ...preStageDocs, ...uploadedDocs };
+
+      // Compile PDF (returns Uint8Array)
+      const finalPdfBytes = await portfolioService.compilePortfolio(
+        { 
+          first_name: student.firstName, 
+          last_name: student.lastName, 
+          course_code: student.course, 
+          course_name: student.courseFullName 
+        },
+        allData.internship,
+        allData.company,
+        allData.weeklyReports,
+        allData.attendance,
+        allData.internship.portfolio_reflection,
+        mergedDocs
+      );
+
+      // Save/Download PDF locally using Blob
+      const fileName = `${student.lastName}_${student.firstName}_Portfolio.pdf`.replace(/\s+/g, '_');
+      const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      notify('Portfolio generated successfully!', 'success');
+    } catch (err) {
+      console.error('Error downloading portfolio:', err);
+      notify('Failed to generate portfolio: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+      setDownloadingPortfolioId(null);
     }
   };
 
@@ -766,6 +824,24 @@ export default function DocumentReviewPage() {
 
                               {isOpen && (
                                 <div style={{ padding: '0 24px 24px', borderTop: `1px solid ${theme.colors.border}`, backgroundColor: '#fafafa' }}>
+                                  
+                                  {(student.currentStage === 'POST_INTERNSHIP' || student.currentStage === 'COMPLETED') && (
+                                    <div style={{ padding: '16px', backgroundColor: '#e0f2fe', borderRadius: '12px', margin: '20px 0', border: '1px solid #bae6fd', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                                      <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#0369a1', fontSize: '0.95rem' }}>Student e-Portfolio</h4>
+                                        <p style={{ margin: 0, color: '#0284c7', fontSize: '0.8rem' }}>This student is in the Post-Internship phase. You can generate and download their compiled portfolio.</p>
+                                      </div>
+                                      <button 
+                                        onClick={() => handleDownloadPortfolio(student, student.internshipId)}
+                                        disabled={downloadingPortfolioId === student.studentId}
+                                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}
+                                      >
+                                        {downloadingPortfolioId === student.studentId ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
+                                        {downloadingPortfolioId === student.studentId ? 'Generating...' : 'Download Portfolio'}
+                                      </button>
+                                    </div>
+                                  )}
+
                                   {student.docs.length === 0 ? (
                                     <div style={{ padding: '40px', textAlign: 'center', color: theme.colors.textMuted }}>
                                       <AlertCircle size={40} style={{ marginBottom: '12px', opacity: 0.3 }} />

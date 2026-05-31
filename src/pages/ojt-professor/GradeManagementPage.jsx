@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, Download, 
@@ -136,6 +137,11 @@ const GradeManagementPage = () => {
     fetchStudents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.program_id]);
+
+  useRealtimeSubscription(
+    ['users', 'student_internships'],
+    fetchStudents
+  );
 
   // Edit grade click handler
   const handleOpenGradeModal = (e, student) => {

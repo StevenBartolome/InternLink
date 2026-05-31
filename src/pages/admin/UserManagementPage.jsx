@@ -1,5 +1,6 @@
 // src/pages/admin/UserManagementPage.jsx
 import React, { useState } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { Users, Search, UserPlus, ShieldAlert, Edit, X, Save, Check, GraduationCap, BookOpen } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
@@ -274,6 +275,11 @@ export default function UserManagementPage() {
   React.useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  useRealtimeSubscription(
+    ['users', 'student_profiles', 'student_internships', 'programs', 'program_sections'],
+    fetchUsers
+  );
 
   React.useEffect(() => {
     const fetchMetadata = async () => {

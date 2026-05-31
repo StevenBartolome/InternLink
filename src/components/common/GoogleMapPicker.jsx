@@ -16,7 +16,7 @@ const center = {
 
 const libraries = ['places'];
 
-const GoogleMapPicker = ({ onLocationSelect, initialLocation }) => {
+const GoogleMapPicker = ({ onLocationSelect, initialLocation, initialAddress }) => {
   const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
   const { isLoaded, loadError } = useJsApiLoader({
@@ -27,7 +27,7 @@ const GoogleMapPicker = ({ onLocationSelect, initialLocation }) => {
 
   const [map, setMap] = useState(null);
   const [marker, setMarker] = useState(initialLocation || center);
-  const [address, setAddress] = useState('');
+  const [address, setAddress] = useState(initialAddress || '');
   const autocompleteRef = useRef(null);
 
   useEffect(() => {
@@ -36,14 +36,20 @@ const GoogleMapPicker = ({ onLocationSelect, initialLocation }) => {
     }
   }, [initialLocation]);
 
-  const onMapClick = useCallback((e) => {
+  useEffect(() => {
+    if (initialAddress) {
+      setAddress(initialAddress);
+    }
+  }, [initialAddress]);
+
+  const onMapClick = (e) => {
     const newPos = {
       lat: e.latLng.lat(),
       lng: e.latLng.lng()
     };
     setMarker(newPos);
     updateAddress(newPos);
-  }, []);
+  };
 
   const updateAddress = async (pos) => {
     if (!window.google) return;
@@ -125,6 +131,8 @@ const GoogleMapPicker = ({ onLocationSelect, initialLocation }) => {
             <input
               type="text"
               placeholder="Search for company address..."
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
               style={{
                 width: '100%',
                 padding: '12px 12px 12px 40px',

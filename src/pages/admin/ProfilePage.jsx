@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
-import { 
-  Mail, Edit, ShieldCheck, Save, X, Terminal, Globe, 
-  Activity, Users, Database, Shield, Key
+import {
+  Mail, Edit, ShieldCheck, Save, X, Terminal, Globe,
+  Activity, Users, Database, Shield, Key, Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
+import Toast from '../../components/common/Toast';
 
 const AdminProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -22,6 +24,7 @@ const AdminProfilePage = () => {
   const [profile, setProfile] = useState(initialData);
   const [tempProfile, setTempProfile] = useState(initialData);
   const [isSaving, setIsSaving] = useState(false);
+  const [toast, setToast] = useState(null);
   const [systemStats, setSystemStats] = useState({
     activeUsers: 0,
     totalPlacements: 0,
@@ -40,36 +43,43 @@ const AdminProfilePage = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    const fetchSystemStats = async () => {
-      try {
-        const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        const { count: placementCount } = await supabase.from('student_internships').select('*', { count: 'exact', head: true });
-        setSystemStats(prev => ({
-          ...prev,
-          activeUsers: userCount || 0,
-          totalPlacements: placementCount || 0
-        }));
-      } catch (err) {
-        console.error('Error fetching system stats:', err);
-      }
-    };
-    fetchSystemStats();
+  const fetchSystemStats = useCallback(async () => {
+    try {
+      const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true });
+      const { count: placementCount } = await supabase.from('student_internships').select('*', { count: 'exact', head: true });
+      setSystemStats(prev => ({
+        ...prev,
+        activeUsers: userCount || 0,
+        totalPlacements: placementCount || 0
+      }));
+    } catch (err) {
+      console.error('Error fetching system stats:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSystemStats();
+  }, [fetchSystemStats]);
+
+  useRealtimeSubscription(
+    ['users', 'student_internships'],
+    fetchSystemStats
+  );
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      if (updateUser) {
-        await updateUser({
-          first_name: tempProfile.firstName,
-          last_name: tempProfile.lastName,
-        });
-      }
-      setProfile({...tempProfile});
+      const { error } = await updateUser({
+        first_name: tempProfile.firstName.trim(),
+        last_name: tempProfile.lastName.trim(),
+      });
+      if (error) throw error;
+      setProfile({ ...tempProfile });
       setIsEditing(false);
+      setToast({ message: 'Profile updated successfully.', type: 'success' });
     } catch (err) {
       console.error(err);
+      setToast({ message: err.message || 'Failed to save profile.', type: 'error' });
     } finally {
       setIsSaving(false);
     }
@@ -223,6 +233,7 @@ const AdminProfilePage = () => {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {/* Header */}
       <div style={styles.headerCard}>
         <div style={styles.avatar}>
@@ -259,9 +270,9 @@ const AdminProfilePage = () => {
             ) : (
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={handleSave} style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }} disabled={isSaving}>
-                  {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                  {isSaving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={16} /> Save Changes</>}
                 </button>
-                <button onClick={() => setIsEditing(false)} style={styles.secondaryButton}>
+                <button onClick={() => { setIsEditing(false); setTempProfile({...profile}); }} style={styles.secondaryButton}>
                   <X size={16} /> Cancel
                 </button>
               </div>

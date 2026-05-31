@@ -1,5 +1,6 @@
 // src/pages/admin/InternshipConfigPage.jsx
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { 
   Settings, 
   Clock, 
@@ -109,7 +110,12 @@ export default function InternshipConfigPage() {
 
   useEffect(() => {
     fetchConfigs();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['programs', 'program_required_documents'],
+    fetchConfigs
+  );
 
   const fetchConfigs = async () => {
     try {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ListChecks,
@@ -98,6 +99,11 @@ const Activities = () => {
     if (isDeployed) fetchData();
     else setLoading(false);
   }, [internshipId, isDeployed, fetchData]);
+
+  useRealtimeSubscription(
+    ['daily_activities', 'attendance_logs'],
+    () => { if (internshipId && isDeployed) fetchData(); }
+  );
 
   // ── Filter and Sort Groups ──
   const filteredAndSortedGroups = React.useMemo(() => {

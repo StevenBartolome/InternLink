@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ClipboardList, 
@@ -136,6 +137,11 @@ const WeeklyReports = () => {
       setLoading(false);
     }
   }, [isDeployed, fetchReports]);
+
+  useRealtimeSubscription(
+    ['weekly_activity_reports', 'daily_activities'],
+    () => { if (isDeployed) fetchReports(true); }
+  );
 
   // Handle auto-generation of WAR with Gemini AI
   const handleGenerateWithAI = async () => {

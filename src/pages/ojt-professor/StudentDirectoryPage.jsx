@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Search, Filter, UserPlus, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 import StatusBadge from '../../components/common/StatusBadge/StatusBadge';
@@ -55,7 +56,8 @@ const StudentDirectoryPage = () => {
           ),
           student_internships!student_id (
             current_stage, rendered_hours, supervisor_name, is_deployed,
-            companies ( name )
+            companies ( name ),
+            additional_requirements ( document_name, status, reviewer_comment )
           )
         `)
         .eq('role', 'student')
@@ -77,6 +79,19 @@ const StudentDirectoryPage = () => {
         const internship = (Array.isArray(s.student_internships) ? s.student_internships[0] : s.student_internships) || {};
         const company = internship.companies || {};
         
+        let calculatedHours = 0;
+        let hasSignedReports = false;
+        const addReqs = internship.additional_requirements || [];
+        addReqs.forEach(req => {
+          if (req.document_name && req.document_name.startsWith('Signed Attendance Report') && req.status !== 'NOT_SUBMITTED') {
+            hasSignedReports = true;
+            if (req.reviewer_comment) {
+              const match = req.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/);
+              if (match) calculatedHours += parseFloat(match[1]);
+            }
+          }
+        });
+
         return {
           id: s.id,
           studentId: profile.student_id || 'Not Set',
@@ -87,7 +102,7 @@ const StudentDirectoryPage = () => {
           company: company.name || 'Not Applied',
           supervisor: internship.supervisor_name || 'Not Placed',
           isDeployed: internship.is_deployed || false,
-          hoursRendered: internship.rendered_hours || 0,
+          hoursRendered: hasSignedReports ? calculatedHours : (internship.rendered_hours || 0),
           hoursRequired: profile.programs?.required_hours || 486,
           section: profile.program_sections?.name || 'Not Assigned',
           sectionId: profile.section_id || 'unassigned',
@@ -111,6 +126,11 @@ const StudentDirectoryPage = () => {
   React.useEffect(() => {
     fetchStudents();
   }, [fetchStudents]);
+
+  useRealtimeSubscription(
+    ['users', 'student_internships', 'student_profiles'],
+    fetchStudents
+  );
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 

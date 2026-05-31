@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import { 
   ArrowLeft, Mail, Phone, MapPin, 
@@ -161,6 +162,11 @@ const StudentProfilePage = () => {
   useEffect(() => {
     fetchStudentData();
   }, [fetchStudentData]);
+
+  useRealtimeSubscription(
+    ['users', 'student_profiles', 'student_internships'],
+    fetchStudentData
+  );
 
   useEffect(() => {
     if (student?.programId) {

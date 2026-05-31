@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
 import { 
   FileText, 
@@ -32,7 +33,12 @@ const Documents = () => {
     if (user?.internship_id) {
       fetchDocuments();
     }
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['pre_internship_documents', 'additional_requirements'],
+    () => { if (user?.internship_id) fetchDocuments(); }
+  );
 
   const fetchDocuments = async () => {
     const hasExistingDocs = documents.length > 0;

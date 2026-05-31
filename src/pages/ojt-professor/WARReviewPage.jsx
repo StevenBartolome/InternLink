@@ -1,5 +1,6 @@
 // src/pages/ojt-professor/WARReviewPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, MessageSquare, User, ChevronDown, ChevronUp, FileText, Calendar, Layers } from 'lucide-react';
 import { theme } from '../../styles/theme';
@@ -52,6 +53,11 @@ export default function WARReviewPage() {
   useEffect(() => {
     fetchWARs();
   }, [fetchWARs]);
+
+  useRealtimeSubscription(
+    ['weekly_activity_reports'],
+    fetchWARs
+  );
 
   const handleAction = async (id, action) => {
     if (action === 'REJECTED' && !comments[id]?.trim()) {

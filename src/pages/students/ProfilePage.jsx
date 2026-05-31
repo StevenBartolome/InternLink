@@ -1,90 +1,76 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Edit,
-  ShieldCheck, 
-  ExternalLink, 
-  Github,
-  FileText, 
-  Award, 
-  Star, 
-  Save, 
-  X, 
-  Plus, 
-  Trash2, 
-  Eye, 
-  Upload
+import {
+  Mail, Phone, Calendar, Edit, ShieldCheck,
+  ExternalLink, Github, FileText, Award, Star,
+  Save, X, Plus, Eye, Upload, Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { studentDesign } from '../../styles/StudentDesign';
+import { supabase } from '../../services/supabaseClient';
+import Toast from '../../components/common/Toast';
 
 const ProfilePage = () => {
-  const { user } = useAuth();
-  
-  const initialData = {
-    firstName: user?.first_name || 'Juan',
-    lastName: user?.last_name || 'Dela Cruz',
-    email: user?.email || 'juan.delacruz@example.com',
-    course: user?.course_code || 'BS Information Technology',
-    contact: user?.contact_number || '09123456789',
-    studentId: user?.student_id || '2021-12345',
-    address: '123 Sampaguita St., Quezon City',
-    avatar: null,
-    skills: ['React', 'JavaScript', 'UI Design', 'Problem Solving'],
-    certifications: [
-      { id: 1, title: 'AWS Cloud Practitioner', issuer: 'Amazon Web Services', date: 'Dec 2025' },
-      { id: 2, title: 'Google UX Design Professional', issuer: 'Coursera', date: 'Oct 2025' }
-    ],
-    portfolioLinks: [
-      { id: 1, url: 'github.com/juandelacruz' },
-      { id: 2, url: 'juandelacruz.dev' }
-    ],
-    resumeFiles: [
-      { id: 1, filename: 'Juan_Dela_Cruz_Resume.pdf', date: 'May 10, 2026' }
-    ]
-  };
+  const { user, updateUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState(initialData);
-  const [tempProfile, setTempProfile] = useState(initialData);
-  const [skillInput, setSkillInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const fileInputRef = useRef(null);
+  const [toast, setToast] = useState(null);
+
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    contact: '',
+  });
 
   useEffect(() => {
     if (user) {
-      setProfile(prev => ({
-        ...prev,
-        firstName: user.first_name || prev.firstName,
-        lastName: user.last_name || prev.lastName,
-        email: user.email || prev.email,
-        course: user.course || prev.course,
-        studentId: user.student_id || prev.studentId,
-      }));
+      setForm({
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        contact: user.contact_number || '',
+      });
     }
   }, [user]);
 
-  const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setProfile({...tempProfile});
-      setIsSaving(false);
-      setIsEditing(false);
-    }, 800);
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setTempProfile(prev => ({ ...prev, [name]: value }));
+    setForm(prev => ({ ...prev, [name]: value }));
   };
 
-  const getInitials = (first, last) => {
-    return ((first?.[0] || '') + (last?.[0] || '')).toUpperCase();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // 1. Save first_name + last_name to users table
+      const { error: nameError } = await updateUser({
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+      });
+      if (nameError) throw nameError;
+
+      // 2. Save contact_number to student_profiles
+      if (form.contact !== (user.contact_number || '')) {
+        const { error: contactError } = await supabase
+          .from('student_profiles')
+          .update({ contact_number: form.contact.trim() })
+          .eq('id', user.id);
+        if (contactError) throw contactError;
+      }
+
+      setToast({ message: 'Profile updated successfully.', type: 'success' });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Profile save error:', err);
+      setToast({ message: err.message || 'Failed to save profile.', type: 'error' });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  const getInitials = (first, last) =>
+    ((first?.[0] || '') + (last?.[0] || '')).toUpperCase();
+
+  const displayName = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'Student';
 
   const styles = {
     container: {
@@ -96,26 +82,28 @@ const ProfilePage = () => {
     headerCard: {
       ...studentDesign.card,
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       gap: '32px',
       padding: '40px',
       background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+      flexWrap: 'wrap',
     },
     avatar: {
-      width: '120px',
-      height: '120px',
-      borderRadius: '32px',
+      width: '100px',
+      height: '100px',
+      borderRadius: '28px',
       backgroundColor: studentDesign.colors.primary,
       color: '#FFFFFF',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontSize: '40px',
+      fontSize: '36px',
       fontWeight: studentDesign.typography.weights.bold,
-      boxShadow: '0 20px 25px -5px rgba(30, 64, 175, 0.2)',
+      boxShadow: '0 16px 24px -4px rgba(30, 64, 175, 0.2)',
+      flexShrink: 0,
     },
     badge: {
-      padding: '6px 12px',
+      padding: '5px 12px',
       borderRadius: '20px',
       backgroundColor: '#EFF6FF',
       color: studentDesign.colors.primary,
@@ -123,68 +111,56 @@ const ProfilePage = () => {
       fontWeight: studentDesign.typography.weights.semibold,
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '6px',
+      gap: '5px',
     },
     section: {
       ...studentDesign.card,
       height: '100%',
     },
     sectionTitle: {
-      fontSize: '16px',
+      fontSize: '15px',
       fontWeight: studentDesign.typography.weights.bold,
       color: studentDesign.colors.textMain,
       display: 'flex',
       alignItems: 'center',
       gap: '10px',
-      marginBottom: '24px',
+      marginBottom: '20px',
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: '1fr 2fr',
-      gap: '32px',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+      gap: '28px',
     },
-    infoItem: {
+    infoRow: {
       display: 'flex',
       alignItems: 'center',
       gap: '12px',
-      padding: '12px 0',
+      padding: '11px 0',
       borderBottom: `1px solid ${studentDesign.colors.border}`,
     },
-    infoLabel: {
+    label: {
       fontSize: '12px',
       color: studentDesign.colors.textMuted,
-      width: '100px',
+      minWidth: '110px',
     },
-    infoValue: {
+    value: {
       fontSize: '14px',
       color: studentDesign.colors.textDark,
       fontWeight: studentDesign.typography.weights.medium,
-    },
-    skillBadge: {
-      padding: '8px 16px',
-      borderRadius: '12px',
-      backgroundColor: '#F1F5F9',
-      color: studentDesign.colors.textDark,
-      fontSize: '13px',
-      fontWeight: studentDesign.typography.weights.medium,
-      margin: '0 8px 8px 0',
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '8px',
     },
     input: {
-      width: '100%',
-      padding: '12px 16px',
-      borderRadius: '12px',
-      border: `1px solid ${studentDesign.colors.border}`,
+      flex: 1,
+      padding: '8px 12px',
+      borderRadius: '10px',
+      border: `1.5px solid ${studentDesign.colors.primary}`,
       fontSize: '14px',
       outline: 'none',
-      transition: 'border-color 0.2s ease',
-      backgroundColor: '#F8FAFC',
+      backgroundColor: '#F8FAFF',
+      color: studentDesign.colors.textDark,
     },
     primaryButton: {
-      padding: '10px 24px',
-      borderRadius: '12px',
+      padding: '9px 20px',
+      borderRadius: '10px',
       backgroundColor: studentDesign.colors.primary,
       color: '#FFFFFF',
       border: 'none',
@@ -192,12 +168,12 @@ const ProfilePage = () => {
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
+      gap: '7px',
       fontSize: '14px',
     },
     secondaryButton: {
-      padding: '10px 24px',
-      borderRadius: '12px',
+      padding: '9px 20px',
+      borderRadius: '10px',
       backgroundColor: 'transparent',
       color: studentDesign.colors.textDark,
       border: `1px solid ${studentDesign.colors.border}`,
@@ -205,160 +181,150 @@ const ProfilePage = () => {
       cursor: 'pointer',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
+      gap: '7px',
       fontSize: '14px',
-    }
+    },
+    skillBadge: {
+      padding: '7px 14px',
+      borderRadius: '10px',
+      backgroundColor: '#F1F5F9',
+      color: studentDesign.colors.textDark,
+      fontSize: '13px',
+      fontWeight: studentDesign.typography.weights.medium,
+      margin: '0 8px 8px 0',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+    },
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      style={styles.container}
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.container}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
       {/* Header */}
       <div style={styles.headerCard}>
         <div style={styles.avatar}>
-          {getInitials(profile.firstName, profile.lastName)}
+          {getInitials(user?.first_name, user?.last_name)}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-            <h1 style={{ fontSize: '28px', fontWeight: 800, margin: 0 }}>{profile.firstName} {profile.lastName}</h1>
-            <div style={styles.badge}>
-              <ShieldCheck size={14} /> Verified Student
-            </div>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, margin: 0 }}>{displayName}</h1>
+            <div style={styles.badge}><ShieldCheck size={13} /> Verified Student</div>
           </div>
-          <p style={{ color: studentDesign.colors.textMuted, fontSize: '16px', margin: '0 0 24px 0' }}>{profile.course}</p>
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <p style={{ color: studentDesign.colors.textMuted, fontSize: '15px', margin: '0 0 20px 0' }}>
+            {user?.course_code || user?.course_name || 'Student'}
+            {user?.student_id ? ` • ${user.student_id}` : ''}
+          </p>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             {!isEditing ? (
-              <motion.button 
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setTempProfile({...profile});
-                  setIsEditing(true);
-                }}
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={() => setIsEditing(true)}
                 style={styles.primaryButton}
               >
-                <Edit size={16} /> Edit Profile
+                <Edit size={15} /> Edit Profile
               </motion.button>
             ) : (
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  onClick={handleSave} 
+              <>
+                <button
+                  onClick={handleSave}
                   style={{ ...styles.primaryButton, opacity: isSaving ? 0.7 : 1 }}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Saving...' : <><Save size={16} /> Save Changes</>}
+                  {isSaving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Saving...</> : <><Save size={15} /> Save Changes</>}
                 </button>
-                <button 
-                  onClick={() => setIsEditing(false)} 
-                  style={styles.secondaryButton}
-                >
-                  <X size={16} /> Cancel
+                <button onClick={() => { setIsEditing(false); setForm({ firstName: user?.first_name || '', lastName: user?.last_name || '', contact: user?.contact_number || '' }); }} style={styles.secondaryButton}>
+                  <X size={15} /> Cancel
                 </button>
-              </div>
+              </>
             )}
-            <button style={styles.secondaryButton}>
-              <ExternalLink size={16} /> Public Portfolio
-            </button>
           </div>
         </div>
       </div>
 
       <div style={styles.grid}>
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}><Mail size={18} color={studentDesign.colors.primary} /> Contact Info</h3>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={styles.infoItem}>
-                <span style={styles.infoLabel}>Email</span>
-                <span style={styles.infoValue}>{profile.email}</span>
-              </div>
-              <div style={styles.infoItem}>
-                <span style={styles.infoLabel}>Phone</span>
-                <span style={styles.infoValue}>{profile.contact}</span>
-              </div>
-              <div style={styles.infoItem}>
-                <span style={styles.infoLabel}>Address</span>
-                <span style={styles.infoValue}>{profile.address}</span>
-              </div>
-              <div style={styles.infoItem}>
-                <span style={styles.infoLabel}>Student ID</span>
-                <span style={styles.infoValue}>{profile.studentId}</span>
-              </div>
+        {/* Contact Info */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}><Mail size={16} color={studentDesign.colors.primary} /> Contact Info</h3>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* First Name */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>First Name</span>
+              {isEditing
+                ? <input style={styles.input} name="firstName" value={form.firstName} onChange={handleChange} placeholder="First name" />
+                : <span style={styles.value}>{user?.first_name || '—'}</span>
+              }
             </div>
-          </div>
-
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}><Github size={18} color={studentDesign.colors.primary} /> Links</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {profile.portfolioLinks.map(link => (
-                <a key={link.id} href={`https://${link.url}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: studentDesign.colors.textDark, textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyCenter: 'center' }}>
-                    <ExternalLink size={14} style={{ margin: 'auto' }} />
-                  </div>
-                  {link.url}
-                </a>
-              ))}
+            {/* Last Name */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Last Name</span>
+              {isEditing
+                ? <input style={styles.input} name="lastName" value={form.lastName} onChange={handleChange} placeholder="Last name" />
+                : <span style={styles.value}>{user?.last_name || '—'}</span>
+              }
+            </div>
+            {/* Email (read-only) */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Email</span>
+              <span style={styles.value}>{user?.email || '—'}</span>
+            </div>
+            {/* Contact Number */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Phone</span>
+              {isEditing
+                ? <input style={styles.input} name="contact" value={form.contact} onChange={handleChange} placeholder="e.g. 09123456789" />
+                : <span style={styles.value}>{user?.contact_number || '—'}</span>
+              }
+            </div>
+            {/* Student ID (read-only) */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Student ID</span>
+              <span style={styles.value}>{user?.student_id || '—'}</span>
+            </div>
+            {/* Year Level (read-only) */}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Year Level</span>
+              <span style={styles.value}>{user?.year_level || '—'}</span>
             </div>
           </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}><Star size={18} color={studentDesign.colors.primary} /> Skills</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              {profile.skills.map((skill, i) => (
-                <span key={i} style={styles.skillBadge}>{skill}</span>
-              ))}
-              <button style={{ ...styles.skillBadge, backgroundColor: 'transparent', border: `1px dashed ${studentDesign.colors.border}`, color: studentDesign.colors.textMuted }}>
-                <Plus size={14} /> Add Skill
-              </button>
+        {/* Internship Info (read-only) */}
+        <div style={styles.section}>
+          <h3 style={styles.sectionTitle}><Calendar size={16} color={studentDesign.colors.primary} /> Internship Info</h3>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Program</span>
+              <span style={styles.value}>{user?.course_name || user?.course_code || '—'}</span>
             </div>
-          </div>
-
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitle}><Award size={18} color={studentDesign.colors.primary} /> Certifications</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {profile.certifications.map(cert => (
-                <div key={cert.id} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', backgroundColor: studentDesign.colors.primaryLight, color: studentDesign.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Award size={24} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{cert.title}</div>
-                    <div style={{ fontSize: '12px', color: studentDesign.colors.textMuted }}>{cert.issuer} • {cert.date}</div>
-                  </div>
-                </div>
-              ))}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Stage</span>
+              <span style={styles.value}>{
+                user?.current_stage === 'PRE_INTERNSHIP' ? 'Pre-Internship'
+                : user?.current_stage === 'DURING_INTERNSHIP' ? 'During Internship'
+                : user?.current_stage === 'POST_INTERNSHIP' ? 'Post-Internship'
+                : user?.current_stage === 'COMPLETED' ? 'Completed'
+                : '—'
+              }</span>
             </div>
-          </div>
-
-          <div style={styles.section}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ ...styles.sectionTitle, marginBottom: 0 }}><FileText size={18} color={studentDesign.colors.primary} /> Resumes</h3>
-              <button style={{ ...styles.secondaryButton, padding: '6px 12px', fontSize: '12px' }}>
-                <Upload size={14} /> Upload New
-              </button>
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Company</span>
+              <span style={styles.value}>{user?.company_name || '—'}</span>
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              {profile.resumeFiles.map(file => (
-                <div key={file.id} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: `1px solid ${studentDesign.colors.border}`, flex: 1, minWidth: '240px' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: '#FFFFFF', color: studentDesign.colors.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-                    <FileText size={20} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: '14px' }}>{file.filename}</div>
-                    <div style={{ fontSize: '11px', color: studentDesign.colors.textMuted }}>Uploaded {file.date}</div>
-                  </div>
-                  <button style={{ background: 'none', border: 'none', color: studentDesign.colors.textMuted, cursor: 'pointer' }}>
-                    <Eye size={18} />
-                  </button>
-                </div>
-              ))}
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Supervisor</span>
+              <span style={styles.value}>{user?.supervisor_name || '—'}</span>
+            </div>
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Hours Done</span>
+              <span style={styles.value}>
+                {user?.rendered_hours != null ? `${user.rendered_hours} / ${user?.required_hours || 486} hrs` : '—'}
+              </span>
+            </div>
+            <div style={styles.infoRow}>
+              <span style={styles.label}>Academic Year</span>
+              <span style={styles.value}>{user?.academic_year || '—'}</span>
             </div>
           </div>
         </div>

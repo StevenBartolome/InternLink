@@ -35,7 +35,7 @@ export const ojtProfessorService = {
         ),
         docs:pre_internship_documents(*)
       `)
-      .in('current_stage', ['PRE_INTERNSHIP', 'DURING_INTERNSHIP'])
+      // Remove stage filter so we can see all students including POST_INTERNSHIP
       .order('updated_at', { ascending: false });
 
     if (error) throw error;
@@ -107,6 +107,7 @@ export const ojtProfessorService = {
         supervisorName: item.supervisor_name || 'Not Assigned',
         supervisorEmail: item.supervisor_email || 'Not Provided',
         moaStatus: item.moa_status,
+        currentStage: item.current_stage,
         deploymentApproved: item.is_deployed,
         sectionId: profileData?.section_id,
         sectionName: profileData?.program_sections?.name || 'Not Assigned',

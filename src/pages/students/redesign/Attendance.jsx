@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useRealtimeSubscription } from '../../../hooks/useRealtimeSubscription';
 import { motion } from 'framer-motion';
 import { 
   Clock, 
@@ -587,6 +588,11 @@ const Attendance = () => {
     }
   }, [internshipId, isDeployed]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useRealtimeSubscription(
+    ['attendance_logs', 'student_internships'],
+    () => { if (internshipId && isDeployed) fetchLogs(true); }
+  );
+
   const fetchLogs = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -1115,7 +1121,8 @@ const Attendance = () => {
 
   // 8. Compute Metrics
   const loggedLogs = logs.filter(l => l.status === 'LOGGED' || l.status === 'DEDUCTED');
-  const totalRendered = loggedLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
+  // We no longer calculate this from raw logs or `user.rendered_hours`.
+  // The correct official total matches what is in the Dashboard: `uploadedReportHours`
   const uniqueDates = new Set(loggedLogs.map(l => l.log_date));
   const daysPresent = uniqueDates.size;
 
@@ -1141,7 +1148,7 @@ const Attendance = () => {
   };
 
   const metrics = [
-    { label: 'Total hours rendered', value: fmtHours(totalRendered), icon: Clock, color: studentDesign.colors.primary },
+    { label: 'Total hours rendered', value: fmtHours(uploadedReportHours), icon: Clock, color: studentDesign.colors.primary },
     { label: 'Days present', value: `${daysPresent} days`, icon: Calendar, color: studentDesign.colors.success },
     { label: 'Remaining hours', value: fmtHours(remainingHours), icon: Hourglass, color: studentDesign.colors.warning },
   ];
