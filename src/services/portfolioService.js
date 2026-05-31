@@ -279,15 +279,82 @@ Requirements:
     return `${prog} ${term}${ay} ${ln} ${fi}${mi} ${co}`;
   },
 
-  // ─── PDF BUILDER ──────────────────────────────────────────────────────────
+  // ─── COMPILE PORTFOLIO ────────────────────────────────────────────────────
+  
+  async compilePortfolio(user, internship, company, weeklyReports, attendance, reflection, uploadedDocs = {}) {
+    console.log('[Portfolio] Fetching attachments to determine page counts...');
+    const attachments = {};
+    for (const key of Object.keys(uploadedDocs)) {
+      if (!uploadedDocs[key] || !uploadedDocs[key].url) continue;
+      try {
+        const response = await fetch(uploadedDocs[key].url);
+        if (!response.ok) continue;
+        const buffer = await response.arrayBuffer();
+        const contentType = response.headers.get('content-type') || '';
+        const urlLower = uploadedDocs[key].url.toLowerCase();
+        
+        if (contentType.includes('pdf') || urlLower.includes('.pdf')) {
+          const pdf = await PDFDocument.load(buffer);
+          attachments[key] = { count: pdf.getPageCount(), pdf, type: 'pdf' };
+        } else if (contentType.includes('image') || urlLower.match(/\.(png|jpg|jpeg)$/)) {
+          attachments[key] = { count: 1, buffer, type: 'image', contentType, urlLower };
+        }
+      } catch (err) {
+        console.error(`[Portfolio] Failed to fetch attachment ${key}:`, err);
+      }
+    }
 
-  buildPDF(user, internship, company, weeklyReports, attendance, reflection, uploadedDocs = {}) {
+    // Now call the builder with attachments to get the jsPDF document and the layout recipe
+    const { jsPdfDoc, layoutRecipe } = this._buildJsPdfWithRecipe(user, internship, company, weeklyReports, attendance, reflection, attachments);
+    const jsPdfBuffer = jsPdfDoc.output('arraybuffer');
+
+    // Merge using pdf-lib according to the strict sequence defined in the layoutRecipe
+    const mainPdf = await PDFDocument.create();
+    const generatedPdf = await PDFDocument.load(jsPdfBuffer);
+    const copiedGeneratedPages = await mainPdf.copyPages(generatedPdf, generatedPdf.getPageIndices());
+
+    let jsPdfIndex = 0;
+
+    for (const step of layoutRecipe) {
+      if (step.type === 'generated') {
+        for (let i = 0; i < step.count; i++) {
+          mainPdf.addPage(copiedGeneratedPages[jsPdfIndex]);
+          jsPdfIndex++;
+        }
+      } else if (step.type === 'attachment') {
+        const att = attachments[step.key];
+        if (!att) continue;
+        if (att.type === 'pdf') {
+          const copiedPages = await mainPdf.copyPages(att.pdf, att.pdf.getPageIndices());
+          copiedPages.forEach(p => mainPdf.addPage(p));
+        } else if (att.type === 'image') {
+          let image;
+          if (att.contentType.includes('png') || att.urlLower.includes('.png')) {
+            image = await mainPdf.embedPng(att.buffer);
+          } else {
+            image = await mainPdf.embedJpg(att.buffer);
+          }
+          const page = mainPdf.addPage([595.28, 841.89]);
+          const { width, height } = image.scaleToFit(595.28 - 80, 841.89 - 80);
+          page.drawImage(image, {
+            x: page.getWidth() / 2 - width / 2,
+            y: page.getHeight() / 2 - height / 2,
+            width,
+            height,
+          });
+        }
+      }
+    }
+
+    return await mainPdf.save();
+  },
+
+  // ─── INTERNAL PDF BUILDER ─────────────────────────────────────────────────
+
+  _buildJsPdfWithRecipe(user, internship, company, weeklyReports, attendance, reflection, attachments) {
     const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-    let pageNum = 0;
-
-    let companyProfileStartPage = null;
-    let weeklyReportsStartPage = null;
-    let attendanceReportStartPage = null;
+    let pageNum = 0; // Represents the printed page number
+    let currentPage = 1; // Represents the absolute physical page number
 
     const addPageNumber = () => {
       pageNum++;
@@ -301,19 +368,16 @@ Requirements:
       doc.addPage();
     };
 
-    // Writes text with manual line-break / page-break handling.
-    // Returns the new Y cursor.
     const writeText = (str, x, y, maxW, opts = {}) => {
       const { bold = false, fontSize = 11, color = [0, 0, 0], align = 'left' } = opts;
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
       
-      // Clean up accidentally spaced-out text (e.g. copied from a justified PDF)
       let cleanStr = String(str || '').replace(/(?:\b[a-zA-Z0-9] )+[a-zA-Z0-9]\b/g, m => m.replace(/ /g, ''));
-      
       const lines = doc.splitTextToSize(cleanStr, maxW);
       let cy = y;
+      
       for (let i = 0; i < lines.length; i++) {
         if (cy > PH - MB - LH) {
           newPage();
@@ -322,9 +386,7 @@ Requirements:
           doc.setFontSize(fontSize);
           doc.setTextColor(...color);
         }
-        
         const line = lines[i].trim();
-        // Justify text if requested, except for the last line of a paragraph
         if (align === 'justify' && i < lines.length - 1 && line.length > 20) {
           doc.text(line, x, cy, { maxWidth: maxW, align: 'justify' });
         } else {
@@ -349,7 +411,14 @@ Requirements:
       doc.line(ML, y, PW - MR, y);
     };
 
+    const layoutRecipe = [];
+    const tocRows = [];
+
     // ── TITLE PAGE ──────────────────────────────────────────────────────────
+    pageNum = currentPage - 1; // 0
+    addPageNumber(); // prints 1
+    const titleStartJsPdf = doc.internal.getNumberOfPages();
+    
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
     const companyName = company?.name || internship?.company_name || '';
     const mid = PH / 2;
@@ -358,16 +427,13 @@ Requirements:
     doc.setFontSize(28);
     doc.setTextColor(30, 64, 175);
     doc.text('INTERNSHIP PORTFOLIO', PW / 2, mid - 36, { align: 'center' });
-
     doc.setDrawColor(30, 64, 175);
     doc.setLineWidth(0.5);
     doc.line(ML, mid - 28, PW - MR, mid - 28);
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
     doc.text(fullName, PW / 2, mid - 12, { align: 'center' });
-
     doc.setFontSize(11);
     doc.setTextColor(80, 80, 80);
     doc.text(user.course_code || 'BSIT', PW / 2, mid, { align: 'center' });
@@ -375,32 +441,53 @@ Requirements:
     doc.text(companyName, PW / 2, mid + 20, { align: 'center' });
 
     // ── TABLE OF CONTENTS ───────────────────────────────────────────────────
-    newPage();
-
+    doc.addPage();
+    currentPage++; // now 2
+    pageNum = currentPage - 1; // 1
+    addPageNumber(); // prints 2
+    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.text('TABLE OF CONTENTS', ML, MT + 10);
     hLine(MT + 16, 0, 0, 0);
 
-    // Dynamic TOC rows will be filled in at page 2 at the very end of PDF generation.
+    // Title & TOC take 2 generated pages
+    layoutRecipe.push({ type: 'generated', count: 2 });
+    tocRows.push(['Title Page', '1']);
+    tocRows.push(['Table of Contents', '2']);
+    
+    currentPage++; // now 3
+
+    // Helper for attachments
+    const pushAttachment = (key, label) => {
+      if (attachments[key]) {
+        tocRows.push([label, currentPage.toString()]);
+        layoutRecipe.push({ type: 'attachment', key });
+        currentPage += attachments[key].count;
+      } else {
+        tocRows.push([label, '—']);
+      }
+    };
+
+    // Resume
+    pushAttachment('resume', 'Resume');
 
     // ── PERSONAL REFLECTION ─────────────────────────────────────────────────
-    newPage();
-
+    doc.addPage();
+    pageNum = currentPage - 1; 
+    const reflectionStartJsPdf = doc.internal.getNumberOfPages();
+    
     let ry = sectionHeading('PERSONAL REFLECTION', MT + 10);
     hLine(ry - 2, 0, 0, 0);
     ry += 4;
-
     doc.setTextColor(0, 0, 0);
 
-    // Parse **HEADING** markers: split produces alternating [plain, heading, plain, ...]
     const parts = reflection.split(/\*\*([^*]+)\*\*/);
     parts.forEach((part, idx) => {
       const isHeading = idx % 2 === 1;
       const trimmed = part.trim();
       if (!trimmed) return;
-
       if (isHeading) {
         ry += 4;
         if (ry > PH - MB - LH * 3) { newPage(); ry = MT; }
@@ -411,20 +498,28 @@ Requirements:
         ry += LH + 1;
         doc.setTextColor(0, 0, 0);
       } else {
-        // Body paragraphs — split on double newline to preserve paragraph breaks
         const paragraphs = trimmed.split(/\n{2,}/);
         paragraphs.forEach(para => {
           const cleaned = para.replace(/\n/g, ' ').trim();
           if (!cleaned) return;
           ry = writeText(cleaned, ML, ry, CW, { fontSize: 11, align: 'justify' });
-          ry += LH * 0.4; // paragraph spacing
+          ry += LH * 0.4;
         });
       }
     });
 
+    const reflectionPages = doc.internal.getNumberOfPages() - reflectionStartJsPdf + 1;
+    tocRows.push(['Personal Reflection', currentPage.toString()]);
+    layoutRecipe.push({ type: 'generated', count: reflectionPages });
+    currentPage += reflectionPages;
+
+    // Certificate
+    pushAttachment('certificate_completion', 'Certificate of Completion');
+
     // ── COMPANY PROFILE ─────────────────────────────────────────────────────
-    newPage();
-    companyProfileStartPage = pageNum + 1;
+    doc.addPage();
+    pageNum = currentPage - 1;
+    const companyStartJsPdf = doc.internal.getNumberOfPages();
 
     let cy = sectionHeading('COMPANY PROFILE', MT + 10);
     hLine(cy - 2, 0, 0, 0);
@@ -439,7 +534,6 @@ Requirements:
       ['Supervisor Name', internship?.supervisor_name || 'N/A'],
       ['Supervisor Email', internship?.supervisor_email || 'N/A'],
     ];
-
     const labelW = 58;
     cpFields.forEach(([label, value]) => {
       if (cy > PH - MB - LH * 2) { newPage(); cy = MT; }
@@ -463,9 +557,17 @@ Requirements:
       cy += LH + 2;
     });
 
+    const companyPages = doc.internal.getNumberOfPages() - companyStartJsPdf + 1;
+    tocRows.push(['Company Profile', currentPage.toString()]);
+    layoutRecipe.push({ type: 'generated', count: companyPages });
+    currentPage += companyPages;
+
+    // (Internship Agreement and Plan removed from TOC as requested)
+
     // ── WEEKLY ACTIVITY REPORTS ─────────────────────────────────────────────
-    newPage();
-    weeklyReportsStartPage = pageNum + 1;
+    doc.addPage();
+    pageNum = currentPage - 1;
+    const warStartJsPdf = doc.internal.getNumberOfPages();
 
     let wy = sectionHeading('WEEKLY ACTIVITY REPORTS', MT + 10);
     hLine(wy - 2, 0, 0, 0);
@@ -479,7 +581,6 @@ Requirements:
     } else {
       weeklyReports.forEach((r, i) => {
         if (wy > PH - MB - 40) { newPage(); wy = MT; }
-
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(30, 64, 175);
@@ -503,7 +604,6 @@ Requirements:
           wy = writeText(r.challenges.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
           wy += 2;
         }
-
         if (i < weeklyReports.length - 1) {
           wy += 2;
           if (wy > PH - MB - 10) { newPage(); wy = MT; } else {
@@ -514,29 +614,29 @@ Requirements:
       });
     }
 
+    const warPages = doc.internal.getNumberOfPages() - warStartJsPdf + 1;
+    tocRows.push(['Weekly Activity Reports', currentPage.toString()]);
+    layoutRecipe.push({ type: 'generated', count: warPages });
+    currentPage += warPages;
+
     // ── ATTENDANCE REPORT ────────────────────────────────────────────────────
-    newPage();
-    attendanceReportStartPage = pageNum + 1;
+    doc.addPage();
+    pageNum = currentPage - 1;
+    const attStartJsPdf = doc.internal.getNumberOfPages();
 
     let ay = sectionHeading('ATTENDANCE REPORT / DAILY TIME RECORD', MT + 10);
     hLine(ay - 2, 0, 0, 0);
     ay += 4;
-
     const COL = { date: ML, in: ML + 44, out: ML + 84, hrs: ML + 124, status: ML + 144 };
-
     const drawAttHeader = (y) => {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      ['Date', 'Time In', 'Time Out', 'Hours', 'Status'].forEach((h, i) => {
-        doc.text(h, Object.values(COL)[i], y);
-      });
+      ['Date', 'Time In', 'Time Out', 'Hours', 'Status'].forEach((h, i) => { doc.text(h, Object.values(COL)[i], y); });
       hLine(y + 2, 0, 0, 0);
       return y + LH;
     };
-
     ay = drawAttHeader(ay);
-
     const fmtTime = (iso) => {
       if (!iso) return '--';
       try { return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); }
@@ -546,7 +646,6 @@ Requirements:
     let totalHours = 0;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-
     attendance.forEach(log => {
       if (ay > PH - MB - 16) {
         newPage();
@@ -572,7 +671,6 @@ Requirements:
       doc.text('No attendance records found.', ML, ay);
       ay += LH;
     }
-
     ay += 2;
     hLine(ay, 0, 0, 0);
     ay += LH;
@@ -581,33 +679,29 @@ Requirements:
     doc.setTextColor(0, 0, 0);
     doc.text(`Total Hours Rendered: ${totalHours.toFixed(2)} hrs`, ML, ay);
 
-    // Final page number
-    addPageNumber();
+    const attPages = doc.internal.getNumberOfPages() - attStartJsPdf + 1;
+    tocRows.push(['Attendance Reports / Daily Time Record', currentPage.toString()]);
+    layoutRecipe.push({ type: 'generated', count: attPages });
+    currentPage += attPages;
 
-    // ── DYNAMIC TABLE OF CONTENTS GENERATION (Page 2) ────────────────────────
+    // Evidence
+    pushAttachment('evidence_achievements', 'Evidence of Achievements or Activities');
+
+    // Other Docs
+    const handledKeys = ['resume', 'certificate_completion', 'internship_agreement', 'internship_plan', 'evidence_achievements'];
+    const otherKeys = Object.keys(attachments).filter(k => !handledKeys.includes(k));
+    if (otherKeys.length > 0) {
+      tocRows.push(['Other Documents', currentPage.toString()]);
+      for (const k of otherKeys) {
+        layoutRecipe.push({ type: 'attachment', key: k });
+        currentPage += attachments[k].count;
+      }
+    } else {
+      tocRows.push(['Other Documents', '—']);
+    }
+
+    // ── DRAW TOC ────────────────────────────────────────────────────────────
     doc.setPage(2);
-
-    const hasAgreement = uploadedDocs['internship_agreement'] || Object.keys(uploadedDocs).some(k => k.toLowerCase().includes('agreement'));
-    const hasPlan = uploadedDocs['internship_plan'] || Object.keys(uploadedDocs).some(k => k.toLowerCase().includes('plan'));
-
-    const otherKeys = ['cert_attendance_seminar', 'student_evaluation', 'recommendation_letter', 'medical_certificate', 'parent_consent', 'ccit_orientation_cert'];
-    const hasOther = otherKeys.some(k => uploadedDocs[k]);
-
-    const tocRows = [
-      ['Title Page', '1'],
-      ['Table of Contents', '2'],
-      ['Resume', uploadedDocs['resume'] ? 'Attached' : '—'],
-      ['Personal Reflection', '3'],
-      ['Certificate of Completion', uploadedDocs['certificate_completion'] ? 'Attached' : '—'],
-      ['Company Profile', companyProfileStartPage ? String(companyProfileStartPage) : '—'],
-      ['Internship Agreement', hasAgreement ? 'Attached' : '—'],
-      ['Internship Plan', hasPlan ? 'Attached' : '—'],
-      ['Weekly Activity Reports', weeklyReportsStartPage ? String(weeklyReportsStartPage) : '—'],
-      ['Attendance Reports / Daily Time Record', attendanceReportStartPage ? String(attendanceReportStartPage) : '—'],
-      ['Evidence of Achievements or Activities', uploadedDocs['evidence_achievements'] ? 'Attached' : '—'],
-      ['Other Documents', hasOther ? 'Attached' : '—'],
-    ];
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
@@ -618,78 +712,7 @@ Requirements:
       ty += LH + 1;
     });
 
-    doc.setFontSize(9);
-    doc.setTextColor(120, 120, 120);
-    doc.text('Note: Items marked "—" are compiled from uploaded documents and pre-internship records.', ML, ty + 8);
-
-    return doc;
-  },
-
-  // ─── ATTACHMENT MERGING ───────────────────────────────────────────────────
-
-  async mergeAttachments(generatedPdfArrayBuffer, uploadedDocs) {
-    const mainPdf = await PDFDocument.load(generatedPdfArrayBuffer);
-    
-    // We want to add the attachments in a logical order, preferably matching TOC.
-    const orderedKeys = [
-      'resume',
-      'certificate_completion',
-      'internship_agreement',
-      'internship_plan',
-      'evidence_achievements',
-      'cert_attendance_seminar',
-      'student_evaluation',
-      'recommendation_letter',
-      'medical_certificate',
-      'parent_consent',
-      'ccit_orientation_cert'
-    ];
-    
-    const allKeys = Object.keys(uploadedDocs);
-    const extraKeys = allKeys.filter(k => !orderedKeys.includes(k));
-    const finalKeys = [...orderedKeys, ...extraKeys];
-    
-    for (const key of finalKeys) {
-      if (!uploadedDocs[key] || !uploadedDocs[key].url) continue;
-      
-      try {
-        console.log(`[Portfolio] Fetching attachment: ${key} from ${uploadedDocs[key].url}`);
-        const response = await fetch(uploadedDocs[key].url);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const buffer = await response.arrayBuffer();
-        
-        const contentType = response.headers.get('content-type') || '';
-        const urlLower = uploadedDocs[key].url.toLowerCase();
-        
-        if (contentType.includes('pdf') || urlLower.includes('.pdf')) {
-          const attachPdf = await PDFDocument.load(buffer);
-          const copiedPages = await mainPdf.copyPages(attachPdf, attachPdf.getPageIndices());
-          copiedPages.forEach(page => mainPdf.addPage(page));
-        } else if (contentType.includes('image') || urlLower.match(/\.(png|jpg|jpeg)$/)) {
-          let image;
-          if (contentType.includes('png') || urlLower.includes('.png')) {
-            image = await mainPdf.embedPng(buffer);
-          } else {
-            image = await mainPdf.embedJpg(buffer);
-          }
-          // Create an A4 page
-          const page = mainPdf.addPage([595.28, 841.89]);
-          // Scale image to fit within A4 margins (padding of 40 on all sides)
-          const { width, height } = image.scaleToFit(595.28 - 80, 841.89 - 80);
-          page.drawImage(image, {
-            x: page.getWidth() / 2 - width / 2,
-            y: page.getHeight() / 2 - height / 2,
-            width,
-            height,
-          });
-        } else {
-          console.warn(`[Portfolio] Unsupported file type for ${key}: ${contentType}`);
-        }
-      } catch (err) {
-        console.error(`[Portfolio] Failed to merge attachment ${key}:`, err);
-      }
-    }
-    
-    return await mainPdf.save();
+    return { jsPdfDoc: doc, layoutRecipe };
   }
 };
+

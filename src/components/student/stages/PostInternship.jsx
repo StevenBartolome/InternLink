@@ -311,18 +311,12 @@ export default function PostInternship() {
     try {
       const data = portfolioData || await portfolioService.fetchAllData(user.internship_id);
       
-      // 1. Build the generated jsPDF document
-      const pdfDoc = portfolioService.buildPDF(
+      // Build and compile the entire PDF including correct interleaving of attachments
+      const finalPdfBytes = await portfolioService.compilePortfolio(
         user, data.internship, data.company,
         data.weeklyReports, data.attendance, reflection, uploadedDocs
       );
       const filename = portfolioService.getFilename(user, data.internship, data.company);
-      
-      // 2. Extract as ArrayBuffer
-      const jsPdfBuffer = pdfDoc.output('arraybuffer');
-      
-      // 3. Merge uploaded files (PDFs and Images) using pdf-lib
-      const finalPdfBytes = await portfolioService.mergeAttachments(jsPdfBuffer, uploadedDocs);
       
       // 4. Trigger download
       const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
