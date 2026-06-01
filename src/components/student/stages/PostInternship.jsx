@@ -123,10 +123,10 @@ export default function PostInternship() {
 
   const [toast, setToast] = useState(null);
   const [submitted, setSubmitted] = useState(user?.stage3_submitted || false);
-  const finalGrade = user?.final_grade;
 
   // Step 1 — AI generation
   const [portfolioData, setPortfolioData] = useState(null);
+  const finalGrade = portfolioData?.internship?.final_grade ?? user?.final_grade;
   const [reflection, setReflection] = useState('');
   const [generating, setGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState('');

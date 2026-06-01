@@ -166,20 +166,30 @@ const GradeManagementPage = () => {
 
     try {
       setSavingGrade(true);
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('student_internships')
         .update({ 
           final_grade: gradeNum,
-          final_grade_encoded_at: new Date().toISOString()
+          final_grade_encoded_at: new Date().toISOString(),
+          is_completed: true,
+          current_stage: 'COMPLETED'
         })
-        .eq('student_id', selectedStudent.id);
+        .eq('student_id', selectedStudent.id)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Update failed: No rows were updated. This is likely due to missing UPDATE policies (RLS) in your database.");
+      }
 
       notify(`Successfully encoded grade for ${selectedStudent.name}!`, 'success');
       
       // Update local state instantly
-      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { ...s, grade: gradeNum } : s));
+      setStudents(prev => prev.map(s => s.id === selectedStudent.id ? { 
+        ...s, 
+        grade: gradeNum,
+        status: 'Completed'
+      } : s));
       
       setIsGradeModalOpen(false);
       setSelectedStudent(null);
@@ -260,8 +270,14 @@ const GradeManagementPage = () => {
   });
 
   filteredStudents.forEach(student => {
-    const sId = student.sectionId || 'unassigned';
-    const sName = student.section || 'Not Assigned';
+    let sId = student.sectionId || 'unassigned';
+    let sName = student.section || 'Not Assigned';
+
+    // Extract completed students into their own section
+    if (student.status === 'Completed') {
+      sId = 'completed_students';
+      sName = 'Completed Students';
+    }
 
     if (!sectionsMap[sId]) {
       sectionsMap[sId] = {

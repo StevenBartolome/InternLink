@@ -164,8 +164,14 @@ const StudentDirectoryPage = () => {
 
   // Then group the filtered students
   filteredStudents.forEach(student => {
-    const sId = student.sectionId || 'unassigned';
-    const sName = student.section || 'Not Assigned';
+    let sId = student.sectionId || 'unassigned';
+    let sName = student.section || 'Not Assigned';
+
+    // Extract completed students into their own section
+    if (student.status === 'Completed') {
+      sId = 'completed_students';
+      sName = 'Completed Students';
+    }
 
     if (!sectionsMap[sId]) {
       sectionsMap[sId] = {
