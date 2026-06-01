@@ -727,34 +727,7 @@ export default function InternshipConfigPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: theme.colors.textMuted, marginBottom: '6px' }}>
-                          <Calendar size={13} style={{ marginRight: '4px' }} /> Doc Submission Deadline
-                        </label>
-                        <input 
-                          type="date" 
-                          value={config.deadlines.docSubmission}
-                          onChange={e => setConfigs(prev => prev.map(c => c.id !== config.id ? c : { 
-                            ...c, deadlines: { ...c.deadlines, docSubmission: e.target.value }
-                          }))}
-                          style={{ ...commonStyles.input, width: '100%' }}
-                        />
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: theme.colors.textMuted, marginBottom: '6px' }}>
-                          <Calendar size={13} style={{ marginRight: '4px' }} /> Portfolio Deadline
-                        </label>
-                        <input 
-                          type="date" 
-                          value={config.deadlines.portfolioSubmission}
-                          onChange={e => setConfigs(prev => prev.map(c => c.id !== config.id ? c : { 
-                            ...c, deadlines: { ...c.deadlines, portfolioSubmission: e.target.value }
-                          }))}
-                          style={{ ...commonStyles.input, width: '100%' }}
-                        />
-                      </div>
-                    </div>
+
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button 

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import StudentSidebar from './StudentSidebar';
 import StudentTopbar from './StudentTopbar';
 import { studentDesign } from '../../../styles/StudentDesign';
+import BullBot from '../../common/BullBot';
 
 const StudentLayout = () => {
   const styles = {
@@ -35,6 +36,7 @@ const StudentLayout = () => {
           <Outlet />
         </main>
       </div>
+      <BullBot />
     </div>
   );
 };

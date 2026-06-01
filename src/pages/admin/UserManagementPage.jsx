@@ -7,6 +7,7 @@ import { commonStyles } from '../../styles/commonStyles';
 import { internshipConfig } from '../../services/mocks/adminMockData';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
 import Toast from '../../components/common/Toast';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import { supabase } from '../../services/supabaseClient';
 import { Loader2 } from 'lucide-react';
 
@@ -36,14 +37,37 @@ export default function UserManagementPage() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [expandedHeadId, setExpandedHeadId] = useState(null);
   const [expandedSectionId, setExpandedSectionId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
 
   const showToast = (message, type = 'success') => setToast({ message, type });
+
+  const promptToggleUser = (userType, id, name, status) => {
+    const next = status === 'Active' ? false : true;
+    const actionStr = next ? 'reactivate' : 'deactivate';
+    setConfirmModal({
+      isOpen: true,
+      title: `${next ? 'Reactivate' : 'Deactivate'} User`,
+      message: `Are you sure you want to ${actionStr} the account for ${name}?`,
+      onConfirm: async () => {
+        setConfirmModal(p => ({ ...p, isOpen: false }));
+        if (userType === 'student') await handleToggleStudent(id, name, status);
+        else await handleToggleHead(id, name, status);
+      }
+    });
+  };
 
   const handleToggleStudent = async (id, name, status) => {
     const next = status === 'Active' ? false : true;
     try {
-      const { error } = await supabase.from('users').update({ is_active: next }).eq('id', id);
-      if (error) throw error;
+      const response = await fetch('/api/admin/toggle-user-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, isActive: next })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update user status');
+      }
       setStudents(p => p.map(s => s.id === id ? { ...s, status: next ? 'Active' : 'Inactive' } : s));
       showToast(`${name} has been ${next ? 'reactivated' : 'deactivated'}.`, next ? 'success' : 'warning');
     } catch (err) {
@@ -54,8 +78,15 @@ export default function UserManagementPage() {
   const handleToggleHead = async (id, name, status) => {
     const next = status === 'Active' ? false : true;
     try {
-      const { error } = await supabase.from('users').update({ is_active: next }).eq('id', id);
-      if (error) throw error;
+      const response = await fetch('/api/admin/toggle-user-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: id, isActive: next })
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update user status');
+      }
       setHeads(p => p.map(h => h.id === id ? { ...h, status: next ? 'Active' : 'Inactive' } : h));
       showToast(`${name} has been ${next ? 'reactivated' : 'deactivated'}.`, next ? 'success' : 'warning');
     } catch (err) {
@@ -334,6 +365,14 @@ export default function UserManagementPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
+      <ConfirmModal 
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(p => ({ ...p, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+      />
 
       {/* Add OJT Adviser Modal */}
       {showAddModal && (
@@ -729,7 +768,7 @@ export default function UserManagementPage() {
                         </button>
                         <button title={student.status === 'Active' ? 'Deactivate' : 'Reactivate'}
                           style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.danger }}
-                          onClick={() => handleToggleStudent(student.id, student.name, student.status)}>
+                          onClick={() => promptToggleUser('student', student.id, student.name, student.status)}>
                           <ShieldAlert size={16} />
                         </button>
                       </div>
@@ -816,7 +855,7 @@ export default function UserManagementPage() {
                         </button>
                         <button title={head.status === 'Active' ? 'Deactivate' : 'Reactivate'}
                           style={{ padding: '6px', background: 'none', border: 'none', cursor: 'pointer', color: theme.colors.danger }}
-                          onClick={() => handleToggleHead(head.id, head.name, head.status)}>
+                          onClick={() => promptToggleUser('head', head.id, head.name, head.status)}>
                           <ShieldAlert size={16} />
                         </button>
                       </div>

@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import Toast from '../../common/Toast';
 import { studentDesign } from '../../../styles/StudentDesign';
+import BullBot from '../../common/BullBot';
 
 const OjtProfessorLayout = () => {
   const [toast, setToast] = useState(null);
@@ -48,12 +49,13 @@ const OjtProfessorLayout = () => {
         </main>
       </div>
       {toast && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
+      <BullBot />
     </div>
   );
 };

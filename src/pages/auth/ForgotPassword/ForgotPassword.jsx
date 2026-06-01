@@ -1,27 +1,127 @@
 // src/pages/auth/ForgotPassword/ForgotPassword.jsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, ArrowLeft, Mail, CheckCircle, AlertCircle } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Mail, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 import { theme } from '../../../styles/theme';
 import { useMediaQuery } from '../../../hooks/useMediaQuery';
+import { supabase } from '../../../services/supabaseClient';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 900px)');
+  
+  const [step, setStep] = useState(1); // 1: email, 2: otp, 3: new password, 4: success
   const [email, setEmail] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hoveredBtn, setHoveredBtn] = useState(null);
 
-  const handleSubmit = (e) => {
+  const inputRefs = useRef([]);
+
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!email.includes('@')) {
       setError('Please enter a valid email address.');
       return;
     }
     setError('');
-    setIsSubmitted(true);
-    // In a real app, this would trigger an API call
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      setStep(2);
+    } catch (err) {
+      setError(err.message || 'Failed to send reset code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOtpChange = (index, value) => {
+    if (value && !/^[0-9]$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    if (value && index < 5) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6).split('');
+    if (pastedData.length === 0) return;
+
+    const newOtp = [...otp];
+    pastedData.forEach((char, i) => {
+      newOtp[i] = char;
+    });
+    setOtp(newOtp);
+    
+    const focusIndex = Math.min(pastedData.length, 5);
+    inputRefs.current[focusIndex].focus();
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    const finalOtp = otp.join('');
+    
+    if (finalOtp.length !== 6) {
+      setError('Please enter the complete 6-digit code.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+
+    try {
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: finalOtp,
+        type: 'recovery'
+      });
+      if (verifyError) throw verifyError;
+      
+      setStep(3);
+    } catch (err) {
+      setError(err.message || 'Invalid recovery code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (newPassword.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    setError('');
+    setLoading(true);
+
+    try {
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (updateError) throw updateError;
+
+      await supabase.auth.signOut();
+      setStep(4);
+    } catch (err) {
+      setError(err.message || 'Failed to update password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const styles = {
@@ -97,6 +197,26 @@ const ForgotPassword = () => {
       fontSize: '1rem',
       backgroundColor: '#F8FAFC',
       transition: 'all 0.2s ease',
+      boxSizing: 'border-box'
+    },
+    otpContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      gap: '8px',
+      marginBottom: '0.5rem'
+    },
+    otpInput: {
+      width: '45px',
+      height: '55px',
+      textAlign: 'center',
+      fontSize: '1.5rem',
+      fontWeight: 700,
+      border: `1px solid ${theme.colors.border}`,
+      borderRadius: '12px',
+      backgroundColor: '#F8FAFC',
+      color: theme.colors.textMain,
+      transition: 'all 0.2s ease',
+      outline: 'none'
     },
     inputIcon: {
       position: 'absolute',
@@ -115,10 +235,12 @@ const ForgotPassword = () => {
       boxShadow: isHovered ? theme.shadows.md : 'none',
       transform: isHovered ? 'translateY(-2px)' : 'none',
       transition: 'all 0.2s ease',
+      opacity: loading ? 0.7 : 1
     }),
     btnBack: (isHovered) => ({
       display: 'inline-flex',
       alignItems: 'center',
+      justifyContent: 'center',
       gap: '8px',
       color: theme.colors.textMuted,
       fontWeight: 600,
@@ -150,27 +272,43 @@ const ForgotPassword = () => {
           <div style={styles.logo}>
             <GraduationCap size={28} />
           </div>
-          {!isSubmitted ? (
+          {step === 1 && (
             <>
               <h1 style={styles.title}>Forgot Password?</h1>
               <p style={styles.subtitle}>
-                No worries, we'll send you reset instructions.
+                No worries, we'll send you a recovery code to your email.
               </p>
             </>
-          ) : (
+          )}
+          {step === 2 && (
+            <>
+              <h1 style={styles.title}>Enter Recovery Code</h1>
+              <p style={styles.subtitle}>
+                We've sent a 6-digit code to <strong>{email}</strong>
+              </p>
+            </>
+          )}
+          {step === 3 && (
+            <>
+              <h1 style={styles.title}>Create New Password</h1>
+              <p style={styles.subtitle}>
+                Your code has been verified. Please enter a new password.
+              </p>
+            </>
+          )}
+          {step === 4 && (
             <div style={styles.successState}>
               <CheckCircle size={64} style={styles.successIcon} />
-              <h1 style={styles.title}>Check your email</h1>
+              <h1 style={styles.title}>Password Reset!</h1>
               <p style={styles.subtitle}>
-                We've sent a password reset link to <br />
-                <strong>{email}</strong>
+                Your password has been changed successfully.
               </p>
             </div>
           )}
         </div>
 
-        {!isSubmitted ? (
-          <form style={styles.form} onSubmit={handleSubmit}>
+        {step === 1 && (
+          <form style={styles.form} onSubmit={handleSendOtp}>
             <div style={styles.inputGroup}>
               <label style={styles.label}>Email Address</label>
               <div style={styles.inputWrapper}>
@@ -193,17 +331,94 @@ const ForgotPassword = () => {
             
             <button 
               type="submit" 
+              style={styles.btnSubmit(hoveredBtn === 'send')}
+              onMouseEnter={() => setHoveredBtn('send')}
+              onMouseLeave={() => setHoveredBtn(null)}
+              disabled={loading}
+            >
+              {loading ? 'Sending...' : 'Send Recovery Code'}
+            </button>
+          </form>
+        )}
+
+        {step === 2 && (
+          <form style={styles.form} onSubmit={handleVerifyOtp}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>6-Digit Recovery Code</label>
+              <div style={styles.otpContainer} onPaste={handlePaste}>
+                {otp.map((digit, index) => (
+                  <input
+                    key={index}
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    type="text"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onFocus={(e) => e.target.style.borderColor = theme.colors.primary}
+                    onBlur={(e) => e.target.style.borderColor = theme.colors.border}
+                    style={styles.otpInput}
+                    required
+                  />
+                ))}
+              </div>
+              {error && (
+                <p style={{ color: theme.colors.danger, fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertCircle size={14} /> {error}
+                </p>
+              )}
+            </div>
+            
+            <button 
+              type="submit" 
+              style={styles.btnSubmit(hoveredBtn === 'verify')}
+              onMouseEnter={() => setHoveredBtn('verify')}
+              onMouseLeave={() => setHoveredBtn(null)}
+              disabled={loading}
+            >
+              {loading ? 'Verifying...' : 'Verify Code'}
+            </button>
+          </form>
+        )}
+
+        {step === 3 && (
+          <form style={styles.form} onSubmit={handleUpdatePassword}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>New Password</label>
+              <div style={styles.inputWrapper}>
+                <Lock size={18} style={styles.inputIcon} />
+                <input 
+                  type="password" 
+                  placeholder="Enter new password" 
+                  style={styles.input}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                />
+              </div>
+              {error && (
+                <p style={{ color: theme.colors.danger, fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertCircle size={14} /> {error}
+                </p>
+              )}
+            </div>
+            
+            <button 
+              type="submit" 
               style={styles.btnSubmit(hoveredBtn === 'reset')}
               onMouseEnter={() => setHoveredBtn('reset')}
               onMouseLeave={() => setHoveredBtn(null)}
+              disabled={loading}
             >
-              Reset Password
+              {loading ? 'Updating...' : 'Set New Password'}
             </button>
           </form>
-        ) : (
+        )}
+
+        {step === 4 && (
           <button 
-            style={styles.btnSubmit(hoveredBtn === 'reset')}
-            onMouseEnter={() => setHoveredBtn('reset')}
+            style={styles.btnSubmit(hoveredBtn === 'login')}
+            onMouseEnter={() => setHoveredBtn('login')}
             onMouseLeave={() => setHoveredBtn(null)}
             onClick={() => navigate('/login')}
           >
@@ -211,7 +426,7 @@ const ForgotPassword = () => {
           </button>
         )}
 
-        {!isSubmitted && (
+        {step !== 4 && (
           <button 
             style={styles.btnBack(hoveredBtn === 'back')}
             onMouseEnter={() => setHoveredBtn('back')}

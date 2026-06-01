@@ -406,6 +406,22 @@ app.post('/admin/create-ojt-head', async (req, res) => {
     }
 });
 
+// Admin Route: Toggle User Status
+app.post(['/api/admin/toggle-user-status', '/admin/toggle-user-status'], async (req, res) => {
+    const { userId, isActive } = req.body;
+    if (!userId || isActive === undefined) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
+    try {
+        const { error } = await supabaseAdmin.from('users').update({ is_active: isActive }).eq('id', userId);
+        if (error) throw error;
+        res.json({ success: true, message: 'Status updated' });
+    } catch (error) {
+        console.error('Toggle status error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Admin Route: Update Professor Sections
 app.post('/admin/update-professor-sections', async (req, res) => {
     const { professorId, sectionIds } = req.body;
@@ -1648,6 +1664,623 @@ app.get(['/api/admin/backup/download/:fileName', '/admin/backup/download/:fileNa
         
         if (error) throw error;
         res.redirect(data.signedUrl);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── BullBot: Claude AI Chat with database tool use ──────────────────────────
+
+const PAGE_LABELS = {
+    '/dashboard': 'Dashboard', '/company-info': 'Company Info', '/documents': 'Documents',
+    '/templates': 'Templates', '/attendance': 'Attendance', '/activities': 'Daily Activities',
+    '/weekly-reports': 'Weekly Reports', '/portfolio': 'Portfolio',
+    '/notifications': 'Notifications', '/profile': 'Profile',
+    '/ojt-professor/dashboard': 'Dashboard', '/ojt-professor/students': 'Student Directory',
+    '/ojt-professor/attendance': 'Attendance Management', '/ojt-professor/document-review': 'Document Review',
+    '/ojt-professor/war-review': 'WAR Review', '/ojt-professor/monitoring': 'Progress Monitoring',
+    '/ojt-professor/completion-validation': 'Completion Validation',
+    '/ojt-professor/visit-itinerary': 'Visit Itinerary', '/ojt-professor/grades': 'Grade Management',
+    '/ojt-professor/reports': 'Reports', '/ojt-professor/notifications': 'Notifications',
+    '/ojt-professor/profile': 'Profile',
+    '/admin/dashboard': 'Dashboard', '/admin/users': 'User Management',
+    '/admin/internship-config': 'Internship Config', '/admin/reports': 'Reports',
+    '/admin/audit': 'Audit Logs', '/admin/settings': 'Settings',
+    '/admin/notifications': 'Notifications', '/admin/profile': 'Profile',
+    '/admin/departments': 'Departments', '/admin/backup': 'Backup & Restore',
+};
+
+const ROLE_PAGES = {
+    student: '/dashboard, /company-info, /documents, /templates, /attendance, /activities, /weekly-reports, /portfolio, /notifications, /profile',
+    ojt_head: '/ojt-professor/dashboard, /ojt-professor/students, /ojt-professor/attendance, /ojt-professor/document-review, /ojt-professor/war-review, /ojt-professor/monitoring, /ojt-professor/completion-validation, /ojt-professor/visit-itinerary, /ojt-professor/grades, /ojt-professor/reports, /ojt-professor/notifications, /ojt-professor/profile',
+    admin: '/admin/dashboard, /admin/users, /admin/internship-config, /admin/departments, /admin/reports, /admin/audit, /admin/backup, /admin/settings, /admin/notifications, /admin/profile',
+};
+
+const bullBotSystem = (role, userName) => `You are BullBot, the official AI assistant for InternLink — a comprehensive OJT (On-the-Job Training) management system used by a university.
+
+Current user: ${userName} (role: ${role})
+
+--- FULL SYSTEM KNOWLEDGE ---
+
+InternLink manages the entire OJT internship lifecycle for three user roles:
+
+STUDENT ROLE
+Students go through three internship stages: BEFORE_INTERNSHIP (pre-deployment), DURING_INTERNSHIP (actively rendering hours), and POST_INTERNSHIP (completed hours, awaiting grade).
+Features available to students:
+- Dashboard: shows internship progress, hours rendered vs required, current stage, company info, and recent activity.
+- Company Info: displays deployment details — company name, address, industry, department, supervisor name and email, MOA status, and deployment letter status.
+- Documents: a checklist of pre-internship requirements (e.g. endorsement letter, medical certificate, parental consent, insurance). Each document has a status of NOT_SUBMITTED, PENDING, APPROVED, or REJECTED. Rejected documents show reviewer comments. Additional custom requirements can also be assigned.
+- Attendance: students log daily time-in and time-out. The system calculates hours per day (capped at regular hours + max 2 overtime hours, with absolute 7PM cutoff). Total rendered hours are tracked against required hours (e.g. 486 hours for most programs). NOTE: Attendance logs have statuses. 'LOGGED' means recorded but unsubmitted ('unsubmitted_logged_hours'). 'DEDUCTED' is a GOOD status: it means the hours were officially approved via a PDF report and have been successfully deducted from the student's remaining required hours ('officially_approved_hours'). Always report 'officially_approved_hours' as the student's primary total hours rendered.
+- Weekly Reports (WAR): students submit a Weekly Activity Report each week summarizing activities, skills learned, and challenges. Reports have statuses: NOT_SUBMITTED, PENDING, APPROVED, REJECTED. AI can help generate report content.
+- Portfolio: post-internship document submissions including reflection papers and certificates.
+- Notifications: system alerts for document reviews, approvals, rejections, and deadlines.
+- Profile: personal information, profile photo, OJT subject name.
+
+ADVISER ROLE (ojt_head)
+Advisers manage and monitor students assigned to their sections within a program.
+Features available to advisers:
+- Student Directory: full list of assigned students with internship stage, company, hours progress, deployment status, and section.
+- Document Review: view and approve or reject student pre-internship documents and additional requirements. Can add reviewer comments.
+- WAR Review (Weekly Activity Report Review): review and approve or reject student weekly reports. Can provide feedback.
+- Progress Monitoring: track individual student attendance logs, hours rendered, and internship stage.
+- Completion Validation: when a student reaches the required number of OJT hours, the adviser validates completion and transitions the student to POST_INTERNSHIP stage. The system checks submitted attendance reports for calculated hours.
+- Visit Itinerary: advisers schedule and manage company visits. Each visit has a date, location, notes, a list of students at that location, and a status (SCHEDULED or COMPLETED). The Smart Auto-Generator groups deployed students by geographic location cluster to optimize travel. Advisers can manually add visits or use the auto-generator.
+- Grade Management: advisers encode final numeric grades (0-100) for students who have completed their internship and submitted their portfolio. The system tracks final_grade and the date it was encoded.
+- Reports Dashboard: summary reports on student progress, document completion rates, hours distribution, and grade statistics.
+- Notifications: alerts for student submissions, document uploads, and system events.
+- Profile: personal information and section assignments.
+
+ADVISER ROLE — ADDITIONAL CAPABILITY
+Advisers (ojt_head) can also register and create new student accounts directly. This is done through the Student Directory page. Advisers fill in the student's details (name, email, student ID, program, section, year level) and the system creates the account and sends login credentials to the student via email.
+
+ADMIN ROLE
+Admins manage the entire system configuration and user accounts.
+Features available to admins:
+- Dashboard: system-wide statistics — total students, advisers, active internships, pending documents, completion rates.
+- User Management: create, view, activate/deactivate student and adviser accounts. Bulk import students via CSV. Assign students to sections and programs. Reset passwords. Admins can also create student accounts the same way advisers can.
+- Internship Configuration: configure academic programs (name, code, required OJT hours, OJT subject code), document submission deadlines, and portfolio submission deadlines.
+- Department Management: manage academic departments and their programs.
+- Backup & Restore: export full database backups and restore from backup files.
+- Audit Logs: track all system events — who did what and when, with IP address logging.
+- Reports: system-wide reports on internship completion, document status, grade distribution.
+- Settings: system-wide configuration.
+- Notifications: system-wide alerts.
+
+KEY DATA RELATIONSHIPS
+- Programs define required OJT hours (commonly 486 hours) and document deadlines.
+- Sections belong to programs; advisers are assigned to specific sections via professor_sections.
+- Students are enrolled in a section within a program; their profile (student_profiles) stores this.
+- Each student has one internship record (student_internships) which tracks company, hours, stage, MOA, grade.
+- Documents, attendance logs, weekly reports, and portfolio items all link to the internship record.
+- Visit itineraries are per-adviser and store a JSON list of students in that visit.
+
+--- END SYSTEM KNOWLEDGE ---
+
+When a user asks about their data, use the available tools to fetch live data and answer accurately. Always use tools before answering data-specific questions.
+
+You have a powerful 'query_database' tool that allows you to directly query the Supabase database. Use this tool if the specific tools do not provide the information needed. You can query tables like 'users', 'student_profiles', 'student_internships', 'attendance_logs', 'companies', etc. 
+SECURITY WARNING: Do not leak sensitive information (like other users' personal data or grades) to students.
+
+If a question is completely unrelated to InternLink, OJT, or internship management (e.g. cooking, entertainment, general coding), politely decline and redirect.
+
+When listing multiple items, use a dash (-) at the start of each item on its own line. Do not use bold, italic, headers, pound signs, underscores, backticks, or other markdown. Write in clear natural sentences.
+
+--- PAGE SHORTCUTS ---
+At the end of your response, if there are InternLink pages the user should visit based on what was discussed, add exactly one line in this format:
+PAGES: /path1, /path2
+
+Only use paths from this list: ${ROLE_PAGES[role] || ROLE_PAGES.student}
+Include at most 3 relevant paths. If no page is directly relevant, omit the PAGES line entirely.`;
+
+const bullBotTools = (role) => {
+    const tools = [];
+
+    if (role === 'student') {
+        tools.push(
+            {
+                name: 'get_my_internship',
+                description: 'Get the student\'s internship record: company name, position, rendered hours, required hours, current stage (BEFORE_INTERNSHIP, DURING_INTERNSHIP, POST_INTERNSHIP), MOA status, supervisor name.',
+                input_schema: { type: 'object', properties: {} }
+            },
+            {
+                name: 'get_my_documents',
+                description: 'Get the student\'s document checklist with submission and review status (NOT_SUBMITTED, PENDING, APPROVED, REJECTED) and any reviewer comments.',
+                input_schema: { type: 'object', properties: {} }
+            },
+            {
+                name: 'get_my_attendance',
+                description: 'Get the student\'s attendance logs (date, time in/out, daily hours) and total rendered vs required hours.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        limit: { type: 'number', description: 'Number of recent records to return (default 14)' }
+                    }
+                }
+            },
+            {
+                name: 'get_my_weekly_reports',
+                description: 'Get the student\'s weekly activity reports with week number, status, and review comments.',
+                input_schema: { type: 'object', properties: {} }
+            }
+        );
+    }
+
+    if (role === 'ojt_head') {
+        tools.push(
+            {
+                name: 'get_students',
+                description: 'Get list of students assigned to this adviser with their internship info: name, company, position, hours rendered, required hours, and current stage.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        stage: { type: 'string', description: 'Filter by stage: BEFORE_INTERNSHIP, DURING_INTERNSHIP, POST_INTERNSHIP' }
+                    }
+                }
+            },
+            {
+                name: 'get_pending_documents',
+                description: 'Get all student documents with PENDING status that need review, including the student name and document name.',
+                input_schema: { type: 'object', properties: {} }
+            },
+            {
+                name: 'get_student_attendance',
+                description: 'Get attendance records for a specific student given their user ID.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        student_id: { type: 'string', description: 'Student user ID' }
+                    },
+                    required: ['student_id']
+                }
+            },
+            {
+                name: 'get_student_weekly_reports',
+                description: 'Get weekly activity reports for a specific student given their internship ID.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        internship_id: { type: 'string', description: 'The student\'s internship ID' }
+                    },
+                    required: ['internship_id']
+                }
+            },
+            {
+                name: 'get_visit_itineraries',
+                description: 'Get all scheduled and completed company visit itineraries. Each visit has a date, location, notes, status (SCHEDULED or COMPLETED), and the list of students at that location.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        status: { type: 'string', description: 'Filter by status: SCHEDULED or COMPLETED' }
+                    }
+                }
+            },
+            {
+                name: 'get_student_grades',
+                description: 'Get final grade records for all assigned students — shows student name, current stage, hours rendered, whether portfolio was submitted (stage3_submitted), and final grade if already encoded.',
+                input_schema: { type: 'object', properties: {} }
+            }
+        );
+    }
+
+    if (role === 'admin') {
+        tools.push(
+            {
+                name: 'get_system_stats',
+                description: 'Get overall system statistics: total students, total advisers, active internships count, pending documents count.',
+                input_schema: { type: 'object', properties: {} }
+            },
+            {
+                name: 'get_users',
+                description: 'Get a list of users in the system, optionally filtered by role.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        role: { type: 'string', description: 'Filter by role: student, ojt_head, admin' },
+                        limit: { type: 'number', description: 'Max results (default 30)' }
+                    }
+                }
+            },
+            {
+                name: 'get_internships',
+                description: 'Get internship records with student name, company, hours, and stage.',
+                input_schema: {
+                    type: 'object',
+                    properties: {
+                        stage: { type: 'string', description: 'Filter by current_stage' },
+                        limit: { type: 'number', description: 'Max results (default 30)' }
+                    }
+                }
+            }
+        );
+    }
+
+    // Universal Database Access Tool for BullBot
+    tools.push({
+        name: 'query_database',
+        description: 'Query any table in the database to get information about the system. Use this to fetch schemas, list tables, or get data not covered by other tools. Be mindful of user roles and security.',
+        input_schema: {
+            type: 'object',
+            properties: {
+                table: { type: 'string', description: 'Table name to query' },
+                select: { type: 'string', description: 'Columns to select (e.g., "*", "id, name")' },
+                match: { type: 'object', description: 'Key-value pairs to filter by exact match' },
+                limit: { type: 'number', description: 'Max results (default 10, max 50)' }
+            },
+            required: ['table']
+        }
+    });
+
+    return tools;
+};
+
+const runBullBotTool = async (name, input, userId, userRole) => {
+    try {
+        switch (name) {
+            case 'query_database': {
+                try {
+                    let query = supabaseAdmin.from(input.table).select(input.select || '*');
+                    if (input.match) {
+                        query = query.match(input.match);
+                    }
+                    const limit = Math.min(input.limit || 10, 50);
+                    query = query.limit(limit);
+                    
+                    const { data, error } = await query;
+                    if (error) throw error;
+                    return data || [];
+                } catch (err) {
+                    console.error('[BullBot] query_database error:', err.message);
+                    return { error: err.message };
+                }
+            }
+
+            case 'get_my_internship': {
+                if (!userId) return { error: 'userId not provided' };
+                const { data: internship, error: e1 } = await supabaseAdmin
+                    .from('student_internships')
+                    .select(`id, position, supervisor_name, supervisor_email, moa_status,
+                        is_deployed, current_stage, rendered_hours,
+                        company:companies(name, address)`)
+                    .eq('student_id', userId)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                if (e1) { console.error('[BullBot] get_my_internship:', e1.message); return { error: e1.message }; }
+                if (!internship) return { message: 'No internship record found.' };
+
+                // Calculate officially approved hours from documents (matches UI logic)
+                const { data: docs } = await supabaseAdmin
+                    .from('pre_internship_documents')
+                    .select('document_name, reviewer_comment, status')
+                    .eq('internship_id', internship.id);
+                
+                let officially_approved_hours = 0;
+                if (docs) {
+                    docs.filter(d => d.document_name && d.document_name.startsWith('Signed Attendance Report') && d.status !== 'Not submitted')
+                        .forEach(d => {
+                            if (d.reviewer_comment) {
+                                const match = d.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/);
+                                if (match) officially_approved_hours += parseFloat(match[1]);
+                            }
+                        });
+                }
+
+                // required_hours lives on the program, not the internship row
+                const { data: profile } = await supabaseAdmin
+                    .from('student_profiles')
+                    .select('programs(required_hours)')
+                    .eq('id', userId)
+                    .maybeSingle();
+                const required_hours = profile?.programs?.required_hours ?? 486;
+
+                return { 
+                    ...internship, 
+                    required_hours,
+                    officially_approved_hours,
+                    unsubmitted_logged_hours: internship.rendered_hours
+                };
+            }
+
+            case 'get_my_documents': {
+                const { data: internship } = await supabaseAdmin
+                    .from('student_internships').select('id').eq('student_id', userId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (!internship) return { message: 'No internship found.' };
+                const [{ data: docs }, { data: extra }] = await Promise.all([
+                    supabaseAdmin.from('pre_internship_documents')
+                        .select('document_name, status, submitted_at, reviewer_comment')
+                        .eq('internship_id', internship.id),
+                    supabaseAdmin.from('additional_requirements')
+                        .select('document_name, status, submitted_at, reviewer_comment')
+                        .eq('internship_id', internship.id)
+                ]);
+                return { pre_internship_documents: docs || [], additional_requirements: extra || [] };
+            }
+
+            case 'get_my_attendance': {
+                if (!userId) return { error: 'userId not provided' };
+                const { data: internship, error: e1 } = await supabaseAdmin
+                    .from('student_internships').select('id, rendered_hours')
+                    .eq('student_id', userId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (e1) { console.error('[BullBot] get_my_attendance internship:', e1.message); return { error: e1.message }; }
+                if (!internship) return { message: 'No internship found.' };
+
+                const { data: profile } = await supabaseAdmin
+                    .from('student_profiles').select('programs(required_hours)').eq('id', userId).maybeSingle();
+                const required_hours = profile?.programs?.required_hours ?? 486;
+
+                const { data: logs, error: e2 } = await supabaseAdmin
+                    .from('attendance_logs')
+                    .select('log_date, time_in, time_out, hours_rendered, status')
+                    .eq('internship_id', internship.id)
+                    .order('log_date', { ascending: false })
+                    .limit(input.limit || 14);
+                if (e2) { console.error('[BullBot] get_my_attendance logs:', e2.message); return { error: e2.message }; }
+
+                // Calculate officially approved hours from documents (matches UI logic)
+                const { data: docs } = await supabaseAdmin
+                    .from('pre_internship_documents')
+                    .select('document_name, reviewer_comment, status')
+                    .eq('internship_id', internship.id);
+                
+                let officially_approved_hours = 0;
+                if (docs) {
+                    docs.filter(d => d.document_name && d.document_name.startsWith('Signed Attendance Report') && d.status !== 'Not submitted')
+                        .forEach(d => {
+                            if (d.reviewer_comment) {
+                                const match = d.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/);
+                                if (match) officially_approved_hours += parseFloat(match[1]);
+                            }
+                        });
+                }
+
+                return { 
+                    officially_approved_hours,
+                    unsubmitted_logged_hours: internship.rendered_hours,
+                    required_hours, 
+                    recent_logs: logs || [] 
+                };
+            }
+
+            case 'get_my_weekly_reports': {
+                const { data: internship } = await supabaseAdmin
+                    .from('student_internships').select('id').eq('student_id', userId)
+                    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+                if (!internship) return { message: 'No internship found.' };
+                const { data } = await supabaseAdmin
+                    .from('weekly_activity_reports')
+                    .select('week_number, week_label, status, submitted_at, reviewer_comment')
+                    .eq('internship_id', internship.id)
+                    .order('week_number');
+                return data || [];
+            }
+
+            case 'get_students': {
+                // Step 1 — adviser's program + sections
+                const { data: adviser, error: e1 } = await supabaseAdmin
+                    .from('users')
+                    .select('program_id, professor_sections(section_id)')
+                    .eq('id', userId)
+                    .maybeSingle();
+                if (e1) { console.error('[BullBot] adviser lookup:', e1.message); return { error: e1.message }; }
+
+                const sectionIds = (adviser?.professor_sections || []).map(s => s.section_id);
+                const programId = adviser?.program_id;
+
+                // Step 2 — user UUIDs from student_profiles (id = UUID FK to users.id)
+                let profileQ = supabaseAdmin.from('student_profiles').select('id');
+                if (programId) profileQ = profileQ.eq('program_id', programId);
+                if (sectionIds.length > 0) profileQ = profileQ.in('section_id', sectionIds);
+                const { data: profiles, error: e2 } = await profileQ.limit(200);
+                if (e2) { console.error('[BullBot] profiles lookup:', e2.message); return { error: e2.message }; }
+
+                const studentIds = (profiles || []).map(p => p.id);
+                if (studentIds.length === 0) return { students: [], message: 'No students found in your assigned sections.' };
+
+                // Step 3 — internships + student names
+                let intQ = supabaseAdmin
+                    .from('student_internships')
+                    .select(`id, student_id, position, current_stage, rendered_hours, required_hours,
+                        company:companies(name),
+                        student:users!student_id(first_name, last_name)`)
+                    .in('student_id', studentIds)
+                    .order('updated_at', { ascending: false })
+                    .limit(50);
+                if (input.stage) intQ = intQ.eq('current_stage', input.stage);
+                const { data, error: e3 } = await intQ;
+                if (e3) { console.error('[BullBot] internships lookup:', e3.message); return { error: e3.message }; }
+                return data || [];
+            }
+
+            case 'get_pending_documents': {
+                const { data } = await supabaseAdmin
+                    .from('pre_internship_documents')
+                    .select(`document_name, status, submitted_at,
+                        internship:student_internships!internship_id(
+                            student:users!student_id(first_name, last_name)
+                        )`)
+                    .eq('status', 'PENDING')
+                    .order('submitted_at', { ascending: true })
+                    .limit(50);
+                return data || [];
+            }
+
+            case 'get_student_attendance': {
+                const { data: internship, error: e1 } = await supabaseAdmin
+                    .from('student_internships').select('id, rendered_hours')
+                    .eq('student_id', input.student_id).limit(1).maybeSingle();
+                if (e1) { console.error('[BullBot] get_student_attendance:', e1.message); return { error: e1.message }; }
+                if (!internship) return { message: 'Student internship not found.' };
+
+                const { data: profile } = await supabaseAdmin
+                    .from('student_profiles').select('programs(required_hours)').eq('id', input.student_id).maybeSingle();
+                const required_hours = profile?.programs?.required_hours ?? 486;
+
+                const { data: logs } = await supabaseAdmin
+                    .from('attendance_logs')
+                    .select('log_date, time_in, time_out, hours_rendered, status')
+                    .eq('internship_id', internship.id)
+                    .order('log_date', { ascending: false }).limit(30);
+                return { rendered_hours: internship.rendered_hours, required_hours, logs: logs || [] };
+            }
+
+            case 'get_student_weekly_reports': {
+                const { data } = await supabaseAdmin
+                    .from('weekly_activity_reports')
+                    .select('week_number, week_label, status, submitted_at, reviewer_comment')
+                    .eq('internship_id', input.internship_id)
+                    .order('week_number');
+                return data || [];
+            }
+
+            case 'get_visit_itineraries': {
+                let q = supabaseAdmin
+                    .from('visit_itineraries')
+                    .select('id, date, location, notes, status, students')
+                    .order('date', { ascending: true });
+                if (input.status) q = q.eq('status', input.status);
+                const { data, error } = await q;
+                if (error) { console.error('[BullBot] visit_itineraries:', error.message); return { error: error.message }; }
+                return data || [];
+            }
+
+            case 'get_student_grades': {
+                // Reuse adviser section lookup
+                const { data: adviser } = await supabaseAdmin
+                    .from('users').select('program_id, professor_sections(section_id)')
+                    .eq('id', userId).maybeSingle();
+                const sectionIds = (adviser?.professor_sections || []).map(s => s.section_id);
+                const programId = adviser?.program_id;
+                let profileQ = supabaseAdmin.from('student_profiles').select('id');
+                if (programId) profileQ = profileQ.eq('program_id', programId);
+                if (sectionIds.length > 0) profileQ = profileQ.in('section_id', sectionIds);
+                const { data: profiles } = await profileQ.limit(200);
+                const studentIds = (profiles || []).map(p => p.id);
+                if (studentIds.length === 0) return [];
+                const { data, error } = await supabaseAdmin
+                    .from('student_internships')
+                    .select(`student_id, current_stage, rendered_hours, required_hours, final_grade, final_grade_encoded_at, stage3_submitted,
+                        student:users!student_id(first_name, last_name)`)
+                    .in('student_id', studentIds)
+                    .order('student_id');
+                if (error) { console.error('[BullBot] grades:', error.message); return { error: error.message }; }
+                return data || [];
+            }
+
+            case 'get_system_stats': {
+                const [
+                    { count: students },
+                    { count: advisers },
+                    { count: activeInternships },
+                    { count: pendingDocs }
+                ] = await Promise.all([
+                    supabaseAdmin.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student'),
+                    supabaseAdmin.from('users').select('id', { count: 'exact', head: true }).eq('role', 'ojt_head'),
+                    supabaseAdmin.from('student_internships').select('id', { count: 'exact', head: true }).eq('current_stage', 'DURING_INTERNSHIP'),
+                    supabaseAdmin.from('pre_internship_documents').select('id', { count: 'exact', head: true }).eq('status', 'PENDING')
+                ]);
+                return { total_students: students, total_advisers: advisers, active_internships: activeInternships, pending_documents: pendingDocs };
+            }
+
+            case 'get_users': {
+                let query = supabaseAdmin
+                    .from('users').select('id, first_name, last_name, role')
+                    .order('first_name').limit(input.limit || 30);
+                if (input.role) query = query.eq('role', input.role);
+                const { data, error } = await query;
+                if (error) return { error: error.message };
+                return data || [];
+            }
+
+            case 'get_internships': {
+                let query = supabaseAdmin
+                    .from('student_internships')
+                    .select(`id, position, current_stage, rendered_hours, required_hours,
+                        company:companies(name),
+                        student:users!student_id(first_name, last_name)`)
+                    .order('updated_at', { ascending: false }).limit(input.limit || 30);
+                if (input.stage) query = query.eq('current_stage', input.stage);
+                const { data, error } = await query;
+                if (error) return { error: error.message };
+                return data || [];
+            }
+
+            default:
+                return { error: `Unknown tool: ${name}` };
+        }
+    } catch (err) {
+        console.error(`[BullBot] Tool "${name}" threw:`, err.message);
+        return { error: err.message };
+    }
+};
+
+app.post(['/api/bullbot/chat', '/bullbot/chat'], async (req, res) => {
+    try {
+        const { messages, userId, userRole, userName } = req.body;
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'messages array is required' });
+        }
+
+        const tools = bullBotTools(userRole || 'student');
+        const system = bullBotSystem(userRole || 'student', userName || 'User');
+
+        // Internal message chain for Claude (may grow with tool_use rounds)
+        let chain = messages.map(m => ({ role: m.role, content: m.content }));
+
+        for (let iteration = 0; iteration < 6; iteration++) {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                    'x-api-key': process.env.CLAUDE_API_KEY,
+                    'anthropic-version': '2023-06-01',
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-6',
+                    max_tokens: 2048,
+                    system,
+                    tools,
+                    messages: chain,
+                }),
+            });
+
+            const data = await response.json();
+            if (data.error) throw new Error(data.error.message || 'Claude API error');
+
+            if (data.stop_reason === 'tool_use') {
+                // Add Claude's response (contains tool_use blocks) to chain
+                chain.push({ role: 'assistant', content: data.content });
+
+                // Execute every requested tool in parallel
+                const toolUseBlocks = data.content.filter(b => b.type === 'tool_use');
+                const results = await Promise.all(
+                    toolUseBlocks.map(async block => ({
+                        type: 'tool_result',
+                        tool_use_id: block.id,
+                        content: JSON.stringify(await runBullBotTool(block.name, block.input, userId, userRole)),
+                    }))
+                );
+
+                // Feed results back to Claude
+                chain.push({ role: 'user', content: results });
+                continue;
+            }
+
+            // end_turn — extract text, parse PAGES shortcut line, return
+            let text = data.content.find(b => b.type === 'text')?.text || '';
+            const pagesMatch = text.match(/\nPAGES:\s*([^\n]+)/);
+            let links = [];
+            if (pagesMatch) {
+                links = pagesMatch[1].split(',')
+                    .map(p => p.trim())
+                    .filter(p => PAGE_LABELS[p])
+                    .map(p => ({ label: PAGE_LABELS[p], path: p }));
+                text = text.replace(/\nPAGES:\s*[^\n]+/, '').trim();
+            }
+            return res.json({ content: text, links });
+        }
+
+        return res.status(500).json({ error: 'Too many tool iterations.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

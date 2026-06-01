@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import { studentDesign } from '../../../styles/StudentDesign';
+import BullBot from '../../common/BullBot';
 
 const AdminLayout = () => {
   const styles = {
@@ -40,6 +41,7 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+      <BullBot />
     </div>
   );
 };
