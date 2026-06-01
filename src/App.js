@@ -37,6 +37,7 @@ import ReportsDashboardPage from './pages/ojt-professor/ReportsDashboardPage';
 import OjtProfessorNotificationsPage from './pages/ojt-professor/NotificationsPage';
 import OjtProfessorProfilePage from './pages/ojt-professor/ProfilePage';
 import OjtProfessorStudentProfilePage from './pages/ojt-professor/StudentProfilePage';
+import AttendanceManagementPage from './pages/ojt-professor/AttendanceManagementPage';
 
 // ── Admin Pages ──────────────────────────────────────────────────────
 import AdminLayout from './components/layout/admin/AdminLayout';
@@ -142,6 +143,7 @@ function App() {
             <Route path="/ojt-professor/dashboard" element={<OjtProfessorDashboardPage />} />
             <Route path="/ojt-professor/students" element={<StudentDirectoryPage />} />
             <Route path="/ojt-professor/students/:id" element={<OjtProfessorStudentProfilePage />} />
+            <Route path="/ojt-professor/attendance" element={<AttendanceManagementPage />} />
             <Route path="/ojt-professor/document-review" element={<DocumentReviewPage />} />
             <Route path="/ojt-professor/war-review" element={<WARReviewPage />} />
             <Route path="/ojt-professor/monitoring" element={<ProgressMonitoringPage />} />

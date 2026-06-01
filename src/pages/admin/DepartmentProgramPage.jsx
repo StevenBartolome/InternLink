@@ -27,14 +27,9 @@ const DepartmentProgramPage = () => {
   const [sections, setSections] = useState([]);
   const [newSectionName, setNewSectionName] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useRealtimeSubscription(
-    ['departments', 'programs', 'program_sections'],
-    fetchData
-  );
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
 
   const fetchData = async () => {
     try {
@@ -58,9 +53,14 @@ const DepartmentProgramPage = () => {
     }
   };
 
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-  };
+  useEffect(() => {
+    fetchData();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['departments', 'programs', 'program_sections'],
+    fetchData
+  );
 
   const handleSaveDepartment = async () => {
     try {

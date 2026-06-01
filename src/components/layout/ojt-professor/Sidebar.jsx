@@ -23,6 +23,7 @@ const Sidebar = () => {
       title: 'MANAGEMENT',
       items: [
         { label: 'Student Directory', path: '/ojt-professor/students', icon: Users },
+        { label: 'Attendance', path: '/ojt-professor/attendance', icon: ClipboardCheck },
         { label: 'Document Review', path: '/ojt-professor/document-review', icon: FileCheck },
         { label: 'WAR Review', path: '/ojt-professor/war-review', icon: BookOpen },
       ]

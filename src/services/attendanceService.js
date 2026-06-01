@@ -124,7 +124,7 @@ export const attendanceService = {
       .from('attendance_logs')
       .select('hours_rendered')
       .eq('internship_id', internshipId)
-      .in('status',        ['LOGGED', 'DEDUCTED']);
+      .eq('status', 'LOGGED');
 
     if (fetchError) throw fetchError;
 
@@ -158,5 +158,59 @@ export const attendanceService = {
       capReason,
       allowedEndTime: timeOutIso
     };
+  },
+
+  /**
+   * Toggle the deduction status of a log (LOGGED <-> DEDUCTED)
+   * and recalculate the internship's total rendered hours.
+   */
+  async toggleLogDeduction(logId, internshipId, newStatus) {
+    const nowStr = new Date().toISOString();
+
+    // 1. Update log status
+    const { data: updatedLog, error: updateError } = await supabase
+      .from('attendance_logs')
+      .update({ status: newStatus, updated_at: nowStr })
+      .eq('id', logId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // 2. Fetch all 'LOGGED' logs to recalculate sum
+    const { data: allLogs, error: fetchError } = await supabase
+      .from('attendance_logs')
+      .select('hours_rendered')
+      .eq('internship_id', internshipId)
+      .eq('status', 'LOGGED');
+
+    if (fetchError) throw fetchError;
+
+    const totalHours = allLogs.reduce((sum, l) => sum + (l.hours_rendered || 0), 0);
+    const roundedHours = Math.round(totalHours);
+
+    // 3. Update student_internships
+    const { data: internData } = await supabase
+      .from('student_internships')
+      .select('required_hours, current_stage')
+      .eq('id', internshipId)
+      .single();
+
+    const updatePayload = { rendered_hours: roundedHours, updated_at: nowStr };
+
+    if (internData && roundedHours >= internData.required_hours && internData.current_stage === 'DURING_INTERNSHIP') {
+      updatePayload.current_stage = 'POST_INTERNSHIP';
+    } else if (internData && roundedHours < internData.required_hours && internData.current_stage === 'POST_INTERNSHIP') {
+      updatePayload.current_stage = 'DURING_INTERNSHIP';
+    }
+
+    const { error: internError } = await supabase
+      .from('student_internships')
+      .update(updatePayload)
+      .eq('id', internshipId);
+
+    if (internError) throw internError;
+
+    return { log: updatedLog, totalHours: roundedHours };
   }
 };
