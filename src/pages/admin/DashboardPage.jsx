@@ -51,6 +51,7 @@ const DashboardPage = () => {
     studentsCompleted: 0
   });
   const [courseStats, setCourseStats] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const isMobile = useMediaQuery('(max-width: 1024px)');
   const [hoveredAction, setHoveredAction] = useState(null);
@@ -93,6 +94,16 @@ const DashboardPage = () => {
 
       setCourseStats(Object.entries(breakdown).map(([course, enrolled]) => ({ course, enrolled })));
 
+      // 3. Fetch Recent Activity (Audit Logs)
+      const { data: logsData, error: lError } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(5);
+
+      if (lError) throw lError;
+      setRecentActivity(logsData || []);
+
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
       showToast('Failed to load real-time stats', 'error');
@@ -106,12 +117,9 @@ const DashboardPage = () => {
   }, [fetchDashboardData]);
 
   useRealtimeSubscription(
-    ['student_internships', 'student_profiles'],
+    ['student_internships', 'student_profiles', 'audit_logs'],
     fetchDashboardData
   );
-
-  // Get top 5 recent audit logs
-  const recentActivity = auditLogs.slice(0, 5);
 
   const showToast = (message, type = 'info') => setToast({ message, type });
 
@@ -477,9 +485,9 @@ const DashboardPage = () => {
                   </div>
                   <div style={styles.activityDetails}>
                     <p style={styles.activityText}>
-                      <strong>{log.user}</strong> <span style={{ color: theme.colors.textMuted, fontSize: '0.78rem', fontWeight: 600 }}>({log.role})</span> {log.action.toLowerCase()}
+                      <strong>{log.user_name || 'System'}</strong> <span style={{ color: theme.colors.textMuted, fontSize: '0.78rem', fontWeight: 600 }}>({log.user_role ? log.user_role.toUpperCase() : 'SYSTEM'})</span> {log.action?.toLowerCase() || ''}
                     </p>
-                    <span style={styles.activityTime}>{log.timestamp}</span>
+                    <span style={styles.activityTime}>{new Date(log.timestamp).toLocaleString()}</span>
                   </div>
                 </motion.div>
               ))}
