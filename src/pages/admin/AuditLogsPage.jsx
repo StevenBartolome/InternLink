@@ -171,18 +171,17 @@ const AuditLogsPage = () => {
         <table style={styles.table}>
           <thead>
             <tr>
-              <th style={styles.th}>Timestamp</th>
-              <th style={styles.th}>User</th>
+              <th style={styles.th}>Username</th>
+              <th style={styles.th}>Role</th>
               <th style={styles.th}>Action</th>
-              <th style={styles.th}>Affected Record</th>
               <th style={styles.th}>Type</th>
-              <th style={styles.th}>IP Address</th>
+              <th style={styles.th}>Date</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="6" style={{ padding: '80px 20px', textAlign: 'center' }}>
+                <td colSpan="5" style={{ padding: '80px 20px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{
                       width: '28px',
@@ -204,25 +203,27 @@ const AuditLogsPage = () => {
                 </td>
               </tr>
             ) : filteredLogs.length === 0 ? (
-              <tr><td colSpan="6" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>No logs found.</td></tr>
+              <tr><td colSpan="5" style={{ ...styles.td, textAlign: 'center', padding: '40px' }}>No logs found.</td></tr>
             ) : filteredLogs.map(log => (
               <tr key={log.id}>
-                <td style={{ ...styles.td, fontSize: '0.8rem', color: theme.colors.textMuted }}>
-                   {new Date(log.timestamp).toLocaleString()}
-                </td>
                 <td style={styles.td}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <User size={14} color={theme.colors.primary} />
-                    <span style={{ fontWeight: 600 }}>{log.user_name}</span>
+                    <span style={{ fontWeight: 600 }}>{log.user_name || 'System'}</span>
                   </div>
-                  <div style={{ fontSize: '0.65rem', color: theme.colors.textMuted }}>{log.user_role?.toUpperCase()}</div>
+                </td>
+                <td style={styles.td}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '4px 8px', borderRadius: '4px', backgroundColor: theme.colors.bgSecondary, color: theme.colors.textMuted }}>
+                    {log.user_role ? log.user_role.toUpperCase() : 'SYSTEM'}
+                  </span>
                 </td>
                 <td style={styles.td}>{log.action}</td>
-                <td style={styles.td}>{log.affected_record}</td>
                 <td style={styles.td}>
                   <span style={styles.typeBadge(log.type)}>{log.type}</span>
                 </td>
-                <td style={{ ...styles.td, fontSize: '0.8rem', fontFamily: 'monospace' }}>{log.ip_address}</td>
+                <td style={{ ...styles.td, fontSize: '0.8rem', color: theme.colors.textMuted }}>
+                   {new Date(log.timestamp).toLocaleString()}
+                </td>
               </tr>
             ))}
           </tbody>

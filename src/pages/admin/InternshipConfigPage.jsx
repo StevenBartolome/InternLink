@@ -108,15 +108,6 @@ export default function InternshipConfigPage() {
   const [deletedDocuments, setDeletedDocuments] = useState([]);
   const [defaultDocs, setDefaultDocs] = useState([]);
 
-  useEffect(() => {
-    fetchConfigs();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useRealtimeSubscription(
-    ['programs', 'program_required_documents'],
-    fetchConfigs
-  );
-
   const fetchConfigs = async () => {
     try {
       setLoading(true);
@@ -129,6 +120,15 @@ export default function InternshipConfigPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchConfigs();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useRealtimeSubscription(
+    ['programs', 'program_required_documents'],
+    fetchConfigs
+  );
 
 
 

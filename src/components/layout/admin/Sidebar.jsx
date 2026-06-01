@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, Users, BarChart2, 
-  Settings, Shield, User, Building2
+import {
+  LayoutDashboard, Users, BarChart2,
+  Settings, Shield, User, Building2, DatabaseBackup
 } from 'lucide-react';
 import { studentDesign } from '../../../styles/StudentDesign';
 import { useAuth } from '../../../context/AuthContext';
@@ -31,6 +31,7 @@ const Sidebar = () => {
       title: 'SYSTEM',
       items: [
         { label: 'Audit Logs', path: '/admin/audit', icon: Shield },
+        { label: 'Backup & Restore', path: '/admin/backup', icon: DatabaseBackup },
       ]
     },
     {

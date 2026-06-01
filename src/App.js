@@ -49,6 +49,7 @@ import SystemSettingsPage from './pages/admin/SystemSettingsPage';
 import NotificationsCenterPage from './pages/admin/NotificationsCenterPage';
 import AdminProfilePage from './pages/admin/ProfilePage';
 import DepartmentProgramPage from './pages/admin/DepartmentProgramPage';
+import BackupRestorePage from './pages/admin/BackupRestorePage';
 
 // ── Security Components ───────────────────────────────────────────────
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -169,6 +170,7 @@ function App() {
             <Route path="/admin/notifications" element={<NotificationsCenterPage />} />
             <Route path="/admin/profile" element={<AdminProfilePage />} />
             <Route path="/admin/departments" element={<DepartmentProgramPage />} />
+            <Route path="/admin/backup" element={<BackupRestorePage />} />
             {/* Redirect old routes */}
             <Route path="/admin/verification" element={<Navigate to="/admin/users" replace />} />
             <Route path="/admin/oversight" element={<Navigate to="/admin/reports" replace />} />

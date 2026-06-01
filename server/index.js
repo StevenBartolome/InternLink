@@ -1,6 +1,8 @@
 console.log('--- BACKEND SERVER INITIALIZING ---');
 import express from 'express';
 import cors from 'cors';
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
 import { supabase, supabaseAdmin } from './database.js';
 import { sendCredentialsEmail, sendAdminWelcomeEmail, sendAttendanceReminderEmail } from './emailService.js';
 
@@ -1125,17 +1127,7 @@ app.post(['/api/student/upload-signed-attendance-report', '/student/upload-signe
     }
 });
 
-// Serve static assets from the React build folder
-const buildPath = path.join(__dirname, '../build');
-app.use(express.static(buildPath));
 
-// Catch-all route to serve the React app
-app.get(/.*/, (req, res) => {
-    // Only serve index.html if it's not an API request
-    if (!req.url.startsWith('/api')) {
-        res.sendFile(path.join(buildPath, 'index.html'));
-    }
-});
 
 // Background Worker: Runs immediately on boot and every 5 minutes to deliver Shift Attendance Reminders (Clock-in and Clock-out reminders)
 const runAttendanceReminderEngine = async () => {
@@ -1427,6 +1419,250 @@ app.post(['/api/claude/generate-war', '/claude/generate-war'], async (req, res) 
     } catch (err) {
         console.error('[Claude WAR] Error:', err.message);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// ─── Backup & Restore ────────────────────────────────────────────────────────
+
+const BACKUP_BUCKET = 'backups';
+
+// Tables in restore-safe dependency order (parents before children)
+const BACKUP_TABLES = [
+    'departments',
+    'programs',
+    'program_sections',
+    'program_required_documents',
+    'companies',
+    'users',
+    'student_profiles',
+    'student_internships',
+    'pre_internship_documents',
+    'weekly_activity_reports',
+    'daily_activities',
+    'attendance_logs',
+    'additional_requirements',
+    'student_moas',
+    'visit_itineraries',
+    'portfolio_documents',
+];
+
+const ensureBackupBucket = async () => {
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets();
+    const exists = buckets?.some(b => b.name === BACKUP_BUCKET);
+    if (!exists) {
+        await supabaseAdmin.storage.createBucket(BACKUP_BUCKET, { public: false });
+        console.log('[Backup] Created storage bucket:', BACKUP_BUCKET);
+    }
+};
+
+const performBackup = async (triggeredBy = 'auto') => {
+    console.log(`[Backup] Starting ${triggeredBy} backup...`);
+    const startTime = Date.now();
+    try {
+        await ensureBackupBucket();
+
+        const backupData = {
+            version: '1.0',
+            created_at: new Date().toISOString(),
+            triggered_by: triggeredBy,
+            tables: {}
+        };
+
+        for (const table of BACKUP_TABLES) {
+            try {
+                const { data, error } = await supabaseAdmin.from(table).select('*');
+                if (error) {
+                    console.warn(`[Backup] Could not fetch ${table}:`, error.message);
+                    backupData.tables[table] = { error: error.message, rows: [] };
+                } else {
+                    backupData.tables[table] = { rows: data || [], count: (data || []).length };
+                }
+            } catch (err) {
+                console.warn(`[Backup] Exception for ${table}:`, err.message);
+                backupData.tables[table] = { error: err.message, rows: [] };
+            }
+        }
+
+        // Filename: backup_YYYY-MM-DD_HH-MM.json (Manila time)
+        const manilaStr = new Intl.DateTimeFormat('sv-SE', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+        }).format(new Date()).replace(' ', '_').replace(':', '-');
+        const fileName = `backup_${manilaStr}.json`;
+
+        const jsonBuffer = Buffer.from(JSON.stringify(backupData), 'utf-8');
+        const { error: uploadError } = await supabaseAdmin.storage
+            .from(BACKUP_BUCKET)
+            .upload(fileName, jsonBuffer, { contentType: 'application/json', upsert: true });
+
+        if (uploadError) throw uploadError;
+
+        const duration = Date.now() - startTime;
+        const tableCounts = Object.fromEntries(
+            Object.entries(backupData.tables).map(([t, v]) => [t, v.count ?? 0])
+        );
+        console.log(`[Backup] Done: ${fileName} (${duration}ms) —`, tableCounts);
+        return { success: true, fileName, created_at: backupData.created_at, duration_ms: duration, table_counts: tableCounts };
+    } catch (err) {
+        console.error('[Backup] Failed:', err.message);
+        return { success: false, error: err.message };
+    }
+};
+
+// Schedule auto-backup at midnight Asia/Manila (= 16:00 UTC)
+const scheduleMidnightBackup = () => {
+    const now = new Date();
+    const next = new Date(now);
+    next.setUTCHours(16, 0, 0, 0); // 00:00 Manila = 16:00 UTC
+    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+    const delay = next.getTime() - now.getTime();
+    console.log(`[Backup] Auto-backup scheduled in ${Math.round(delay / 60000)} min (${next.toISOString()})`);
+    setTimeout(async () => {
+        await performBackup('auto');
+        scheduleMidnightBackup(); // re-schedule for next midnight
+    }, delay);
+};
+scheduleMidnightBackup();
+
+// POST /api/admin/backup/create — manual trigger
+app.post(['/api/admin/backup/create', '/admin/backup/create'], async (req, res) => {
+    const result = await performBackup('manual');
+    result.success ? res.json(result) : res.status(500).json({ error: result.error });
+});
+
+// GET /api/admin/backup/list — list available backups
+app.get(['/api/admin/backup/list', '/admin/backup/list'], async (req, res) => {
+    try {
+        await ensureBackupBucket();
+        const { data, error } = await supabaseAdmin.storage
+            .from(BACKUP_BUCKET)
+            .list('', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+        if (error) throw error;
+        const backups = (data || [])
+            .filter(f => f.name?.endsWith('.json'))
+            .map(f => ({ name: f.name, created_at: f.created_at, size: f.metadata?.size || 0 }));
+        res.json({ backups });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/admin/backup/restore — restore from a backup file
+app.post(['/api/admin/backup/restore', '/admin/backup/restore'], async (req, res) => {
+    const { fileName } = req.body;
+    if (!fileName) return res.status(400).json({ error: 'Missing fileName' });
+    try {
+        // Download backup
+        const { data: fileData, error: dlError } = await supabaseAdmin.storage
+            .from(BACKUP_BUCKET)
+            .download(fileName);
+        if (dlError) throw dlError;
+
+        const backup = JSON.parse(await fileData.text());
+        if (!backup.tables) throw new Error('Invalid backup format');
+
+        // Restore order: skip users/student_profiles to avoid auth FK issues
+        const RESTORE_ORDER = [
+            'departments', 'programs', 'program_sections', 'program_required_documents',
+            'companies', 'student_internships', 'pre_internship_documents',
+            'weekly_activity_reports', 'daily_activities', 'attendance_logs',
+            'additional_requirements', 'student_moas', 'visit_itineraries', 'portfolio_documents',
+        ];
+
+        const results = {};
+        for (const table of RESTORE_ORDER) {
+            const tableData = backup.tables[table];
+            if (!tableData?.rows?.length) { results[table] = { restored: 0 }; continue; }
+            try {
+                const { error } = await supabaseAdmin
+                    .from(table)
+                    .upsert(tableData.rows, { onConflict: 'id' });
+                results[table] = error ? { error: error.message } : { restored: tableData.rows.length };
+            } catch (err) {
+                results[table] = { error: err.message };
+            }
+        }
+
+        console.log(`[Restore] Completed from ${fileName}`);
+        res.json({ success: true, restored_from: fileName, created_at: backup.created_at, results });
+    } catch (err) {
+        console.error('[Restore] Failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// POST /api/admin/backup/upload — upload a backup file
+app.post(['/api/admin/backup/upload', '/admin/backup/upload'], upload.single('file'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    try {
+        const fileContent = req.file.buffer.toString('utf-8');
+        let parsed;
+        try {
+            parsed = JSON.parse(fileContent);
+        } catch (e) {
+            return res.status(400).json({ error: 'Uploaded file is not a valid JSON' });
+        }
+        if (!parsed.tables) {
+            return res.status(400).json({ error: 'Invalid backup format' });
+        }
+
+        let fileName = req.file.originalname;
+        if (!fileName.endsWith('.json')) fileName += '.json';
+
+        const { error } = await supabaseAdmin.storage
+            .from(BACKUP_BUCKET)
+            .upload(fileName, req.file.buffer, {
+                contentType: 'application/json',
+                upsert: true
+            });
+            
+        if (error) throw error;
+        res.json({ success: true, fileName });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE /api/admin/backup/delete — delete a backup file
+app.delete('/api/admin/backup/delete', async (req, res) => {
+    const { fileName } = req.body;
+    if (!fileName) return res.status(400).json({ error: 'Missing fileName' });
+    try {
+        const { error } = await supabaseAdmin.storage.from(BACKUP_BUCKET).remove([fileName]);
+        if (error) throw error;
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// GET /api/admin/backup/download/:fileName — download a backup file
+app.get(['/api/admin/backup/download/:fileName', '/admin/backup/download/:fileName'], async (req, res) => {
+    const { fileName } = req.params;
+    if (!fileName) return res.status(400).json({ error: 'Missing fileName' });
+    try {
+        const { data, error } = await supabaseAdmin.storage
+            .from(BACKUP_BUCKET)
+            .createSignedUrl(fileName, 60, { download: true });
+        
+        if (error) throw error;
+        res.redirect(data.signedUrl);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Serve static assets from the React build folder
+const buildPath = path.join(__dirname, '../build');
+app.use(express.static(buildPath));
+
+// Catch-all route to serve the React app
+app.get(/.*/, (req, res, next) => {
+    if (!req.url.startsWith('/api')) {
+        res.sendFile(path.join(buildPath, 'index.html'));
+    } else {
+        next(); // let API routes registered later handle the request
     }
 });
 
