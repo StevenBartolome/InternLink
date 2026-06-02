@@ -964,13 +964,16 @@ Also find the date range covered by this report. It is typically found at the to
 
 Finally, extract the exact list of all individual dates that have logged hours recorded in the table rows and return them in "loggedDates" as an array of YYYY-MM-DD strings.
 
+Also extract the name of the student from the top of the document. Usually found under "Student Name", "Trainee Name", or similar. Return it in "studentName" as a string.
+
 Return the result in JSON format ONLY:
 {
   "grandTotalHours": 40.5,
   "daysPresent": 5,
   "startDate": "2025-01-01",
   "endDate": "2025-01-07",
-  "loggedDates": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07"]
+  "loggedDates": ["2025-01-01", "2025-01-02", "2025-01-03", "2025-01-06", "2025-01-07"],
+  "studentName": "John Doe"
 }
 
 Where "grandTotalHours" must be the "Total this Period" value only (the new hours for this specific report).

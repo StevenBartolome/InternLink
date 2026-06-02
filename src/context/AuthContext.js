@@ -205,6 +205,19 @@ export function AuthProvider({ children }) {
     return currentFetchPromise.current.promise;
   };
 
+  const forceRefreshProfile = async () => {
+    if (user) {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user) {
+        // Temporarily clear the promise ref so it forces a re-fetch
+        currentFetchPromise.current = null;
+        // Temporarily set loading to bypass the skip check
+        setUser(prev => prev ? { ...prev, is_loading_full_profile: true } : prev);
+        await fetchProfile(data.user);
+      }
+    }
+  };
+
   const login = async (email, password) => {
     try {
       console.log('Attempting login for:', email);
@@ -483,7 +496,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, registerStudent, createStudentAccount, bulkCreateStudentAccounts, seedAdmin, setupAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser, forceRefreshProfile, registerStudent, createStudentAccount, bulkCreateStudentAccounts, seedAdmin, setupAdmin }}>
       {children}
     </AuthContext.Provider>
   );

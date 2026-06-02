@@ -626,17 +626,22 @@ const Dashboard = () => {
 
       <AnimatePresence>
         {showPromptModal && (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
-            backdropFilter: 'blur(8px)',
-          }}>
+          <motion.div
+            key="prompt-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              backgroundColor: 'rgba(15, 23, 42, 0.4)',
+              backdropFilter: 'blur(8px)',
+            }}>
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -743,7 +748,7 @@ const Dashboard = () => {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -762,17 +767,22 @@ const Dashboard = () => {
       {/* Unlock Success Modal */}
       <AnimatePresence>
         {showUnlockSuccess && (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            backgroundColor: 'rgba(15, 23, 42, 0.4)',
-            backdropFilter: 'blur(8px)',
-          }}>
+          <motion.div
+            key="unlock-success-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              backgroundColor: 'rgba(15, 23, 42, 0.4)',
+              backdropFilter: 'blur(8px)',
+            }}>
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -810,7 +820,7 @@ const Dashboard = () => {
                 You have successfully unlocked the <strong>Post-Internship</strong> stage. Redirecting you shortly to refresh your dashboard...
               </p>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

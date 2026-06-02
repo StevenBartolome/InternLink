@@ -28,7 +28,7 @@ import Toast from '../../../components/common/Toast';
 import PageLoader from '../../../components/common/PageLoader';
 
 const Attendance = () => {
-  const { user } = useAuth();
+  const { user, forceRefreshProfile } = useAuth();
   const [logs, setLogs] = useState([]);
   const [todayLog, setTodayLog] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -569,6 +569,10 @@ const Attendance = () => {
       });
 
       if (error) throw error;
+      
+      // Force refresh the user profile in AuthContext to apply settings instantly
+      await forceRefreshProfile();
+
       setToast({ message: '✨ Shift and email reminder settings saved successfully!', type: 'success' });
     } catch (err) {
       console.error('Error saving shift settings:', err);
@@ -589,7 +593,7 @@ const Attendance = () => {
   }, [internshipId, isDeployed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useRealtimeSubscription(
-    ['attendance_logs', 'student_internships'],
+    ['attendance_logs', 'student_internships', 'pre_internship_documents'],
     () => { if (internshipId && isDeployed) fetchLogs(true); }
   );
 
@@ -982,6 +986,28 @@ const Attendance = () => {
     try {
       const res = await scanOJTAttendanceReportWithGemini(file);
       if (res.success) {
+        
+        // 4. Validate Student Name
+        if (res.studentName && res.studentName.trim().length > 0 && !['null', 'n/a', 'not found', 'none'].includes(res.studentName.toLowerCase())) {
+          const foundName = res.studentName.toLowerCase();
+          const firstName = (user?.first_name || '').toLowerCase();
+          const lastName = (user?.last_name || '').toLowerCase();
+          
+          const nameParts = [...firstName.split(' '), ...lastName.split(' ')].filter(p => p.length > 2);
+          const hasMatch = nameParts.some(part => foundName.includes(part));
+          
+          if (!hasMatch && nameParts.length > 0) {
+            setToast({
+              message: `⚠️ Name mismatch: The report belongs to "${res.studentName}", but your account is "${user?.first_name} ${user?.last_name}". Upload rejected.`,
+              type: 'error'
+            });
+            setReportFile(null);
+            const fileInput = document.getElementById('report-file-input');
+            if (fileInput) fileInput.value = '';
+            return;
+          }
+        }
+
         const dates = Array.isArray(res.loggedDates) && res.loggedDates.length > 0
           ? [...res.loggedDates].sort()
           : [];
