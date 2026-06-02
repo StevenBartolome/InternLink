@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import { useOutletContext } from 'react-router-dom';
-import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload, Layers, Loader2 } from 'lucide-react';
+import { FileText, CheckCircle, XCircle, Clock, Building2, Rocket, ChevronDown, ChevronUp, AlertCircle, User, Eye, MessageSquare, ExternalLink, Plus, Trash2, RefreshCw, Upload, Layers, Loader2, RotateCcw } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
 import { ojtProfessorService } from '../../services/ojtProfessorService';
@@ -543,6 +543,25 @@ export default function DocumentReviewPage() {
     }
   };
 
+  const handleUnsubmitPortfolio = async (studentId, internshipId, studentName) => {
+    if (!window.confirm(`Are you sure you want to unsubmit the portfolio for ${studentName}? This will allow the student to edit their portfolio.`)) return;
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('student_internships')
+        .update({ stage3_submitted: false })
+        .eq('id', internshipId);
+      if (error) throw error;
+      notify(`Portfolio unsubmitted for ${studentName}`, 'success');
+      await fetchQueue(true); 
+    } catch (err) {
+      console.error(err);
+      notify('Failed to unsubmit portfolio', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDownloadPortfolio = async (student, internshipId) => {
     try {
       setDownloadingPortfolioId(student.studentId);
@@ -833,14 +852,22 @@ export default function DocumentReviewPage() {
                                         <h4 style={{ margin: '0 0 4px 0', color: '#0369a1', fontSize: '0.95rem' }}>Student e-Portfolio</h4>
                                         <p style={{ margin: 0, color: '#0284c7', fontSize: '0.8rem' }}>This student is in the Post-Internship phase. You can generate and download their compiled portfolio.</p>
                                       </div>
-                                      <button 
-                                        onClick={() => handleDownloadPortfolio(student, student.internshipId)}
-                                        disabled={downloadingPortfolioId === student.studentId}
-                                        style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}
-                                      >
-                                        {downloadingPortfolioId === student.studentId ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
-                                        {downloadingPortfolioId === student.studentId ? 'Generating...' : 'Download Portfolio'}
-                                      </button>
+                                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <button 
+                                          onClick={() => handleUnsubmitPortfolio(student.studentId, student.internshipId, student.firstName)}
+                                          style={{ ...commonStyles.dashboardBtn, backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                          <RotateCcw size={16} /> Return Portfolio
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDownloadPortfolio(student, student.internshipId)}
+                                          disabled={downloadingPortfolioId === student.studentId}
+                                          style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        >
+                                          {downloadingPortfolioId === student.studentId ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <FileText size={16} />}
+                                          {downloadingPortfolioId === student.studentId ? 'Generating...' : 'Download Portfolio'}
+                                        </button>
+                                      </div>
                                     </div>
                                   )}
 

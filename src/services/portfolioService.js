@@ -373,8 +373,15 @@ Requirements:
       doc.setFont('helvetica', bold ? 'bold' : 'normal');
       doc.setFontSize(fontSize);
       doc.setTextColor(...color);
-      
-      let cleanStr = String(str || '').replace(/(?:\b[a-zA-Z0-9] )+[a-zA-Z0-9]\b/g, m => m.replace(/ /g, ''));
+      // Sanitize string to remove non-ASCII characters that break jsPDF's default Helvetica font
+      let cleanStr = String(str || '')
+        .replace(/[\u2018\u2019]/g, "'") // smart single quotes
+        .replace(/[\u201C\u201D]/g, '"') // smart double quotes
+        .replace(/[\u2013\u2014]/g, '-') // en-dash and em-dash
+        .replace(/\u2026/g, '...')       // ellipsis
+        .replace(/[^\x00-\x7F]/g, '')    // strip any remaining non-ASCII chars to be safe
+        .replace(/(?:\b[a-zA-Z0-9] )+[a-zA-Z0-9]\b/g, m => m.replace(/ /g, ''));
+        
       const lines = doc.splitTextToSize(cleanStr, maxW);
       let cy = y;
       
@@ -387,11 +394,7 @@ Requirements:
           doc.setTextColor(...color);
         }
         const line = lines[i].trim();
-        if (align === 'justify' && i < lines.length - 1 && line.length > 20) {
-          doc.text(line, x, cy, { maxWidth: maxW, align: 'justify' });
-        } else {
-          doc.text(line, x, cy);
-        }
+        doc.text(line, x, cy);
         cy += LH;
       }
       return cy;
@@ -483,7 +486,8 @@ Requirements:
     ry += 4;
     doc.setTextColor(0, 0, 0);
 
-    const parts = reflection.split(/\*\*([^*]+)\*\*/);
+    const safeReflection = reflection || 'No personal reflection generated yet.';
+    const parts = safeReflection.split(/\*\*([^*]+)\*\*/);
     parts.forEach((part, idx) => {
       const isHeading = idx % 2 === 1;
       const trimmed = part.trim();
@@ -502,7 +506,7 @@ Requirements:
         paragraphs.forEach(para => {
           const cleaned = para.replace(/\n/g, ' ').trim();
           if (!cleaned) return;
-          ry = writeText(cleaned, ML, ry, CW, { fontSize: 11, align: 'justify' });
+          ry = writeText(cleaned, ML, ry, CW, { fontSize: 11, align: 'left' });
           ry += LH * 0.4;
         });
       }
@@ -591,17 +595,17 @@ Requirements:
 
         if (r.summary) {
           wy = writeText('Summary:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.summary.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
+          wy = writeText(r.summary.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'left' });
           wy += 2;
         }
         if (r.skills_learned) {
           wy = writeText('Skills Learned:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.skills_learned.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
+          wy = writeText(r.skills_learned.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'left' });
           wy += 2;
         }
         if (r.challenges) {
           wy = writeText('Challenges:', ML, wy, CW, { bold: true, fontSize: 11 });
-          wy = writeText(r.challenges.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'justify' });
+          wy = writeText(r.challenges.replace(/\n/g, ' '), ML + 4, wy, CW - 4, { fontSize: 11, align: 'left' });
           wy += 2;
         }
         if (i < weeklyReports.length - 1) {

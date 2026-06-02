@@ -252,11 +252,29 @@ export default function PostInternship() {
 
       // Saved permanently — remove the temporary session draft
       if (sessionKey) sessionStorage.removeItem(sessionKey);
-
-      setToast({ message: '✅ Draft saved permanently!', type: 'success' });
+      setToast({ message: 'Reflection draft saved permanently.', type: 'success' });
     } catch (err) {
       console.error(err);
       setToast({ message: 'Failed to save draft.', type: 'error' });
+    }
+  };
+
+  const handleSaveReflectionDirectly = async () => {
+    try {
+      const { error } = await supabase.from('student_internships')
+        .update({ portfolio_reflection: reflection })
+        .eq('id', user.internship_id);
+
+      if (error) throw error;
+
+      if (sessionKey) sessionStorage.removeItem(sessionKey);
+      setToast({ message: 'Reflection saved to portfolio successfully!', type: 'success' });
+      // Force re-render to hide draft banner
+      setShowReflection(false);
+      setTimeout(() => setShowReflection(true), 10);
+    } catch (err) {
+      console.error(err);
+      setToast({ message: 'Failed to save reflection.', type: 'error' });
     }
   };
 
@@ -608,8 +626,9 @@ export default function PostInternship() {
                     </>
                   ) : (
                     <>
-                      <button onClick={() => { setEditText(reflection); setIsEditingReflection(true); }} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>✏️ Edit Draft</button>
-                      <button onClick={handleDeleteReflection} style={{ ...commonStyles.dashboardBtn, backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>🗑️ Delete Completely</button>
+                      <button onClick={() => { setEditText(reflection); setIsEditingReflection(true); }} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnSecondary, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>✏️ Edit</button>
+                      <button onClick={handleSaveReflectionDirectly} style={{ ...commonStyles.dashboardBtn, ...commonStyles.dashboardBtnPrimary, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>💾 Save Reflection</button>
+                      <button onClick={handleDeleteReflection} style={{ ...commonStyles.dashboardBtn, backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>🗑️ Delete</button>
                     </>
                   )}
                 </div>
