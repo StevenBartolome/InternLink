@@ -15,7 +15,7 @@ import { supabase } from '../../services/supabaseClient';
 
 const DashboardPage = () => {
   const { user } = useAuth();
-  
+
   const getCourseGradient = (courseCode) => {
     const codes = courseCode.toUpperCase();
     if (codes.includes('IT')) return 'linear-gradient(90deg, #3B82F6 0%, #60A5FA 100%)';
@@ -126,8 +126,7 @@ const DashboardPage = () => {
   const handleVerifyAccounts = () => navigate('/admin/users');
   const handleViewReports = () => navigate('/admin/reports');
 
-
-  const handleViewAllActivity = () => navigate('/admin/audit-logs');
+  const handleViewAllActivity = () => navigate('/admin/audit');
 
   const styles = {
     container: {
@@ -188,7 +187,7 @@ const DashboardPage = () => {
     actionBtn: (id, type) => {
       const isPrimary = type === 'primary';
       const isHovered = hoveredAction === id;
-      
+
       return {
         display: 'flex',
         alignItems: 'center',
@@ -196,7 +195,7 @@ const DashboardPage = () => {
         padding: '0.7rem 1.4rem',
         borderRadius: '10px',
         border: isPrimary ? 'none' : `1px solid ${isHovered ? theme.colors.primary : theme.colors.border}`,
-        backgroundColor: isPrimary 
+        backgroundColor: isPrimary
           ? (isHovered ? theme.colors.primaryHover : theme.colors.primary)
           : (isHovered ? theme.colors.bgSecondary : theme.colors.bgPrimary),
         color: isPrimary ? theme.colors.white : (isHovered ? theme.colors.primary : theme.colors.textMain),
@@ -301,7 +300,7 @@ const DashboardPage = () => {
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Welcome Card */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -318,40 +317,40 @@ const DashboardPage = () => {
       </motion.div>
 
       {/* Grid Stats */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
         style={styles.statsGrid}
       >
-        <StatCard 
-          title="Total Students" 
-          value={loading ? '...' : stats.totalStudents} 
-          icon={Users} 
-          color="primary" 
+        <StatCard
+          title="Total Students"
+          value={loading ? '...' : stats.totalStudents}
+          icon={Users}
+          color="primary"
         />
-        <StatCard 
-          title="Pre-Internship" 
-          value={loading ? '...' : stats.studentsInPreInternship} 
-          icon={FileText} 
-          color="warning" 
+        <StatCard
+          title="Pre-Internship"
+          value={loading ? '...' : stats.studentsInPreInternship}
+          icon={FileText}
+          color="warning"
         />
-        <StatCard 
-          title="During Internship" 
-          value={loading ? '...' : stats.studentsInDuringInternship} 
-          icon={Briefcase} 
-          color="success" 
+        <StatCard
+          title="During Internship"
+          value={loading ? '...' : stats.studentsInDuringInternship}
+          icon={Briefcase}
+          color="success"
         />
-        <StatCard 
-          title="Post-Internship" 
-          value={loading ? '...' : stats.studentsInPostInternship + stats.studentsCompleted} 
-          icon={CheckCircle} 
-          color="info" 
+        <StatCard
+          title="Post-Internship"
+          value={loading ? '...' : stats.studentsInPostInternship + stats.studentsCompleted}
+          icon={CheckCircle}
+          color="info"
         />
       </motion.div>
 
       {/* Action Buttons */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
@@ -359,7 +358,7 @@ const DashboardPage = () => {
       >
         <h3 style={styles.quickActions.h3}>Quick Actions</h3>
         <div style={styles.actionButtons}>
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.98 }}
             style={styles.actionBtn('verify', 'secondary')}
@@ -369,7 +368,7 @@ const DashboardPage = () => {
           >
             <CheckCircle size={18} /> Verify Accounts
           </motion.button>
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.03, y: -2 }}
             whileTap={{ scale: 0.98 }}
             style={styles.actionBtn('reports', 'secondary')}
@@ -386,7 +385,7 @@ const DashboardPage = () => {
       {/* Dashboard Sub-Grid */}
       <div style={styles.dashboardGrid}>
         {/* Role Distribution */}
-        <motion.div 
+        <motion.div
           whileHover={{ y: -4, boxShadow: '0 16px 36px rgba(15, 23, 42, 0.05)' }}
           initial={{ opacity: 0, x: -15 }}
           animate={{ opacity: 1, x: 0 }}
@@ -409,12 +408,12 @@ const DashboardPage = () => {
                   return (
                     <div key={course.course} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ 
-                          padding: '4px 10px', 
-                          borderRadius: '8px', 
-                          fontSize: '0.8rem', 
-                          fontWeight: 700, 
-                          backgroundColor: getCourseBg(course.course), 
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '8px',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          backgroundColor: getCourseBg(course.course),
                           color: getCourseTextColor(course.course),
                           border: `1px solid ${getCourseTextColor(course.course)}15`
                         }}>
@@ -426,15 +425,15 @@ const DashboardPage = () => {
                         </div>
                       </div>
                       <div style={{ height: '8px', width: '100%', backgroundColor: theme.colors.bgSecondary, borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
-                        <motion.div 
+                        <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${percentage}%` }}
                           transition={{ duration: 0.8, ease: 'easeOut' }}
-                          style={{ 
-                            height: '100%', 
-                            background: getCourseGradient(course.course), 
-                            borderRadius: '6px' 
-                          }} 
+                          style={{
+                            height: '100%',
+                            background: getCourseGradient(course.course),
+                            borderRadius: '6px'
+                          }}
                         />
                       </div>
                     </div>
@@ -448,7 +447,7 @@ const DashboardPage = () => {
         </motion.div>
 
         {/* Recent Activity */}
-        <motion.div 
+        <motion.div
           whileHover={{ y: -4, boxShadow: '0 16px 36px rgba(15, 23, 42, 0.05)' }}
           initial={{ opacity: 0, x: 15 }}
           animate={{ opacity: 1, x: 0 }}
@@ -464,9 +463,9 @@ const DashboardPage = () => {
           <div style={styles.cardContent}>
             <div style={styles.activityList}>
               {recentActivity.map((log) => (
-                <motion.div 
+                <motion.div
                   whileHover={{ x: 6, backgroundColor: 'rgba(248, 250, 252, 0.8)' }}
-                  key={log.id} 
+                  key={log.id}
                   style={{
                     display: 'flex',
                     gap: '0.85rem',

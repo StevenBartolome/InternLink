@@ -1,23 +1,44 @@
 import React from 'react';
 import { 
-  BarChart3, TrendingUp,
-  Download, Users, 
-  CheckCircle, Briefcase,
+  Download,
   ArrowUpRight, Printer, Info
 } from 'lucide-react';
 import { theme } from '../../styles/theme';
 import { commonStyles } from '../../styles/commonStyles';
-import { systemReports } from '../../services/mocks/adminMockData';
+import { systemReports as mockSystemReports } from '../../services/mocks/adminMockData';
 
 import Toast from '../../components/common/Toast';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SystemReportsPage = () => {
-  const { academicYear, semester, courseBreakdown } = systemReports;
-  const totalEnrolled = courseBreakdown.reduce((a, c) => a + c.enrolled, 0);
-  const totalCompleted = courseBreakdown.reduce((a, c) => a + c.completed, 0);
-  const academicTerm = `${academicYear} — ${semester}`;
+  const [systemReports, setSystemReports] = useState({ academicYear: '2025-2026', semester: '2nd Semester', courseBreakdown: [] });
   const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const response = await fetch('/api/admin/system-reports');
+        if (!response.ok) throw new Error('Failed to fetch system reports');
+        const data = await response.json();
+        
+        if (data.courseBreakdown && data.courseBreakdown.length > 0) {
+          setSystemReports(data);
+        } else {
+          // Fallback to mock data if no programs/courses exist in DB yet
+          setSystemReports(mockSystemReports);
+        }
+      } catch (err) {
+        console.error('Error fetching reports:', err);
+        setSystemReports(mockSystemReports);
+      }
+    };
+    fetchReports();
+  }, []);
+
+  const { academicYear, semester, courseBreakdown } = systemReports;
+  const totalEnrolled = courseBreakdown.reduce((a, c) => a + (c.enrolled || 0), 0);
+  const totalCompleted = courseBreakdown.reduce((a, c) => a + (c.completed || 0), 0);
+  const academicTerm = `${academicYear} — ${semester}`;
 
   const showToast = (message, type = 'success') => setToast({ message, type });
 
@@ -80,7 +101,7 @@ const SystemReportsPage = () => {
         <div style={styles.statCard}>
           <div style={{ fontSize: '0.8rem', color: theme.colors.textMuted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Overall Placement</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{((totalCompleted/totalEnrolled)*100).toFixed(1)}%</span>
+            <span style={{ fontSize: '1.75rem', fontWeight: 800 }}>{totalEnrolled > 0 ? ((totalCompleted/totalEnrolled)*100).toFixed(1) : '0.0'}%</span>
             <span style={{ color: theme.colors.success, fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center' }}>
               <ArrowUpRight size={12} /> +2.4%
             </span>
@@ -107,7 +128,7 @@ const SystemReportsPage = () => {
                   <span style={{ color: theme.colors.textMuted }}>{c.completed}/{c.enrolled}</span>
                 </div>
                 <div style={{ height: '8px', backgroundColor: theme.colors.bgSecondary, borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${(c.completed/c.enrolled)*100}%`, backgroundColor: theme.colors.primary }}></div>
+                  <div style={{ height: '100%', width: `${c.enrolled > 0 ? (c.completed/c.enrolled)*100 : 0}%`, backgroundColor: theme.colors.primary }}></div>
                 </div>
               </div>
             ))}

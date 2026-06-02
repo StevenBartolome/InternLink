@@ -372,10 +372,6 @@ const Documents = () => {
 
         <div style={styles.footer}>
           <div style={styles.footerText}>
-            <div style={styles.statusDot(user?.moa_status === 'PROCESSED')} />
-            MOA Status: <strong>{user?.moa_status === 'PROCESSED' ? 'Company MOA Active' : 'Pending MOA'}</strong>
-          </div>
-          <div style={styles.footerText}>
             <div style={styles.statusDot(user?.is_deployed)} />
             Deployment Approval: <strong>{user?.is_deployed ? 'Approved' : 'Pending Document Completion'}</strong>
           </div>

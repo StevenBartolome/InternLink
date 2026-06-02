@@ -325,11 +325,13 @@ export default function DocumentReviewPage() {
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [notify]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     fetchQueue();
-  }, [fetchQueue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useRealtimeSubscription(
     ['pre_internship_documents', 'additional_requirements', 'student_internships', 'student_moas'],

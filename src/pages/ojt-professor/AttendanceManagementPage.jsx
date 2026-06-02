@@ -21,9 +21,7 @@ const AttendanceManagementPage = () => {
   const [expandedSectionId, setExpandedSectionId] = useState(null);
   
   // Modal state
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentLogs, setStudentLogs] = useState([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+  const [selectedPdfStudent, setSelectedPdfStudent] = useState(null);
 
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { showToast } = useOutletContext() || {};
@@ -75,7 +73,7 @@ const AttendanceManagementPage = () => {
         addReqs.forEach(req => {
           if (req.document_name && req.document_name.startsWith('Signed Attendance Report') && req.status !== 'NOT_SUBMITTED') {
             hasSignedReports = true;
-            if (req.file_url) pdfUrls.push(req.file_url);
+            if (req.file_url) pdfUrls.push({ url: req.file_url, name: req.document_name });
             if (req.reviewer_comment) {
               const match = req.reviewer_comment.match(/\[HOURS:([0-9.]+)\]/);
               if (match) calculatedHours += parseFloat(match[1]);
@@ -123,45 +121,7 @@ const AttendanceManagementPage = () => {
     fetchStudents
   );
 
-  const fetchLogs = async (internshipId) => {
-    try {
-      setLogsLoading(true);
-      const logs = await attendanceService.getAttendanceLogs(internshipId);
-      setStudentLogs(logs);
-    } catch (err) {
-      console.error('Error fetching logs:', err);
-      if (showToast) showToast('Failed to load logs', 'error');
-    } finally {
-      setLogsLoading(false);
-    }
-  };
 
-  const handleOpenLogs = (student) => {
-    setSelectedStudent(student);
-    if (student.internshipId) {
-      fetchLogs(student.internshipId);
-    } else {
-      setStudentLogs([]);
-    }
-  };
-
-  const handleToggleDeduction = async (log) => {
-    if (!selectedStudent?.internshipId) return;
-    
-    const newStatus = log.status === 'LOGGED' ? 'DEDUCTED' : 'LOGGED';
-    const actionText = newStatus === 'DEDUCTED' ? 'deducted' : 'restored';
-    
-    try {
-      await attendanceService.toggleLogDeduction(log.id, selectedStudent.internshipId, newStatus);
-      if (showToast) showToast(`Attendance log ${actionText} successfully.`, 'success');
-      // Refresh logs
-      fetchLogs(selectedStudent.internshipId);
-      // Wait for Realtime to update the background students list or call fetchStudents manually
-    } catch (err) {
-      console.error('Error toggling deduction:', err);
-      if (showToast) showToast(`Failed to update log: ${err.message}`, 'error');
-    }
-  };
 
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -360,18 +320,12 @@ const AttendanceManagementPage = () => {
                                 </td>
                                 <td style={commonStyles.dashboardTableTd}>
                                   <div style={{ display: 'flex', gap: '8px' }}>
-                                    <button 
-                                      style={{...commonStyles.dashboardBtnSecondary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
-                                      onClick={() => handleOpenLogs(student)}
-                                    >
-                                      <Clock size={14} style={{ marginRight: '4px', display: 'inline-block', verticalAlign: 'middle' }} /> View Logs
-                                    </button>
                                     {student.pdfUrls && student.pdfUrls.length > 0 && (
                                       <button 
                                         style={{...commonStyles.dashboardBtnPrimary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px'}} 
-                                        onClick={() => window.open(student.pdfUrls[student.pdfUrls.length - 1], '_blank')}
+                                        onClick={() => setSelectedPdfStudent(student)}
                                       >
-                                        View PDF
+                                        View PDFs ({student.pdfUrls.length})
                                       </button>
                                     )}
                                   </div>
@@ -390,82 +344,33 @@ const AttendanceManagementPage = () => {
         )}
       </div>
 
-      {/* Logs Modal */}
-      {selectedStudent && (
-        <div style={styles.modalOverlay} onClick={() => setSelectedStudent(null)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+      {/* PDFs Modal */}
+      {selectedPdfStudent && (
+        <div style={styles.modalOverlay} onClick={() => setSelectedPdfStudent(null)}>
+          <div style={{ ...styles.modal, maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Attendance Logs</h3>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Attendance Reports</h3>
                 <p style={{ margin: '4px 0 0', color: theme.colors.textMuted, fontSize: '0.85rem' }}>
-                  {selectedStudent.name} • {selectedStudent.hoursRendered} / {selectedStudent.hoursRequired} hrs
+                  {selectedPdfStudent.name}
                 </p>
               </div>
-              <button onClick={() => setSelectedStudent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: theme.colors.textMuted }}>&times;</button>
+              <button onClick={() => setSelectedPdfStudent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem', color: theme.colors.textMuted }}>&times;</button>
             </div>
             
-            {logsLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>Loading logs...</div>
-            ) : studentLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: theme.colors.textMuted }}>
-                No attendance records found for this student.
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ ...commonStyles.dashboardTable, width: '100%' }}>
-                  <thead>
-                    <tr>
-                      <th style={commonStyles.dashboardTableTh}>Date</th>
-                      <th style={commonStyles.dashboardTableTh}>Time In</th>
-                      <th style={commonStyles.dashboardTableTh}>Time Out</th>
-                      <th style={commonStyles.dashboardTableTh}>Hours</th>
-                      <th style={commonStyles.dashboardTableTh}>Status</th>
-                      <th style={commonStyles.dashboardTableTh}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {studentLogs.map(log => (
-                      <tr key={log.id}>
-                        <td style={{ ...commonStyles.dashboardTableTd, fontWeight: 600 }}>{log.log_date}</td>
-                        <td style={commonStyles.dashboardTableTd}>
-                          {log.time_in ? new Date(log.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                        </td>
-                        <td style={commonStyles.dashboardTableTd}>
-                          {log.time_out ? new Date(log.time_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                        </td>
-                        <td style={commonStyles.dashboardTableTd}>
-                          <span style={{ fontWeight: 700, color: theme.colors.primary }}>{log.hours_rendered || 0}</span> hrs
-                        </td>
-                        <td style={commonStyles.dashboardTableTd}>
-                          <span style={styles.statusBadge(log.status)}>{log.status}</span>
-                        </td>
-                        <td style={commonStyles.dashboardTableTd}>
-                          {log.status === 'LOGGED' && (
-                            <button 
-                              onClick={() => handleToggleDeduction(log)}
-                              style={{ border: 'none', background: '#fee2e2', color: '#dc2626', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <AlertCircle size={14} /> Deduct
-                            </button>
-                          )}
-                          {log.status === 'DEDUCTED' && (
-                            <button 
-                              onClick={() => handleToggleDeduction(log)}
-                              style={{ border: 'none', background: '#dcfce7', color: '#15803d', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              <CheckCircle size={14} /> Restore
-                            </button>
-                          )}
-                          {log.status === 'IN_PROGRESS' && (
-                            <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted }}>In Progress</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {selectedPdfStudent.pdfUrls.map((pdf, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: `1px solid ${theme.colors.border}`, borderRadius: '8px', backgroundColor: '#f8fafc' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.9rem', color: theme.colors.textMain }}>{pdf.name}</span>
+                  <button 
+                    onClick={() => window.open(pdf.url, '_blank')}
+                    style={{ ...commonStyles.dashboardBtnPrimary, padding: '0.4rem 0.8rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                  >
+                    View
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

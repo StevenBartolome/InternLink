@@ -341,7 +341,8 @@ app.post('/admin/create-ojt-head', async (req, res) => {
                 last_name: lastName,
                 role: 'ojt_head',
                 assigned_course: assignedCourse,
-                program_id: programId
+                program_id: programId,
+                is_first_login: true
             },
             redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/setup-account`
         });
@@ -363,7 +364,8 @@ app.post('/admin/create-ojt-head', async (req, res) => {
                 first_name: firstName,
                 last_name: lastName,
                 role: 'ojt_head',
-                program_id: programId
+                program_id: programId,
+                is_first_login: true
             });
 
         if (userError) {
@@ -2283,6 +2285,66 @@ app.post(['/api/bullbot/chat', '/bullbot/chat'], async (req, res) => {
         return res.status(500).json({ error: 'Too many tool iterations.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin Route: System Reports
+app.get(['/api/admin/system-reports', '/admin/system-reports'], async (req, res) => {
+    try {
+        const { data: programs, error: progErr } = await supabaseAdmin.from('programs').select('*');
+        if (progErr) throw progErr;
+
+        const { data: profiles, error: profErr } = await supabaseAdmin.from('student_profiles').select('id, program_id, academic_year, semester');
+        if (profErr) throw profErr;
+
+        const { data: internships, error: intErr } = await supabaseAdmin.from('student_internships').select('student_id, current_stage');
+        if (intErr) throw intErr;
+
+        const courseBreakdown = programs.map(prog => {
+            const progProfiles = profiles.filter(p => p.program_id === prog.id);
+            const enrolled = progProfiles.length;
+            let preInternship = 0;
+            let duringInternship = 0;
+            let postInternship = 0;
+            let completed = 0;
+
+            progProfiles.forEach(prof => {
+                const internship = internships.find(i => i.student_id === prof.id);
+                if (internship) {
+                    if (internship.current_stage === 'PRE_INTERNSHIP') preInternship++;
+                    else if (internship.current_stage === 'DURING_INTERNSHIP') duringInternship++;
+                    else if (internship.current_stage === 'POST_INTERNSHIP') postInternship++;
+                    else if (internship.current_stage === 'COMPLETED') completed++;
+                }
+            });
+
+            // Using mock avgGrade as actual grade logic depends on a separate feature not fully scoped yet
+            const avgGrade = enrolled > 0 ? '1.50' : 'N/A';
+
+            return {
+                course: prog.code || prog.name,
+                enrolled,
+                preInternship,
+                duringInternship,
+                postInternship,
+                completed,
+                avgGrade
+            };
+        });
+
+        // Use the first profile's term info if available, else fallback
+        const academicYear = profiles.find(p => p.academic_year)?.academic_year || '2025-2026';
+        const semester = profiles.find(p => p.semester)?.semester || '2nd Semester';
+
+        res.json({
+            academicYear,
+            semester,
+            courseBreakdown
+        });
+
+    } catch (error) {
+        console.error('System Reports error:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

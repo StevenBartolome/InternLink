@@ -69,9 +69,34 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
       }
     };
 
+    const fetchLatestStudentId = async () => {
+      const currentYear = new Date().getFullYear();
+      const { data } = await supabase
+        .from('student_profiles')
+        .select('student_id')
+        .ilike('student_id', `${currentYear}-%`)
+        .order('student_id', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && data[0].student_id) {
+        const lastId = data[0].student_id;
+        const parts = lastId.split('-');
+        if (parts.length === 2) {
+          const num = parseInt(parts[1], 10);
+          if (!isNaN(num)) {
+            const nextNum = (num + 1).toString().padStart(4, '0');
+            setSingleData(p => ({ ...p, studentId: `${currentYear}-${nextNum}` }));
+            return;
+          }
+        }
+      }
+      setSingleData(p => ({ ...p, studentId: `${currentYear}-0001` }));
+    };
+
     fetchAY();
     fetchPrograms();
     fetchSections();
+    fetchLatestStudentId();
   }, [user?.program_id]);
 
   // Filter sections when program changes
@@ -328,11 +353,11 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Student ID (Optional)</label>
+                  <label style={styles.label}>Student ID</label>
                   <div style={styles.inputWrap}>
                     <FileText size={18} style={styles.inputIcon} />
                     <input
-                      type="text" placeholder="2024-0001" style={styles.input}
+                      type="text" required placeholder="2026-0001" style={styles.input}
                       value={singleData.studentId} onChange={e => setSingleData(p => ({ ...p, studentId: e.target.value }))}
                     />
                   </div>
